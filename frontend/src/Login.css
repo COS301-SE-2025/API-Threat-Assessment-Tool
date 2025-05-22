@@ -1,0 +1,126 @@
+* {
+  box-sizing: border-box;
+}
+
+body, html, #root {
+  margin: 0;
+  height: 100%;
+  font-family: "Arial", sans-serif;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: white;
+}
+
+.left-panel {
+  flex: 1.44; 
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 648px; 
+}
+
+.left-panel h1 {
+  font-weight: 700;
+  font-size: 3.6rem;
+  margin-bottom: 2.88rem;
+}
+
+.login-btn {
+  padding: 1.08rem 0; 
+  margin-bottom: 4.32rem;
+  background: white;
+  color: black;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.44rem; 
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: white;
+  color: black;
+  border-radius: 8px;
+  padding: 1.08rem 0;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 2.16rem;
+  font-size: 1.32rem; 
+}
+
+.google-btn img {
+  height: 28.8px;
+  width: 28.8px;
+}
+
+.or-separator {
+  text-align: center;
+  margin: 1.44rem 0 2.16rem;
+  font-weight: 600;
+  color: #888;
+  font-size: 1.32rem; 
+}
+
+.input-field {
+  width: 100%;
+  padding: 1.08rem 1.44rem; 
+  margin-bottom: 1.44rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.32rem; 
+  font-style: italic;
+}
+
+.continue-btn {
+  background-color: #5c5de9;
+  border: none;
+  color: white;
+  padding: 1.08rem 0;
+  border-radius: 8px;
+  font-size: 1.56rem; 
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 2.88rem;
+}
+
+.signup-text {
+  text-align: center;
+  font-size: 1.2rem; 
+  color: #ccc;
+}
+
+.signup-text a {
+  color: #5c5de9;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+
+.right-panel {
+  flex: 0.64;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2b2b2b;
+  padding: 2rem;
+}
+
+.right-panel img {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+}

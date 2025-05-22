@@ -1,4 +1,3 @@
-/* src/App.css */
 * {
   box-sizing: border-box;
 }
@@ -17,30 +16,30 @@ body, html, #root {
 }
 
 .left-panel {
-  flex: 1;
+  flex: 1.44; 
   padding: 3rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 450px;
+  max-width: 648px; 
 }
 
 .left-panel h1 {
   font-weight: 700;
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
+  font-size: 3.6rem;
+  margin-bottom: 2.88rem;
 }
 
 .login-btn {
-  padding: 0.75rem 0;
-  margin-bottom: 3rem;
+  padding: 1.08rem 0; 
+  margin-bottom: 4.32rem;
   background: white;
   color: black;
   font-weight: 700;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.44rem; 
 }
 
 .google-btn {
@@ -51,32 +50,34 @@ body, html, #root {
   background: white;
   color: black;
   border-radius: 8px;
-  padding: 0.75rem 0;
+  padding: 1.08rem 0;
   border: none;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2.16rem;
+  font-size: 1.32rem; 
 }
 
 .google-btn img {
-  height: 20px;
-  width: 20px;
+  height: 28.8px;
+  width: 28.8px;
 }
 
 .or-separator {
   text-align: center;
-  margin: 1rem 0 1.5rem;
+  margin: 1.44rem 0 2.16rem;
   font-weight: 600;
   color: #888;
+  font-size: 1.32rem; 
 }
 
 .input-field {
   width: 100%;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  padding: 1.08rem 1.44rem; 
+  margin-bottom: 1.44rem;
   border-radius: 8px;
   border: none;
-  font-size: 1rem;
+  font-size: 1.32rem; 
   font-style: italic;
 }
 
@@ -84,17 +85,17 @@ body, html, #root {
   background-color: #5c5de9;
   border: none;
   color: white;
-  padding: 0.75rem 0;
+  padding: 1.08rem 0;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 1.56rem; 
   font-weight: 500;
   cursor: pointer;
-  margin-bottom: 2rem;
+  margin-bottom: 2.88rem;
 }
 
 .signup-text {
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 1.2rem; 
   color: #ccc;
 }
 
@@ -110,7 +111,7 @@ body, html, #root {
 }
 
 .right-panel {
-  flex: 1;
+  flex: 0.64;
   display: flex;
   justify-content: center;
   align-items: center;

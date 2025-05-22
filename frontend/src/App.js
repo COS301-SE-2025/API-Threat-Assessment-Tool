@@ -2,7 +2,7 @@
 import React from "react";
 import "./App.css";
 import atatImage from "./img/atat.png"; // Put your AT-AT image in src/atat.png
-
+import googleImage from "./img/google.png"
 function App() {
   return (
     <div className="container">
@@ -12,7 +12,7 @@ function App() {
 
         <button className="google-btn">
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png"
+            src={googleImage}
             alt="Google Logo"
           />
           Continue with Google

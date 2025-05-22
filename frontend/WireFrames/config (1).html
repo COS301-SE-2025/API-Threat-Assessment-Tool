@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Endpoint Configuration - AT-AT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .btn {
+            @apply px-6 py-3 rounded-lg font-semibold shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-opacity-50;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500;
+        }
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400;
+        }
+        .nav-link {
+            @apply text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors;
+        }
+        .card {
+            @apply bg-white p-6 rounded-xl shadow-lg;
+        }
+        .endpoint-card {
+            @apply bg-white border border-gray-200 rounded-lg p-5 mb-6 shadow-sm;
+        }
+        .form-checkbox {
+            @apply h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500;
+        }
+        .form-input-text {
+            @apply mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm;
+        }
+        .form-select {
+            @apply mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm;
+        }
+        .form-textarea {
+            @apply mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm;
+        }
+        .label-text {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.2em 1.2em;
+            padding-right: 2.5rem;
+        }
+        .tag {
+            @apply inline-block bg-gray-200 text-gray-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full;
+        }
+    </style>
+</head>
+<body class="text-gray-900">
+
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-2xl font-bold text-indigo-600">AT-AT</span>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="nav-link">Home</a>
+                        <a href="dashboard.html" class="nav-link">Dashboard</a>
+                        <a href="#" class="nav-link">New Scan</a>
+                        <a href="#" class="nav-link">Reports</a>
+                        <a href="#" class="nav-link">My Templates</a>
+                        <a href="#" class="nav-link">Public Templates</a>
+                        <a href="#" class="nav-link bg-indigo-100 text-indigo-700">API Settings</a>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-4 flex items-center md:ml-6 space-x-2">
+                        <span class="text-gray-700 text-sm mr-2">Welcome, User!</span>
+                        <a href="#" class="btn bg-transparent border border-indigo-600 text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500 text-sm px-4 py-2">Logout</a>
+                    </div>
+                </div>
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="nav-link block">Home</a>
+                <a href="dashboard.html" class="nav-link block">Dashboard</a>
+                <a href="#" class="nav-link block">New Scan</a>
+                <a href="#" class="nav-link block">Reports</a>
+                <a href="#" class="nav-link block">My Templates</a>
+                <a href="#" class="nav-link block">Public Templates</a>
+                <a href="#" class="nav-link bg-indigo-100 text-indigo-700 block">API Settings</a>
+            </div>
+             <div class="pt-4 pb-3 border-t border-gray-200">
+                <div class="px-5 mb-2">
+                    <div class="font-medium text-base text-gray-800">User Name</div>
+                    <div class="font-medium text-sm text-gray-500">user@example.com</div>
+                </div>
+                <div class="mt-3 px-2 space-y-1">
+                    <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-700 hover:bg-indigo-50">Your Profile</a>
+                    <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-700 hover:bg-indigo-50">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">API Endpoint Configuration</h1>
+            <p class="text-gray-600 mt-1">Manage context-specific settings for: <strong class="text-indigo-700" id="api-name-header">My E-commerce Site API (api.mystore.com)</strong></p>
+        </header>
+
+        <div class="card mb-10">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Global API Settings</h2>
+                <p class="text-sm text-gray-500 mt-1 sm:mt-0">These settings apply to all endpoints unless overridden below.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                <div>
+                    <label for="global-api-nickname" class="label-text">API Nickname/Description:</label>
+                    <input type="text" id="global-api-nickname" name="global-api-nickname" class="form-input-text" value="Production E-commerce Public API">
+                </div>
+                <div>
+                    <label for="global-api-environment" class="label-text">API Environment:</label>
+                    <select id="global-api-environment" name="global-api-environment" class="form-select">
+                        <option value="development">Development</option>
+                        <option value="staging">Staging</option>
+                        <option value="testing">Testing</option>
+                        <option value="production" selected>Production</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="global-business-type" class="label-text">Default Business Type/Industry:</label>
+                    <select id="global-business-type" name="global-business-type" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option value="ecommerce" selected>E-commerce</option>
+                        <option value="financial">Financial Services</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="social">Social Media</option>
+                        <option value="iot">IoT</option>
+                        <option value="internal">Internal Admin Portal</option>
+                        <option value="generic">Generic Public API</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="global-api-criticality" class="label-text">Default Overall API Criticality:</label>
+                    <select id="global-api-criticality" name="global-api-criticality" class="form-select">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high" selected>High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2"> <label class="label-text">Default Primary Compliance Mandates:</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-1 max-h-24 overflow-y-auto">
+                        <div class="flex items-center"><input type="checkbox" id="global-comp-gdpr" class="form-checkbox mr-2" checked><label for="global-comp-gdpr" class="text-sm">GDPR</label></div>
+                        <div class="flex items-center"><input type="checkbox" id="global-comp-pci" class="form-checkbox mr-2" checked><label for="global-comp-pci" class="text-sm">PCI-DSS</label></div>
+                        <div class="flex items-center"><input type="checkbox" id="global-comp-hipaa" class="form-checkbox mr-2"><label for="global-comp-hipaa" class="text-sm">HIPAA</label></div>
+                        <div class="flex items-center"><input type="checkbox" id="global-comp-sox" class="form-checkbox mr-2"><label for="global-comp-sox" class="text-sm">SOX</label></div>
+                        <div class="flex items-center"><input type="checkbox" id="global-comp-ccpa" class="form-checkbox mr-2"><label for="global-comp-ccpa" class="text-sm">CCPA</label></div>
+                    </div>
+                </div>
+                 <div>
+                    <label for="global-cross-user-access" class="label-text">Default Cross-User Data Access Policy:</label>
+                    <select id="global-cross-user-access" name="global-cross-user-access" class="form-select">
+                        <option value="no">No Cross-User Access Expected</option>
+                        <option value="read-own-only" selected>User Can Only Access Own Data (Default)</option>
+                        <option value="read-other-allowed">Viewing Other Users' Data Allowed</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2 lg:col-span-3">
+                    <label for="global-auth-headers" class="label-text">Common Authentication Headers/Parameters (one per line, e.g., Authorization: Bearer {{TOKEN}}):</label>
+                    <textarea id="global-auth-headers" name="global-auth-headers" rows="3" class="form-textarea" placeholder="X-API-Key: YOUR_KEY_HERE&#10;Tenant-ID: default_tenant"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 text-right">
+                <button type="button" class="btn btn-primary text-sm py-2 px-4">Save Global Settings</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Endpoint-Specific Configurations (Overrides Global)</h2>
+                <div class="mt-2 sm:mt-0">
+                    <input type="text" placeholder="Filter endpoints (e.g., /orders, POST)" class="form-input-text px-4 py-2 text-sm mr-2 w-full sm:w-auto">
+                    <button class="btn btn-secondary text-sm py-2 px-4 mt-2 sm:mt-0">Apply Filters</button>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3">
+                    <div>
+                        <span class="text-sm font-semibold bg-blue-500 text-white px-2 py-0.5 rounded-md mr-2">GET</span>
+                        <code class="text-lg font-medium text-indigo-700">/api/v1/orders/{orderId}</code>
+                    </div>
+                    <span class="text-xs text-gray-500 mt-1 md:mt-0">Last Scanned: May 15, 2025</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 mt-4">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label-text">Basic Flags:</label>
+                            <div class="space-y-2 mt-1">
+                                <div class="flex items-center">
+                                    <input id="auth-required-1" name="auth-required-1" type="checkbox" class="form-checkbox" checked disabled>
+                                    <label for="auth-required-1" class="ml-2 block text-sm text-gray-900">Authentication Required (auto-detected)</label>
+                                </div>
+                                 <div class="flex items-center">
+                                    <input id="exclude-scan-1" name="exclude-scan-1" type="checkbox" class="form-checkbox">
+                                    <label for="exclude-scan-1" class="ml-2 block text-sm text-gray-900">Exclude from all scans</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label-text">Data Classification (select all that apply):</label>
+                            <div class="space-y-1 mt-1 max-h-32 overflow-y-auto">
+                                <div class="flex items-center"><input type="checkbox" id="data-pii-1" class="form-checkbox mr-2" checked><label for="data-pii-1" class="text-sm">PII (Personal Identifiable Information)</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-financial-1" class="form-checkbox mr-2" checked><label for="data-financial-1" class="text-sm">Financial Data (PCI Scope)</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-health-1" class="form-checkbox mr-2"><label for="data-health-1" class="text-sm">Health Data (PHI/HIPAA Scope)</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-authcred-1" class="form-checkbox mr-2"><label for="data-authcred-1" class="text-sm">Authentication Credentials</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-session-1" class="form-checkbox mr-2"><label for="data-session-1" class="text-sm">Session Identifiers</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-bizcrit-1" class="form-checkbox mr-2"><label for="data-bizcrit-1" class="text-sm">Business Critical/Proprietary Data</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="data-public-1" class="form-checkbox mr-2"><label for="data-public-1" class="text-sm">Publicly Available Data</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="cross-user-access-1" class="label-text">Expected Cross-User Data Access:</label>
+                            <select id="cross-user-access-1" name="cross-user-access-1" class="form-select">
+                                <option value="inherit">Inherit from Global (User Can Only Access Own Data)</option>
+                                <option value="no">No Cross-User Access Expected</option>
+                                <option value="read-own-only" selected>User Can Only Access Own Data</option>
+                                <option value="read-other-allowed">Viewing Other Users' Data Allowed</option>
+                                <option value="write-other-allowed">Modifying Other Users' Data Allowed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="auth-roles-1" class="label-text">Expected User Roles/Permissions (comma-separated):</label>
+                            <input type="text" id="auth-roles-1" name="auth-roles-1" class="form-input-text" placeholder="e.g., customer, order_viewer, admin">
+                        </div>
+                        <div>
+                            <label for="biz-impact-1" class="label-text">Business Criticality/Impact:</label>
+                            <select id="biz-impact-1" name="biz-impact-1" class="form-select">
+                                 <option value="inherit">Inherit from Global (High)</option>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label-text">Compliance Tags (select all that apply):</label>
+                            <div class="space-y-1 mt-1 max-h-32 overflow-y-auto">
+                                <div class="flex items-center"><input type="checkbox" id="comp-gdpr-1" class="form-checkbox mr-2" checked><label for="comp-gdpr-1" class="text-sm">GDPR</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="comp-pci-1" class="form-checkbox mr-2" checked><label for="comp-pci-1" class="text-sm">PCI-DSS</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="comp-hipaa-1" class="form-checkbox mr-2"><label for="comp-hipaa-1" class="text-sm">HIPAA</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="comp-sox-1" class="form-checkbox mr-2"><label for="comp-sox-1" class="text-sm">SOX</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="comp-ccpa-1" class="form-checkbox mr-2"><label for="comp-ccpa-1" class="text-sm">CCPA</label></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="notes-1" class="label-text">Notes for this Endpoint:</label>
+                            <textarea id="notes-1" name="notes-1" rows="4" class="form-textarea" placeholder="E.g., This endpoint is critical for order processing. Access should be highly restricted."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3">
+                    <div>
+                        <span class="text-sm font-semibold bg-green-500 text-white px-2 py-0.5 rounded-md mr-2">POST</span>
+                        <code class="text-lg font-medium text-indigo-700">/api/v1/products</code>
+                    </div>
+                    <span class="text-xs text-gray-500 mt-1 md:mt-0">Last Scanned: May 14, 2025</span>
+                </div>
+                <p class="text-sm text-gray-500 italic mt-2"> (Endpoint-specific configuration options similar to above would be here, allowing overrides of global settings...) </p>
+            </div>
+
+            <div class="endpoint-card">
+                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3">
+                    <div>
+                        <span class="text-sm font-semibold bg-blue-500 text-white px-2 py-0.5 rounded-md mr-2">GET</span>
+                        <code class="text-lg font-medium text-indigo-700">/api/v1/users/{userId}/past-orders</code>
+                    </div>
+                    <span class="text-xs text-gray-500 mt-1 md:mt-0">Last Scanned: Not Scanned Yet</span>
+                </div>
+                 <p class="text-sm text-gray-500 italic mt-2"> (Endpoint-specific configuration options similar to above would be here...) </p>
+                 <div class="mt-4"> <label for="notes-3-example" class="label-text">Notes for this Endpoint:</label>
+                    <textarea id="notes-3-example" name="notes-3-example" rows="2" class="form-textarea" placeholder="Critical PII. Any cross-user access is a major breach.">For pharmaceutical: Must be 'User Can Only Access Own Data'. For bidding: Could be 'Viewing Other Users' Data Allowed'.</textarea>
+                </div>
+            </div>
+
+            <div class="mt-8 text-right">
+                <button type="button" class="btn btn-secondary mr-2">Discard Endpoint Changes</button>
+                <button type="button" class="btn btn-primary">Save All Configurations</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-gray-300 mt-10">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2025 AT-AT (API Threat Assessment Tool) - COS301 Project. All rights reserved.</p>
+            <p class="text-sm mt-1">[Your Team Name]</p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const svgs = mobileMenuButton.querySelectorAll('svg');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            svgs[0].classList.toggle('hidden');
+            svgs[0].classList.toggle('block');
+            svgs[1].classList.toggle('hidden');
+            svgs[1].classList.toggle('block');
+        });
+
+        // Placeholder for future JS:
+        // - Dynamically load API name into header
+        // - Load/Save Global and Endpoint configurations
+        // - Handle filtering
+        // - "Inherit from Global" logic for endpoint dropdowns
+    </script>
+
+</body>
+</html>
+```
+
+**Changes Made and Key Features of the Global Settings Section:**
+
+1.  **Dedicated Global Settings Card:**
+    * The "Global API Settings" section is now more prominent and contains actual form fields.
+    * The "Edit Global Settings" button is replaced by a "Save Global Settings" button, implying the fields are always editable on this view.
+
+2.  **Global Settings Fields Added:**
+    * **API Nickname/Description (Input Text):** For a user-friendly label.
+    * **API Environment (Select):** `Development`, `Staging`, `Testing`, `Production`.
+    * **Default Business Type/Industry (Select):** `E-commerce`, `Financial Services`, `Healthcare`, etc.
+    * **Default Overall API Criticality (Select):** `Low`, `Medium`, `High`, `Critical`.
+    * **Default Primary Compliance Mandates (Checkboxes):** `GDPR`, `PCI-DSS`, `HIPAA`, `SOX`, `CCPA`. Made this section span more columns on larger screens for better layout.
+    * **Default "Expected Cross-User Data Access" Policy (Select):** Same options as the endpoint level, setting the API-wide default.
+    * **Common Authentication Headers/Parameters (Textarea):** A place to note common headers/params like API keys or tenant IDs, with a placeholder showing an example format.
+
+3.  **Layout of Global Settings:**
+    * Arranged in a responsive grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`) for better space utilization.
+
+4.  **Endpoint Settings - Inheritance Indication:**
+    * For the endpoint-specific dropdowns (`Expected Cross-User Data Access` and `Business Criticality/Impact`), I've added an **"Inherit from Global (Current Global Value)"** option as the first choice. This makes it clear what the global default is and allows users to explicitly choose to inherit or override.
+        * *Example:* `<option value="inherit">Inherit from Global (User Can Only Access Own Data)</option>`
+        * You would dynamically populate the "(Current Global Value)" part with JavaScript based on the selected global setting.
+
+5.  **Clarity in Section Titles:**
+    * The endpoint configuration section title is now "Endpoint-Specific Configurations (Overrides Global)" to emphasize the relationship.
+
+This enhanced structure gives users a clear way to set a broad context for an entire API and then fine-tune it at the individual endpoint level. This hierarchical approach to context is very powerful for an assessment to

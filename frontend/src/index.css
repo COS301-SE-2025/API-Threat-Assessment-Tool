@@ -1,13 +1,125 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* src/App.css */
+* {
+  box-sizing: border-box;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body, html, #root {
+  margin: 0;
+  height: 100%;
+  font-family: "Arial", sans-serif;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: white;
+}
+
+.left-panel {
+  flex: 1;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 450px;
+}
+
+.left-panel h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+.login-btn {
+  padding: 0.75rem 0;
+  margin-bottom: 3rem;
+  background: white;
+  color: black;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: white;
+  color: black;
+  border-radius: 8px;
+  padding: 0.75rem 0;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+}
+
+.google-btn img {
+  height: 20px;
+  width: 20px;
+}
+
+.or-separator {
+  text-align: center;
+  margin: 1rem 0 1.5rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.continue-btn {
+  background-color: #5c5de9;
+  border: none;
+  color: white;
+  padding: 0.75rem 0;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 2rem;
+}
+
+.signup-text {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.signup-text a {
+  color: #5c5de9;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2b2b2b;
+  padding: 2rem;
+}
+
+.right-panel img {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
 }

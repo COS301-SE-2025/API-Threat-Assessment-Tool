@@ -1,4 +1,5 @@
-/* src/App.css */
+/* Fixed polished smooth transition with bubble-like fade in/out for login/signup switching */
+
 * {
   box-sizing: border-box;
 }
@@ -14,15 +15,26 @@ body, html, #root {
   height: 100vh;
   background-color: #1e1e1e;
   color: white;
+  transition: flex-direction 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.9s ease;
+}
+
+.left-panel,
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem;
+  position: relative;
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
+  will-change: opacity, transform;
 }
 
 .left-panel {
   flex: 1;
-  padding: 3rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   max-width: 450px;
+  z-index: 2;
 }
 
 .left-panel h1 {
@@ -98,28 +110,99 @@ body, html, #root {
   color: #ccc;
 }
 
-.signup-text a {
+.signup-text .link-btn {
+  background: none;
+  border: none;
   color: #5c5de9;
   font-weight: 600;
-  text-decoration: none;
   cursor: pointer;
-}
-
-.signup-text a:hover {
   text-decoration: underline;
+  padding: 0;
+  font-size: 0.9rem;
 }
 
+/* Right panel */
 .right-panel {
   flex: 1;
+  background-color: #2b2b2b;
+  padding: 2rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #2b2b2b;
-  padding: 2rem;
+  z-index: 1;
 }
 
+/* Animate image with fade & subtle slide */
 .right-panel img {
   max-width: 100%;
   max-height: 90vh;
   object-fit: contain;
+  transition: transform 0.7s ease, opacity 0.7s ease;
+  will-change: transform, opacity;
+}
+
+/* Transition states for flipping sides with smooth slide & fade */
+
+.container.login-mode .left-panel {
+  opacity: 1;
+  transform: scale(1);
+  order: 0;
+  z-index: 2;
+  animation: bubbleIn 0.7s forwards;
+}
+
+.container.login-mode .right-panel {
+  opacity: 1;
+  transform: scale(1);
+  order: 1;
+  z-index: 1;
+  animation: bubbleIn 0.7s forwards;
+}
+
+.container.signup-mode {
+  flex-direction: row-reverse;
+  background-color: #222233;
+}
+
+.container.signup-mode .left-panel {
+  opacity: 1;
+  transform: scale(1);
+  order: 1;
+  z-index: 2;
+  animation: bubbleIn 0.7s forwards;
+}
+
+.container.signup-mode .right-panel {
+  opacity: 1;
+  transform: scale(1);
+  order: 0;
+  z-index: 1;
+  animation: bubbleIn 0.7s forwards;
+}
+
+/* Bubble in animation */
+@keyframes bubbleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  80% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Bubble out animation (used if needed) */
+@keyframes bubbleOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
 }

@@ -6,18 +6,18 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: '@-@',
+			title: 'AT-AT',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool' }],
 			sidebar: [
 				{
 					label: 'Guides',
 					items: [
 						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
+						{ label: 'Setup Guide', slug: 'guides/example' },
 					],
 				},
 				{
-					label: 'Reference',
+					label: 'Requirements',
 					autogenerate: { directory: 'reference' },
 				},
 			],

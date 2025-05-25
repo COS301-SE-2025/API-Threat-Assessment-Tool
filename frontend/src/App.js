@@ -5,6 +5,7 @@ import Login from "./Login";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
 import ManageAPIs from "./ManageAPIs";
+import Settings from "./Settings";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/home" element={<Home />} />
         <Route path="/manage-apis" element={<ManageAPIs />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/" element={<Signup />} />
       </Routes>
     </Router>

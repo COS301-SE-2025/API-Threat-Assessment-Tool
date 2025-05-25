@@ -135,7 +135,7 @@ const Dashboard = () => {
           <div className="actions-grid">
             <div className="action-card">
               <span className="action-icon">+</span>
-              <p>Manage APIs</p>
+              <p><Link to="/manage-apis" className="action-link">Manage APIs</Link></p>
               <p className="action-desc">Add, edit, or remove APIs</p>
             </div>
             <div className="action-card">

@@ -15,7 +15,7 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="logo">AT-AT</div>
         <nav className="dashboard-nav">
-          <Link to="/dashboard">Home</Link>
+          <Link to="/home">Home</Link>
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/public-templates">Public Templates</Link>
           <Link to="/settings">Settings</Link>
@@ -158,7 +158,7 @@ const Dashboard = () => {
       </main>
 
       <footer className="dashboard-footer">
-        <p>&copy; 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>

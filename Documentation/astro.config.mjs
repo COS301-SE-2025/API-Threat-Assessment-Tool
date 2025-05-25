@@ -9,13 +9,13 @@ export default defineConfig({
 			title: 'AT-AT',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool' }],
 			sidebar: [
-				{
-					label: 'Guides',
-					items: [
+			//	{
+				//	label: 'Guides',
+					//items: [
 						// Each item here is one entry in the navigation menu.
-						{ label: 'Setup Guide', slug: 'guides/example' },
-					],
-				},
+					//	{ label: 'Setup Guide', slug: 'guides/example' },
+					//],
+				//},
 				{
 					label: 'Requirements',
 					autogenerate: { directory: 'reference' },

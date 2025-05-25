@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './Signup.css';
 
 const Signup = () => {
@@ -6,9 +7,9 @@ const Signup = () => {
     <div className="signup-container">
       <div className="form-container">
         <h2>Create an account</h2>
-        <p className="login-link">Already have an account? <a href="#">Log in</a></p>
+        <p className="login-link">Already have an account? <Link to="/login">Log in</Link></p>
         <form>
-          <input type="text" placeholder="First Name" className="input-field" />
+          <input type="text" placeholder="Fletcher" className="input-field" />
           <input type="text" placeholder="Last name" className="input-field" />
           <input type="email" placeholder="Email" className="input-field" />
           <input type="password" placeholder="Enter your password" className="input-field" />

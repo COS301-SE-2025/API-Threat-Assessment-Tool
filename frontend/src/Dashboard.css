@@ -321,3 +321,13 @@
   color: #6b46c1;
   text-decoration: none;
 }
+
+.action-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.action-link:hover {
+  color: #6b46c1;
+  text-decoration: none;
+}

@@ -145,7 +145,7 @@ const Dashboard = () => {
             </div>
             <div className="action-card">
               <span className="action-icon">⚙️</span>
-              <p>Account Settings</p>
+              <p><Link to="/settings" className="action-link">Account Settings</Link></p>
               <p className="action-desc">Update your profile and preferences</p>
             </div>
             <div className="action-card">

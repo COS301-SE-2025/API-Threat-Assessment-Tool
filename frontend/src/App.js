@@ -6,6 +6,7 @@ import Dashboard from "./Dashboard";
 import Home from "./Home";
 import ManageAPIs from "./ManageAPIs";
 import Settings from "./Settings";
+import PublicTemplates from "./PublicTemplates";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/manage-apis" element={<ManageAPIs />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/public-templates" element={<PublicTemplates />} />
         <Route path="/" element={<Signup />} />
       </Routes>
     </Router>

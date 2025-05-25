@@ -1,13 +1,21 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
 
 const Login = () => {
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Add login logic here (e.g., API call, authentication)
+    navigate('/dashboard');
+  };
+
   return (
     <div className="login-container">
       <div className="form-container">
         <h2>Login</h2>
-        <form>
+        <form onSubmit={handleSubmit}>
           <input type="email" placeholder="Email" className="input-field" />
           <input type="password" placeholder="Password" className="input-field" />
           <button type="submit" className="login-btn">Login</button>

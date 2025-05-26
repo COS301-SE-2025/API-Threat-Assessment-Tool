@@ -147,7 +147,85 @@ As a Penetration Tester I would like to:
 
 - **Test different input payloads and see how the API behaves under fuzzing conditions**
 
+## Domain Model
 
+## Use case Diagram
+
+## Service contracts
+
+
+## Technology Requirements
+
+#### Mono Repository Management
+
+**Tool:** GitHub (Monorepo)
+
+ **Advantage**: Enables centralized version control, seamless collaboration, and simplified CI/CD workflows by organizing all backend, frontend, and shared libraries in a single unified repository.
+
+#### Backend Framework
+**Tool:** FastAPI (Python)
+
+**Advantage:** Provides high-performance asynchronous capabilities, automatic documentation generation via OpenAPI, and easy integration with security testing libraries.
+
+#### Frontend Framework
+**Tool:** React
+
+**Advantage:** Offers a component-based architecture and real-time UI updates, enabling the development of responsive and intuitive interfaces for users to manage scans and view reports.
+
+#### Containerization
+**Tool:** Docker
+
+**Advantage:** Ensures consistent environments across development, testing, and production, making it easy to deploy and scale microservices securely and efficiently.
+
+#### Database
+**Tool:** PostgreSQL
+
+**Advantage:** Offers strong ACID compliance and advanced querying capabilities, suitable for storing structured vulnerability data, scan logs, user credentials, and role-based access settings.
+
+#### Authentication
+**Tool:** OAuth 2.0 (Google/GitHub), JWT
+
+**Advantage:** Supports secure, standardized login mechanisms with token-based sessions, enabling flexible integration with external identity providers.
+
+#### Security Testing Tools
+**Tool:** SQLMap, Burp Suite (optional), OWASP ZAP
+
+**Advantage:** Automates discovery of injection vulnerabilities, misconfigurations, and broken authentication flows as part of the scan engine.
+
+Unit / Integration Testing
+Tool: Pytest
+Advantage: Provides lightweight and scalable test automation with rich plugin support for testing scanning logic, service layers, and database interactions.
+
+End-to-End Testing
+Tool: Playwright or Cypress
+Advantage: Enables full workflow simulation and test coverage of the frontend-backend integration, ensuring real-world reliability.
+
+#### CI/CD Pipeline
+**Tool:** GitHub Actions
+
+**Advantage:** Automates testing, linting, building, and deployment with workflows triggered by pull requests and merges, ensuring continuous integration and delivery.
+
+Linting & Formatting
+Tool: ESLint (frontend), Flake8 or Ruff (backend)
+Advantage: Maintains consistent code style and prevents common coding errors across frontend and backend.
+
+Documentation: Inline
+Tool: docstrings (Python) & JSDoc (React)
+Advantage: Improves maintainability and clarity by providing developer-facing documentation directly in the codebase.
+
+#### Documentation: Wiki & Guides
+**Tool:** Markdown + Starlight (Astro)
+
+**Advantage:** Allows clean, navigable documentation hosted alongside the codebase, supporting developer onboarding and client transparency.
+
+#### Design and Wireframes
+**Tool:** Figma
+
+**Advantage:** Enables collaborative UX/UI design and iteration before development, ensuring clear structure and stakeholder feedback.
+
+Deployment
+Tool: VPS via Docker Compose (BITM-provided server)
+Advantage: Delivers an isolated, reproducible production environment with simplified deployment and monitoring.
 
 
 ## Appendix

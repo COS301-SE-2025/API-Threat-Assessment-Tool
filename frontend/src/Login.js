@@ -1,91 +1,35 @@
-// src/App.js
-import React, { useState } from "react";
-import "./Login.css"; // Make sure this matches your CSS filename
-import atatImage from "./img/atat.png";
-import googleImage from "./img/google.png";
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import './Login.css';
 
-function App() {
-  const [isLogin, setIsLogin] = useState(true);
+const Login = () => {
+  const navigate = useNavigate();
 
-  const toggleForm = () => setIsLogin(!isLogin);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Add login logic here (e.g., API call, authentication)
+    navigate('/dashboard');
+  };
 
   return (
-    <div className={`container ${isLogin ? "login-mode" : "signup-mode"}`}>
-      <div className="left-panel">
-        {isLogin ? (
-          <>
-            <h1>Welcome to AT-AT</h1>
-            <button className="login-btn">LOGIN</button>
-
-            <button className="google-btn">
-              <img src={googleImage} alt="Google Logo" />
-              Continue with Google
-            </button>
-
-            <div className="or-separator">OR</div>
-
-            <input
-              type="email"
-              placeholder="email@domainName.com"
-              className="input-field"
-            />
-            <input
-              type="password"
-              placeholder="password"
-              className="input-field"
-            />
-
-            <button className="continue-btn">Continue</button>
-
-            <p className="signup-text">
-              Need an account?{" "}
-              <button onClick={toggleForm} className="link-btn" aria-label="Switch to signup">
-                SignUp
-              </button>
-            </p>
-          </>
-        ) : (
-          <>
-            <h1>Create an Account</h1>
-
-            <input
-              type="text"
-              placeholder="Full Name"
-              className="input-field"
-            />
-            <input
-              type="email"
-              placeholder="email@domainName.com"
-              className="input-field"
-            />
-            <input
-              type="password"
-              placeholder="password"
-              className="input-field"
-            />
-            <input
-              type="password"
-              placeholder="Confirm password"
-              className="input-field"
-            />
-
-            <button className="continue-btn">Sign Up</button>
-
-            <p className="signup-text">
-              Already have an account?{" "}
-              <button onClick={toggleForm} className="link-btn" aria-label="Switch to login">
-                Login
-              </button>
-            </p>
-          </>
-        )}
-      </div>
-
-      <div className="right-panel">
-        <img src={atatImage} alt="AT-AT" />
+    <div className="login-container">
+      <div className="form-container">
+        <h2>Login</h2>
+        <form onSubmit={handleSubmit}>
+          <input type="email" placeholder="Email" className="input-field" />
+          <input type="password" placeholder="Password" className="input-field" />
+          <button type="submit" className="login-btn">Login</button>
+        </form>
+        <p className="register-with">or log in with</p>
+        <div className="social-buttons">
+          <button className="social-btn google">Google</button>
+          <button className="social-btn apple">Apple</button>
+        </div>
+        <p className="forgot-link">Forgot your password? <a href="#">Reset password</a></p>
+        <p className="signup-link">Don't have an account? <Link to="/signup">signup</Link></p>
       </div>
     </div>
   );
-}
+};
 
-export default App;
+export default Login;

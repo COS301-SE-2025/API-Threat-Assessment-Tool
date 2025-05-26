@@ -1,0 +1,187 @@
+/* ManageAPIs.css */
+.manage-apis-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f7fa;
+  font-family: Arial, sans-serif;
+}
+
+.manage-apis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.manage-apis-main {
+  flex: 1;
+  padding: 20px;
+}
+
+.manage-apis-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.manage-apis-top h1 {
+  font-size: 1.8em;
+  color: #333;
+}
+
+.add-api-btn {
+  background: #6b46c1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.apis-list {
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.api-table th,
+.api-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.api-table th {
+  font-size: 0.9em;
+  color: #333;
+  font-weight: 600;
+}
+
+.api-table td {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: #6b46c1;
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 0.9em;
+}
+
+.action-btn:hover {
+  text-decoration: underline;
+}
+
+.action-btn.delete {
+  color: #dc3545;
+}
+
+.no-apis {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+.modal-form .form-group {
+  margin-bottom: 15px;
+}
+
+.modal-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+}
+
+.save-btn {
+  background: #6b46c1;
+  color: white;
+  border: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .api-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

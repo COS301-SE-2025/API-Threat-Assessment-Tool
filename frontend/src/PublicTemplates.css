@@ -1,0 +1,178 @@
+/* PublicTemplates.css */
+.public-templates-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f7fa;
+  font-family: Arial, sans-serif;
+}
+
+.public-templates-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.public-templates-main {
+  flex: 1;
+  padding: 20px;
+}
+
+.public-templates-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.public-templates-top h1 {
+  font-size: 1.8em;
+  color: #333;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-bar input {
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  width: 300px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.filter-btn {
+  padding: 8px 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background: #6b46c1;
+  color: white;
+  border-color: #6b46c1;
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.template-card {
+  background: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.template-card:hover {
+  transform: translateY(-5px);
+}
+
+.template-image {
+  height: 150px;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+.template-content {
+  padding: 15px;
+}
+
+.template-content h3 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.template-content p {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+.template-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  color: #888;
+}
+
+.template-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.template-actions button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.use-template-btn {
+  background: #6b46c1;
+  color: white;
+}
+
+.view-details-btn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.pagination button {
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  background: #6b46c1;
+  color: white;
+  border-color: #6b46c1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .public-templates-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .search-bar input {
+    width: 100%;
+  }
+
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+}

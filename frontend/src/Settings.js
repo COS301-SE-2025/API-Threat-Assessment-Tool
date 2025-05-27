@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react'; // Add useEffect for cookie loading
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Cookies from 'js-cookie'; // Import js-cookie for cookie handling
 import './Settings.css';
 
 const Settings = () => {
@@ -10,7 +11,9 @@ const Settings = () => {
   const { currentUser, logout, getUserFullName } = useAuth();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
-  const [formData, setFormData] = useState({
+
+  // Default form data if no cookie exists
+  const defaultFormData = {
     name: 'John Doe',
     email: 'john.doe@example.com',
     company: 'AT-AT Inc.',
@@ -22,7 +25,18 @@ const Settings = () => {
       weeklyReport: false,
       productUpdates: true
     }
+  };
+
+  // Load form data from cookies if available, otherwise use default
+  const [formData, setFormData] = useState(() => {
+    const savedData = Cookies.get('settingsFormData');
+    return savedData ? JSON.parse(savedData) : defaultFormData;
   });
+
+  // Save form data to cookies whenever it changes
+  useEffect(() => {
+    Cookies.set('settingsFormData', JSON.stringify(formData), { expires: 7 }); // Expires in 7 days
+  }, [formData]);
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -32,7 +46,6 @@ const Settings = () => {
     }
   };
 
-  // Loading state similar to other components
   if (!currentUser) {
     return (
       <div style={{
@@ -88,9 +101,14 @@ const Settings = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Mock save operation (in a real app, this would be an API call)
-    console.log('Saving settings:', formData);
-    alert('Settings saved successfully!');
+    console.log('Saving settings to cookies:', formData);
+    alert('Settings saved successfully! (Stored in cookies for demo)');
+  };
+
+  // Reset form data to default and clear cookies
+  const handleCancel = () => {
+    setFormData(defaultFormData);
+    Cookies.set('settingsFormData', JSON.stringify(defaultFormData), { expires: 7 });
   };
 
   return (
@@ -234,13 +252,7 @@ const Settings = () => {
                     </select>
                   </div>
                   <div className="form-actions">
-                    <button type="button" className="btn btn-secondary" onClick={() => setFormData({
-                      name: 'John Doe',
-                      email: 'john.doe@example.com',
-                      company: 'AT-AT Inc.',
-                      position: 'Security Engineer',
-                      timezone: 'UTC+02:00'
-                    })}>
+                    <button type="button" className="btn btn-secondary" onClick={handleCancel}>
                       Cancel
                     </button>
                     <button type="submit" className="btn btn-primary">Save Changes</button>

@@ -1,0 +1,141 @@
+.construction-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f7fa;
+  font-family: Arial, sans-serif;
+}
+
+.construction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.logo {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #6b46c1;
+}
+
+.construction-nav {
+  display: flex;
+  gap: 20px;
+}
+
+.construction-nav a {
+  text-decoration: none;
+  color: #333;
+  font-size: 1em;
+}
+
+.construction-nav a:hover {
+  color: #6b46c1;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-info span {
+  color: #333;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #6b46c1;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.logout-btn:hover {
+  text-decoration: underline;
+}
+
+.construction-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.construction-content {
+  text-align: center;
+  background: white;
+  padding: 30px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.construction-content h1 {
+  font-size: 2em;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.construction-content p {
+  font-size: 1em;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.back-btn {
+  display: inline-block;
+  background: #6b46c1;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 1em;
+}
+
+.back-btn:hover {
+  background: #5a3da0;
+}
+
+.construction-footer {
+  text-align: center;
+  padding: 10px;
+  background: #333;
+  color: white;
+  font-size: 0.8em;
+}
+
+.footer-links {
+  margin-top: 5px;
+}
+
+.footer-links a {
+  color: white;
+  margin: 0 10px;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .construction-content {
+    padding: 20px;
+  }
+
+  .construction-content h1 {
+    font-size: 1.5em;
+  }
+
+  .back-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -34,7 +34,7 @@ const Home = () => {
             Start a new scan, explore public templates, or review your recent activity below.
           </p>
           <div className="cta-buttons">
-            <Link to="/dashboard" className="cta-btn">Start a New Scan</Link>
+            <Link to="/start-scan" className="cta-btn">Start a New Scan</Link>
             <Link to="/reports" className="cta-btn secondary">View Reports</Link>
           </div>
         </section>

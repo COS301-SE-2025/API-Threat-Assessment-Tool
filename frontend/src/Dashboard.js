@@ -19,6 +19,7 @@ const Dashboard = () => {
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/public-templates">Public Templates</Link>
           <Link to="/settings">Settings</Link>
+
         </nav>
         <div className="user-info">
           <span>Welcome, User!</span>
@@ -29,7 +30,7 @@ const Dashboard = () => {
       <main className="dashboard-main">
         <section className="dashboard-top">
           <h1>Dashboard</h1>
-          <button className="start-scan-btn">+ Start New Scan</button>
+          <Link to="/start-scan" className="start-scan-btn">+ Start New Scan</Link>
         </section>
 
         <section className="scan-config">
@@ -53,7 +54,7 @@ const Dashboard = () => {
                 <option value="auth">Authentication & Authorization Focus</option>
               </select>
             </div>
-            <button className="run-scan-btn">Run Scan with Selected Configuration</button>
+            <Link to="/start-scan" className="run-scan-btn">Run Scan with Selected Configuration</Link>
           </div>
         </section>
 
@@ -140,7 +141,7 @@ const Dashboard = () => {
             </div>
             <div className="action-card">
               <span className="action-icon">📋</span>
-              <p>Manage Templates</p>
+              <p><Link to="/public-templates" className="action-link">Manage Templates</Link></p>
               <p className="action-desc">Create, edit, or share scan templates</p>
             </div>
             <div className="action-card">
@@ -150,7 +151,7 @@ const Dashboard = () => {
             </div>
             <div className="action-card">
               <span className="action-icon">📖</span>
-              <p>Documentation</p>
+              <Link to="/documentation" className="action-link">View</Link>
               <p className="action-desc">Help and how-to guides</p>
             </div>
           </div>

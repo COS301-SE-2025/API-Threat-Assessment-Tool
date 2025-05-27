@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeContext } from '../App';
-import Signup from '../Signup';
+// import Signup from '../Signup';
 import Login from '../Login';
 import Dashboard from '../Dashboard';
 import Home from '../Home';
@@ -24,6 +24,14 @@ test('StartScan renders form and button', () => {
   expect(screen.getByRole('heading', { name: /start a new scan/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /start scan now/i })).toBeInTheDocument();
 });
+// test('Signup renders form fields and button', () => {
+//   customRender(<Signup />);
+  
+//   expect(screen.getByRole('heading', { name: /create an account/i })).toBeInTheDocument();
+//   expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
+//   expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument();
+//   expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+// });
 
   test('Login renders login button', () => {
     customRender(<Login />);

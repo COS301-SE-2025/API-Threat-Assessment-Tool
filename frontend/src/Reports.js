@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeContext } from './App';
 import './Reports.css';
 
 const Reports = () => {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const handleLogout = () => {
-    // Add logout logic here (e.g., clear tokens, state, etc.)
     navigate('/login');
   };
 
@@ -23,6 +24,9 @@ const Reports = () => {
         <div className="user-info">
           <span>Welcome, User!</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </header>
 

@@ -5,6 +5,12 @@
   min-height: 100vh;
   background: #f5f7fa;
   font-family: Arial, sans-serif;
+  color: #333; /* Default text color for light mode */
+}
+
+.dark-mode .manage-apis-container {
+  background: #1a1a1a;
+  color: #e0e0e0;
 }
 
 .manage-apis-header {
@@ -14,6 +20,98 @@
   padding: 10px 20px;
   background: white;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.dark-mode .manage-apis-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #444;
+}
+
+.logo {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #6b46c1;
+}
+
+.dark-mode .logo {
+  color: #a3bffa;
+}
+
+.dashboard-nav {
+  display: flex;
+  gap: 20px;
+}
+
+.dashboard-nav a {
+  text-decoration: none;
+  color: #333;
+  font-size: 1em;
+}
+
+.dark-mode .dashboard-nav a {
+  color: #a3bffa;
+}
+
+.dashboard-nav a:hover {
+  color: #6b46c1;
+}
+
+.dark-mode .dashboard-nav a:hover {
+  color: #c3d4ff;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-info span {
+  color: #333;
+}
+
+.dark-mode .user-info span {
+  color: #e0e0e0;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #6b46c1;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.dark-mode .logout-btn {
+  color: #a3bffa;
+}
+
+.logout-btn:hover {
+  text-decoration: underline;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid #6b46c1;
+  color: #6b46c1;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.dark-mode .theme-toggle-btn {
+  border-color: #a3bffa;
+  color: #a3bffa;
+  background: #333;
+}
+
+.theme-toggle-btn:hover {
+  background: #f0f0f0;
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background: #444;
 }
 
 .manage-apis-main {
@@ -33,6 +131,10 @@
   color: #333;
 }
 
+.dark-mode .manage-apis-top h1 {
+  color: #e0e0e0;
+}
+
 .add-api-btn {
   background: #6b46c1;
   color: white;
@@ -42,11 +144,24 @@
   cursor: pointer;
 }
 
+.dark-mode .add-api-btn {
+  background: #7a5cd1;
+}
+
+.dark-mode .add-api-btn:hover {
+  background: #6a4ac1;
+}
+
 .apis-list {
   background: white;
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .apis-list {
+  background: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .api-table {
@@ -61,15 +176,28 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.dark-mode .api-table th,
+.dark-mode .api-table td {
+  border-bottom: 1px solid #444;
+}
+
 .api-table th {
   font-size: 0.9em;
   color: #333;
   font-weight: 600;
 }
 
+.dark-mode .api-table th {
+  color: #e0e0e0;
+}
+
 .api-table td {
   font-size: 0.9em;
   color: #666;
+}
+
+.dark-mode .api-table td {
+  color: #a3a3a3;
 }
 
 .action-btn {
@@ -81,6 +209,10 @@
   font-size: 0.9em;
 }
 
+.dark-mode .action-btn {
+  color: #a3bffa;
+}
+
 .action-btn:hover {
   text-decoration: underline;
 }
@@ -89,10 +221,18 @@
   color: #dc3545;
 }
 
+.dark-mode .action-btn.delete {
+  color: #ff6b6b;
+}
+
 .no-apis {
   text-align: center;
   padding: 40px;
   color: #666;
+}
+
+.dark-mode .no-apis {
+  color: #a3a3a3;
 }
 
 /* Modal styles */
@@ -109,12 +249,20 @@
   z-index: 1000;
 }
 
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
 .modal-content {
   background: white;
   padding: 20px;
   border-radius: 5px;
   width: 90%;
   max-width: 500px;
+}
+
+.dark-mode .modal-content {
+  background: #2d2d2d;
 }
 
 .modal-header {
@@ -126,6 +274,11 @@
 
 .modal-header h2 {
   margin: 0;
+  color: #333;
+}
+
+.dark-mode .modal-header h2 {
+  color: #e0e0e0;
 }
 
 .close-btn {
@@ -133,6 +286,11 @@
   border: none;
   font-size: 1.5em;
   cursor: pointer;
+  color: #333;
+}
+
+.dark-mode .close-btn {
+  color: #e0e0e0;
 }
 
 .modal-form .form-group {
@@ -143,6 +301,11 @@
   display: block;
   margin-bottom: 5px;
   font-weight: 600;
+  color: #333;
+}
+
+.dark-mode .modal-form label {
+  color: #e0e0e0;
 }
 
 .modal-form input,
@@ -152,6 +315,21 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  background: white;
+  color: #333;
+}
+
+.dark-mode .modal-form input,
+.dark-mode .modal-form textarea,
+.dark-mode .modal-form select {
+  background: #3d3d3d;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.dark-mode .modal-form input::placeholder,
+.dark-mode .modal-form textarea::placeholder {
+  color: #a3a3a3;
 }
 
 .modal-actions {
@@ -170,12 +348,31 @@
 .cancel-btn {
   background: #f0f0f0;
   border: 1px solid #ddd;
+  color: #333;
+}
+
+.dark-mode .cancel-btn {
+  background: #3d3d3d;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.dark-mode .cancel-btn:hover {
+  background: #4d4d4d;
 }
 
 .save-btn {
   background: #6b46c1;
   color: white;
   border: none;
+}
+
+.dark-mode .save-btn {
+  background: #7a5cd1;
+}
+
+.dark-mode .save-btn:hover {
+  background: #6a4ac1;
 }
 
 /* Responsive adjustments */

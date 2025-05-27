@@ -4,6 +4,12 @@
   min-height: 100vh;
   background: #f5f7fa;
   font-family: Arial, sans-serif;
+  color: #333; /* Default text color for light mode */
+}
+
+.dark-mode .construction-container {
+  background: #1a1a1a;
+  color: #e0e0e0;
 }
 
 .construction-header {
@@ -15,10 +21,19 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.dark-mode .construction-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #444;
+}
+
 .logo {
   font-size: 1.5em;
   font-weight: bold;
   color: #6b46c1;
+}
+
+.dark-mode .logo {
+  color: #a3bffa;
 }
 
 .construction-nav {
@@ -32,8 +47,16 @@
   font-size: 1em;
 }
 
+.dark-mode .construction-nav a {
+  color: #a3bffa;
+}
+
 .construction-nav a:hover {
   color: #6b46c1;
+}
+
+.dark-mode .construction-nav a:hover {
+  color: #c3d4ff;
 }
 
 .user-info {
@@ -46,6 +69,10 @@
   color: #333;
 }
 
+.dark-mode .user-info span {
+  color: #e0e0e0;
+}
+
 .logout-btn {
   background: none;
   border: none;
@@ -54,8 +81,36 @@
   font-size: 1em;
 }
 
+.dark-mode .logout-btn {
+  color: #a3bffa;
+}
+
 .logout-btn:hover {
   text-decoration: underline;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid #6b46c1;
+  color: #6b46c1;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.dark-mode .theme-toggle-btn {
+  border-color: #a3bffa;
+  color: #a3bffa;
+  background: #333;
+}
+
+.theme-toggle-btn:hover {
+  background: #f0f0f0;
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background: #444;
 }
 
 .construction-main {
@@ -76,16 +131,29 @@
   width: 100%;
 }
 
+.dark-mode .construction-content {
+  background: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
 .construction-content h1 {
   font-size: 2em;
   color: #333;
   margin-bottom: 15px;
 }
 
+.dark-mode .construction-content h1 {
+  color: #e0e0e0;
+}
+
 .construction-content p {
   font-size: 1em;
   color: #666;
   margin-bottom: 15px;
+}
+
+.dark-mode .construction-content p {
+  color: #a3a3a3;
 }
 
 .back-btn {
@@ -98,8 +166,16 @@
   font-size: 1em;
 }
 
+.dark-mode .back-btn {
+  background: #7a5cd1;
+}
+
 .back-btn:hover {
   background: #5a3da0;
+}
+
+.dark-mode .back-btn:hover {
+  background: #6a4ac1;
 }
 
 .construction-footer {
@@ -108,6 +184,10 @@
   background: #333;
   color: white;
   font-size: 0.8em;
+}
+
+.dark-mode .construction-footer {
+  background: #222;
 }
 
 .footer-links {

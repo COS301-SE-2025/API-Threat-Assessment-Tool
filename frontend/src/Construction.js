@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeContext } from './App';
 import './Construction.css';
 
 const Construction = () => {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const handleLogout = () => {
-    // Add logout logic here (e.g., clear tokens, state, etc.)
     navigate('/login');
   };
 
@@ -23,6 +24,9 @@ const Construction = () => {
         <div className="user-info">
           <span>Welcome, User!</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </header>
 
@@ -33,7 +37,7 @@ const Construction = () => {
             We're working hard to bring this feature to you! Please check back later.
           </p>
           <p>
-            Current Date and Time: Tuesday, May 27, 2025, 12:58 PM SAST
+            Current Date and Time: Tuesday, May 27, 2025, 01:30 PM SAST
           </p>
           <Link to="/dashboard" className="back-btn">Back to Dashboard</Link>
         </section>

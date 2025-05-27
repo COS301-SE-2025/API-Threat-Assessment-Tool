@@ -1,10 +1,12 @@
 // ManageAPIs.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeContext } from './App';
 import './ManageAPIs.css';
 
 const ManageAPIs = () => {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [apis, setApis] = useState([
     {
       id: 1,
@@ -64,10 +66,8 @@ const ManageAPIs = () => {
 
   const handleSaveApi = () => {
     if (currentApi.id) {
-      // Update existing API
       setApis(apis.map(api => api.id === currentApi.id ? currentApi : api));
     } else {
-      // Add new API
       const newApi = {
         ...currentApi,
         id: Math.max(...apis.map(a => a.id), 0) + 1,
@@ -104,6 +104,9 @@ const ManageAPIs = () => {
         <div className="user-info">
           <span>Welcome, User!</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </header>
 

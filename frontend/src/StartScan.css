@@ -4,6 +4,12 @@
   min-height: 100vh;
   background: #f5f7fa;
   font-family: Arial, sans-serif;
+  color: #333; /* Default text color for light mode */
+}
+
+.dark-mode .start-scan-container {
+  background: #1a1a1a;
+  color: #e0e0e0;
 }
 
 .start-scan-header {
@@ -15,10 +21,19 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.dark-mode .start-scan-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #444;
+}
+
 .logo {
   font-size: 1.5em;
   font-weight: bold;
   color: #6b46c1;
+}
+
+.dark-mode .logo {
+  color: #a3bffa;
 }
 
 .start-scan-nav {
@@ -32,8 +47,16 @@
   font-size: 1em;
 }
 
+.dark-mode .start-scan-nav a {
+  color: #a3bffa;
+}
+
 .start-scan-nav a:hover {
   color: #6b46c1;
+}
+
+.dark-mode .start-scan-nav a:hover {
+  color: #c3d4ff;
 }
 
 .user-info {
@@ -46,6 +69,10 @@
   color: #333;
 }
 
+.dark-mode .user-info span {
+  color: #e0e0e0;
+}
+
 .logout-btn {
   background: none;
   border: none;
@@ -54,8 +81,36 @@
   font-size: 1em;
 }
 
+.dark-mode .logout-btn {
+  color: #a3bffa;
+}
+
 .logout-btn:hover {
   text-decoration: underline;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid #6b46c1;
+  color: #6b46c1;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.dark-mode .theme-toggle-btn {
+  border-color: #a3bffa;
+  color: #a3bffa;
+  background: #333;
+}
+
+.theme-toggle-btn:hover {
+  background: #f0f0f0;
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background: #444;
 }
 
 .start-scan-main {
@@ -75,6 +130,10 @@
   color: #333;
 }
 
+.dark-mode .start-scan-header-section h1 {
+  color: #e0e0e0;
+}
+
 .back-btn {
   background: #e0e0e0;
   color: #333;
@@ -84,8 +143,17 @@
   font-size: 1em;
 }
 
+.dark-mode .back-btn {
+  background: #3d3d3d;
+  color: #e0e0e0;
+}
+
 .back-btn:hover {
   background: #d0d0d0;
+}
+
+.dark-mode .back-btn:hover {
+  background: #4d4d4d;
 }
 
 .scan-form-section {
@@ -95,6 +163,11 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   max-width: 600px;
   margin: 0 auto;
+}
+
+.dark-mode .scan-form-section {
+  background: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .form-group {
@@ -108,12 +181,24 @@
   margin-bottom: 5px;
 }
 
+.dark-mode .form-group label {
+  color: #e0e0e0;
+}
+
 .form-group select {
   width: 100%;
   padding: 10px;
   border: 1px solid #e0e0e0;
   border-radius: 5px;
   font-size: 1em;
+  background: white;
+  color: #333;
+}
+
+.dark-mode .form-group select {
+  background: #3d3d3d;
+  border-color: #555;
+  color: #e0e0e0;
 }
 
 .advanced-options {
@@ -131,17 +216,17 @@
   color: #666;
 }
 
-.checkbox-label input {
-  margin: 0;
+.dark-mode .checkbox-label {
+  color: #a3a3a3;
 }
 
 .scan-form-section .button-container {
-  text-align: right; /* Aligns the button to the right */
+  text-align: right;
   margin-top: 20px;
 }
 
 .start-scan-btn {
-  width: 250px; /* Fixed width for consistency */
+  width: 250px;
   padding: 10px;
   background: #6b46c1;
   color: white;
@@ -151,8 +236,16 @@
   cursor: pointer;
 }
 
+.dark-mode .start-scan-btn {
+  background: #7a5cd1;
+}
+
 .start-scan-btn:hover {
   background: #5a3da0;
+}
+
+.dark-mode .start-scan-btn:hover {
+  background: #6a4ac1;
 }
 
 .start-scan-footer {
@@ -161,6 +254,10 @@
   background: #333;
   color: white;
   font-size: 0.8em;
+}
+
+.dark-mode .start-scan-footer {
+  background: #222;
 }
 
 .footer-links {
@@ -194,10 +291,10 @@
   }
 
   .button-container {
-    text-align: center; /* Center on small screens */
+    text-align: center;
   }
 
   .start-scan-btn {
-    width: 100%; /* Full width on small screens */
+    width: 100%;
   }
 }

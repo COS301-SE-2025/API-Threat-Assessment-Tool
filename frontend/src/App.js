@@ -13,6 +13,7 @@ import Construction from "./Construction";
 import ManageAPIs from "./ManageAPIs";
 import Settings from "./Settings";
 import PublicTemplates from "./PublicTemplates";
+<<<<<<< HEAD
 import ScanReport from "./ScanReport";
 // Import the scan simulation module
 import { ScanSimulation } from "./scanSimulation";
@@ -22,6 +23,11 @@ export const ThemeContext = createContext();
 
 // Make ScanSimulation available globally through context
 export const ScanContext = createContext();
+=======
+import Report1 from './Report1';
+import Report2 from './Report2';
+
+>>>>>>> origin/dev
 
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -47,6 +53,7 @@ function App() {
   };
 
   return (
+<<<<<<< HEAD
     <AuthProvider>
       <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
         <ScanContext.Provider value={{ scanSimulation }}>
@@ -202,6 +209,22 @@ function App() {
         </ScanContext.Provider>
       </ThemeContext.Provider>
     </AuthProvider>
+=======
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/manage-apis" element={<ManageAPIs />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/public-templates" element={<PublicTemplates />} />
+        <Route path="/" element={<Signup />} />
+         <Route path="/Report1" element={<Report1 />} />
+        <Route path="/Report2" element={<Report2 />} />
+      </Routes>
+    </Router>
+>>>>>>> origin/dev
   );
 }
 

@@ -248,6 +248,55 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
+<<<<<<< HEAD
+=======
+          <table className="activity-table">
+            <thead>
+              <tr>
+                <th>API Name</th>
+                <th>Profile Used</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>My E-commerce Site API</td>
+                <td>OWASP Top 10 Quick Scan</td>
+                <td>May 14, 2025</td>
+                <td>Completed</td>
+                <td>A-</td>
+                <td><Link to="/Report1">View Report</Link></td>
+              </tr>
+              <tr>
+                <td>Client Project API</td>
+                <td>Full Comprehensive Scan</td>
+                <td>May 12, 2025</td>
+                <td>Completed</td>
+                <td>C+</td>
+                <td><Link to="/Report2">View Report</Link></td>
+              </tr>
+              <tr>
+                <td>Internal User Service</td>
+                <td>Authentication & Authorization Focus</td>
+                <td>May 10, 2025</td>
+                <td>Failed</td>
+                <td>N/A</td>
+                <td><Link to="/details/3">View Details</Link></td>
+              </tr>
+              <tr>
+                <td>My E-commerce Site API</td>
+                <td>Full Comprehensive Scan</td>
+                <td>May 08, 2025</td>
+                <td>In Progress</td>
+                <td>N/A</td>
+                <td><Link to="/progress/4">View Progress</Link></td>
+              </tr>
+            </tbody>
+          </table>
+>>>>>>> origin/dev
           <button className="load-more-btn">Load More Scans</button>
         </section>
 

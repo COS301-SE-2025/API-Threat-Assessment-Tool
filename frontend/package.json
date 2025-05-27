@@ -10,8 +10,13 @@
     "js-cookie": "^3.0.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+<<<<<<< HEAD
     "react-router-dom": "^6.28.0",
     "react-scripts": "5.0.1",
+=======
+    "react-router-dom": "^7.6.0",
+    "react-scripts": "^5.0.1",
+>>>>>>> origin/dev
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -41,6 +46,6 @@
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.7"
+    "tailwindcss": "^3.3.3"
   }
 }

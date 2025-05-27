@@ -576,3 +576,23 @@
     width: 100%;
   }
 }
+
+.form-group input[type="file"] {
+  margin-top: 5px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+}
+
+.dark-mode .form-group input[type="file"] {
+  background: #3d3d3d;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.8em;
+}

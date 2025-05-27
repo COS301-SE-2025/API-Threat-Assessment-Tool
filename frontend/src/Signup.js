@@ -1,104 +1,253 @@
-import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { ThemeContext } from './App';
-import './StartScan.css';
+import { useAuth } from './AuthContext';
+import './Signup.css';
 
-const StartScan = () => {
+const Signup = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-  const [api, setApi] = useState('');
-  const [profile, setProfile] = useState('');
+  const { signup, isLoading } = useAuth();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogout = () => {
-    navigate('/login');
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (!formData.firstName.trim()) {
+      setError('First name is required');
+      return false;
+    }
+    if (!formData.lastName.trim()) {
+      setError('Last name is required');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError('Email address is required');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    if (!formData.username.trim()) {
+      setError('Username is required');
+      return false;
+    }
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters long');
+      return false;
+    }
+    if (!formData.password) {
+      setError('Password is required');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    if (!agreeToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (api && profile) {
-      navigate('/dashboard');
-    } else {
-      alert('Please select an API and a testing profile to start the scan.');
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const result = await signup({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        username: formData.username.trim().toLowerCase(),
+        password: formData.password
+      });
+
+      if (result.success) {
+        alert('Account created successfully! You can now log in.');
+        navigate('/login');
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleGoogleSignup = () => {
+    // Placeholder for Google OAuth integration
+    alert('Google signup functionality will be implemented when backend is ready!');
+  };
+
   return (
-    <div className="start-scan-container">
-      <header className="start-scan-header">
+    <div className="signup-container">
+      <header className="signup-header">
         <div className="logo">AT-AT</div>
-        <nav className="start-scan-nav">
-          <Link to="/home">Home</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/public-templates">Public Templates</Link>
-          <Link to="/settings">Settings</Link>
-        </nav>
         <div className="user-info">
-          <span>Welcome, User!</span>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
           <button onClick={toggleDarkMode} className="theme-toggle-btn">
             {darkMode ? 'Light Mode' : 'Dark Mode'}
           </button>
         </div>
       </header>
 
-      <main className="start-scan-main">
-        <section className="start-scan-header-section">
-          <h1>Start a New Scan</h1>
-          <Link to="/dashboard" className="back-btn">Back to Dashboard</Link>
-        </section>
+      <main className="signup-main">
+        <section className="signup-form-section">
+          <h1>Create Your Account</h1>
+          <p className="signup-subtitle">Join AT-AT to start securing your APIs</p>
+          
+          <button onClick={handleGoogleSignup} className="google-signup-btn" disabled={isSubmitting}>
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" />
+            Sign up with Google
+          </button>
+          
+          <div className="or-separator">
+            <span>or</span>
+          </div>
 
-        <section className="scan-form-section">
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="api-select">Select API to Assess:</label>
-              <select
-                id="api-select"
-                value={api}
-                onChange={(e) => setApi(e.target.value)}
-              >
-                <option value="">-- Choose an API --</option>
-                <option value="api1">My E-commerce Site API</option>
-                <option value="api2">Client Project API</option>
-                <option value="api3">Internal User Service</option>
-              </select>
+          {error && (
+            <div className="error-message">
+              {error}
             </div>
+          )}
 
-            <div className="form-group">
-              <label htmlFor="profile-select">Select Testing Profile:</label>
-              <select
-                id="profile-select"
-                value={profile}
-                onChange={(e) => setProfile(e.target.value)}
-              >
-                <option value="">-- Choose a Profile --</option>
-                <option value="owasp">OWASP Top 10 Quick Scan</option>
-                <option value="full">Full Comprehensive Scan</option>
-                <option value="auth">Authentication & Authorization Focus</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Advanced Options (Optional):</label>
-              <div className="advanced-options">
-                <label className="checkbox-label">
-                  <input type="checkbox" />
-                  Enable Detailed Logging
-                </label>
-                <label className="checkbox-label">
-                  <input type="checkbox" />
-                  Include Deprecated Endpoints
-                </label>
+          <form onSubmit={handleSignup} className="signup-form">
+            <div className="name-row">
+              <div className="form-group half-width">
+                <label htmlFor="firstName">First Name *</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+              <div className="form-group half-width">
+                <label htmlFor="lastName">Last Name *</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  required
+                />
               </div>
             </div>
 
-            <div className="button-container">
-              <button type="submit" className="start-scan-btn">Start Scan Now</button>
+            <div className="form-group">
+              <label htmlFor="email">Email Address *</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                required
+              />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="username">Username *</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password *</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                required
+              />
+              <small className="password-hint">
+                Password must be at least 8 characters long
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password *</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="form-group checkbox-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={agreeToTerms}
+                  onChange={(e) => setAgreeToTerms(e.target.checked)}
+                  disabled={isSubmitting}
+                  required
+                />
+                I agree to the <a href="#" className="terms-link">Terms of Service</a> and <a href="#" className="terms-link">Privacy Policy</a>
+              </label>
+            </div>
+
+            <button type="submit" className="signup-btn" disabled={isSubmitting || isLoading}>
+              {isSubmitting ? 'Creating Account...' : 'Create Account'}
+            </button>
           </form>
+
+          <div className="login-redirect">
+            <p>Already have an account? <Link to="/login" className="login-link">Sign in here</Link></p>
+          </div>
         </section>
       </main>
 
-      <footer className="start-scan-footer">
+      <footer className="signup-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">
           <a href="#">Privacy Policy</a>
@@ -109,4 +258,4 @@ const StartScan = () => {
   );
 };
 
-export default StartScan;
+export default Signup;

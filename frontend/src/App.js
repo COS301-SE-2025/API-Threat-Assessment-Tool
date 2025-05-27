@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./AuthContext";
+import ProtectedRoute from "./ProtectedRoute";
 import Signup from "./Signup";
 import Login from "./Login";
 import Dashboard from "./Dashboard";
@@ -34,24 +36,92 @@ function App() {
   };
 
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      <Router>
-      <Routes>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/manage-apis" element={<ManageAPIs />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/public-templates" element={<PublicTemplates />} />
-        <Route path="/start-scan" element={<StartScan />} />
-        <Route path="/documentation" element={<Documentation />} />
-        <Route path="*" element={<Construction />} /> {/* Catch-all route */}
-        <Route path="/" element={<Signup />} />
-      </Routes>
-    </Router>
-    </ThemeContext.Provider>
+    <AuthProvider>
+      <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+        <Router>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/home" 
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage-apis" 
+              element={
+                <ProtectedRoute>
+                  <ManageAPIs />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/public-templates" 
+              element={
+                <ProtectedRoute>
+                  <PublicTemplates />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/start-scan" 
+              element={
+                <ProtectedRoute>
+                  <StartScan />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documentation" 
+              element={
+                <ProtectedRoute>
+                  <Documentation />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Root route - redirect to dashboard if authenticated, otherwise to login */}
+            <Route 
+              path="/" 
+              element={<Navigate to="/dashboard" replace />} 
+            />
+            
+            {/* Catch-all route for undefined paths */}
+            <Route path="*" element={<Construction />} />
+          </Routes>
+        </Router>
+      </ThemeContext.Provider>
+    </AuthProvider>
   );
 }
 

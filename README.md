@@ -21,7 +21,7 @@ API Threat Assessment Tool (AT-AT) is an innovative web-based platform that help
 
 ## 📋 Documentation
 
-### 📖 [Functional Requirements (SRS) Document](./Documentation/srs.md)
+### 📖 [Functional Requirements (SRS) Document](https://documentation.at-atdocs.pages.dev/)
 Comprehensive Software Requirements Specification detailing functional and non-functional requirements, user stories, technology stack, and system architecture.
 
 ### 📊 [GitHub Project Board](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/projects)

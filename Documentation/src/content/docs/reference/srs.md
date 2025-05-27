@@ -4,6 +4,20 @@ description: Functional Requirements document.
 ---
 SRS Document for Demo 1 as of 28 May 2025 - Will be updated as the project continues to change to fit with the Agile  methodology.
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Purpose](#purpose)
+- [Functional Requirements](#functional-requirements)
+- [Architectural Requirements](#architectural-requirements)
+- [Architectural Quality Requirements](#architectural-quality-requirements)
+- [Architectural Patterns](#architectural-patterns)
+- [Technology Requirements](#technology-requirements)
+- [Service Contracts](#service-contracts)
+- [Use Case Diagrams](#use-case-diagram)
+- [Testing Policy Document](#testing-policy-document)
+- [Constraints](#constraints)
+
 ## Introduction
 
 This document serves as a blueprint of our team's approach in defining the architectural framework for our API Threat Assessment Tool (or AT-AT for short). AT-AT is an innovative platformed designed to help secure and test web-based APIs.
@@ -163,7 +177,7 @@ As a Penetration Tester I would like to:
 - Test different input payloads and see how the API behaves under fuzzing conditions
 
 ## Domain Model
-
+###### Right click on image and press on open imnage in new tab if you want to read it more clearly/in larger scale
 ![Domain Model](/images/domain-model.png)
 
 ## Architectural Constraints
@@ -182,6 +196,7 @@ Since hosting infrastructure is provided by the client (BITM), the team must rem
 ### Reliability
 
 Docker and GitHub Actions ensure high reliability through automated CI/CD and consistent builds. Uptime monitoring tools like Uptime Robot and fail-safe error handling mechanisms help ensure continuous availability and reduce downtime.
+
 ## Architectural Quality Requirements
 ### Security
 Security is paramount for a vulnerability assessment platform. The system must enforce strong authentication, secure transmission and storage of data, and role-based access to restrict sensitive information. This ensures trust, regulatory compliance, and protection from malicious users.
@@ -197,22 +212,21 @@ probably drop compatibility
 
 - Static and dynamic vulnerability scans
 
-R1.1: Secure Authentication
-R1.1.1: Users must authenticate with hashed credentials.
+- R1.1: Secure Authentication
+    - R1.1.1: Users must authenticate with hashed credentials.  
 **Implementation:** Bcrypt will be used for password hashing with appropriate salting.
-
-R1.1.2: Sessions must be stateless and securely maintained.
+    - R1.1.2: Sessions must be stateless and securely maintained.  
 **Implementation:** JWTs (signed with a private key) will be used and stored securely on the client side.
 
-R1.2: Role-Based Access Control (RBAC)
-R1.2.1: Different access levels must exist for users, analysts, and admins.
+- R1.2: Role-Based Access Control (RBAC)
+    - R1.2.1: Different access levels must exist for users, analysts, and admins.  
 **Implementation:** Endpoints will be guarded using middleware that checks role claims embedded in the JWT.
 
-R1.3: Secure Transmission and Storage
-R1.3.1: All API requests and responses must be encrypted in transit.
+- R1.3: Secure Transmission and Storage
+    - R1.3.1: All API requests and responses must be encrypted in transit.  
 **Implementation:** HTTPS (TLS 1.2+) will be enforced via nginx or similar reverse proxy.
 
-R1.3.2: Sensitive data must be encrypted at rest.
+    - R1.3.2: Sensitive data must be encrypted at rest.  
 **Implementation:** AES-256 encryption will be used for storing API keys, scan configs, and user tokens.
 
 ### Performance
@@ -226,18 +240,18 @@ Performance is critical due to the compute-intensive nature of scanning APIs. Us
 
 - API latency benchmarks
 
-R2.1: Responsive UI During Scans
-R2.1.1: Users should see real-time feedback during scans.
+- R2.1: Responsive UI During Scans
+    - R2.1.1: Users should see real-time feedback during scans.  
 **Implementation:** A status polling system using WebSockets or polling will be integrated into the frontend.
 
-R2.1.2: The UI should not freeze during uploads or scans.
+    - R2.1.2: The UI should not freeze during uploads or scans.  
 **Implementation:** All operations will be asynchronous, with loading indicators and retry logic.
 
-R2.2: Scan Completion Targets
-R2.2.1: 90% of scans should complete within 2 minutes on stable networks.
+- R2.2: Scan Completion Targets
+    - R2.2.1: 90% of scans should complete within 2 minutes on stable networks.  
 **Implementation:** Smart scan throttling and resource allocation will be used server-side.
 
-R2.2.2: Large files (up to 5MB) should be accepted without timeout.
+    - R2.2.2: Large files (up to 5MB) should be accepted without timeout.  
 **Implementation:** Chunked file upload and streaming to disk will be employed.
 
 ### Usability
@@ -251,18 +265,18 @@ For both developers and security professionals, the interface must be intuitive,
 
 - Task completion rates
 
-R3.1: Simple Navigation
-R3.1.1: Users must easily find scanning and reporting features.
+- R3.1: Simple Navigation
+    - R3.1.1: Users must easily find scanning and reporting features.  
 **Implementation:** Clear sidebar and breadcrumb navigation using a consistent component library (e.g., MUI or shadcn).
 
-R3.1.2: Form inputs must guide the user through step-by-step scan setup.
+    - R3.1.2: Form inputs must guide the user through step-by-step scan setup.  
 **Implementation:** Tooltips and progressive form sections will be used.
 
-R3.2: Visual Feedback
-R3.2.1: Users must receive confirmation for actions.
-**Implementation:** Toast messages and modals will display confirmation or error results.
+- R3.2: Visual Feedback
+    - R3.2.1: Users must receive confirmation for actions.  
+**Implementation:** Toast messages and modals will display confirmation or error results.  
 
-R3.2.2: Critical errors must show remediation suggestions.
+    - R3.2.2: Critical errors must show remediation suggestions.  
 **Implementation:** Structured messages with documentation links will be displayed in scan reports.
 
 ### Compatibility
@@ -276,15 +290,15 @@ AT-AT must run in any modern browser and allow specification imports from common
 
 - Mobile responsiveness
 
-R4.1: Browser and Device Compatibility
-R4.1.1: The system must work in Chrome, Firefox, and Edge.
+- R4.1: Browser and Device Compatibility
+    - R4.1.1: The system must work in Chrome, Firefox, and Edge.  
 **Implementation:** Regular browser testing and linting with ESLint + Prettier + browserlist.
 
-R4.1.2: Pages must adapt to mobile and tablets.
+    - R4.1.2: Pages must adapt to mobile and tablets.  
 **Implementation:** CSS Grid/Flexbox and responsive breakpoints will be used.
 
-R4.2: Supported File Formats
-R4.2.1: Upload of OpenAPI, Swagger, and Postman collections is required.
+- R4.2: Supported File Formats
+    - R4.2.1: Upload of OpenAPI, Swagger, and Postman collections is required.  
 **Implementation:** File validation logic will parse .json, .yaml, and .zip correctly before processing.
 
 ### Reliability
@@ -298,16 +312,16 @@ As a critical assessment tool, users must trust AT-AT to always be available, re
 
 - System logs and error rates
 
-R5.1: High Availability
-R5.1.1: The system must maintain >99% uptime post-deployment.
+- R5.1: High Availability
+    - R5.1.1: The system must maintain >99% uptime post-deployment.  
 **Implementation:** Docker containers will be monitored with auto-restart policies.
 
-R5.2: Deployment and Update Resilience
-R5.2.1: New features must deploy with zero downtime.
+- R5.2: Deployment and Update Resilience
+    - R5.2.1: New features must deploy with zero downtime.  
 **Implementation:** GitHub Actions + reverse proxy blue-green deployment setup.
 
-R5.3: Error Monitoring and Alerts
-R5.3.1: System errors must be logged and developers notified.
+- R5.3: Error Monitoring and Alerts
+    - R5.3.1: System errors must be logged and developers notified.  
 **Implementation:** A log aggregator like Logtail or custom webhook will track critical backend crashes.
 
 ## Architectural Patterns
@@ -352,16 +366,20 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 
 
 ## Use case Diagram
+
 ### Authentication
 ![Authentication](/images/Authentication.jpg)
 ### API Specification Input
 ![APISpecification](/images/APISpecificationInput.jpg)
-## Scanning
+### Scanning
 ![Scanning](/images/Scanning.jpg)
 ### Heuristic Discovery
 ![HeuristicDiscovery](/images/HeuristicAPIDiscovery.jpg)
 ### Reports
 ![Reports](/images/ReportGeneration.jpg) 
+### Account Management System
+![AccountManagement](/images/AccountManagementSystem.jpg)
+
 ## Service contracts
 ### User Authentication Service
 | Element| Description|
@@ -422,11 +440,11 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 **Tool:** React
 
 **Advantage:** Offers a component-based architecture and real-time UI updates, enabling the development of responsive and intuitive interfaces for users to manage scans and view reports.
+
 #### API
-**Tool:** JavaScript
+**Tool:** JavaScript(Express.js/Node.js)
 
-**Advantage:**  The Express framework
-
+**Advantage:**  Enables rapid development of RESTful endpoints with clean routing, middleware support, and integration with authentication and CI/CD systems.
 
 #### Containerization
 **Tool:** Docker

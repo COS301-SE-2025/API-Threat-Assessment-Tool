@@ -99,7 +99,7 @@ const Dashboard = () => {
                 <td>May 14, 2025</td>
                 <td>Completed</td>
                 <td>A-</td>
-                <td><Link to="/report/1">View Report</Link></td>
+                <td><Link to="/Report1">View Report</Link></td>
               </tr>
               <tr>
                 <td>Client Project API</td>
@@ -107,7 +107,7 @@ const Dashboard = () => {
                 <td>May 12, 2025</td>
                 <td>Completed</td>
                 <td>C+</td>
-                <td><Link to="/report/2">View Report</Link></td>
+                <td><Link to="/Report2">View Report</Link></td>
               </tr>
               <tr>
                 <td>Internal User Service</td>

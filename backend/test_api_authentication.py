@@ -11,8 +11,14 @@ def test_api_authentication(url, auth_credentials):
     assert response.status_code == 200
 
     if __name__ == "__main__":
-        url = "https://example.com/api/endpoint"  # Replace with the URL you want to test
-        auth_credentials = "your_auth_token"  # Replace with your authentication token
-        test_api_authentication(url, auth_credentials)
-        print("API authentication test successful")
+        url = "https://example.com/api/endpoint"
+        auth_credentials = "your_auth_token"
+        try:
+            test_api_authentication(url, auth_credentials)
+            print("API authentication test successful")
+        except AssertionError as e:
+            print("API authentication test failed:", e)
+        except Exception as e:
+            print("An error occurred:", e)
+
 

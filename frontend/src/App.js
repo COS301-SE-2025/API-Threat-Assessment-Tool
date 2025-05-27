@@ -7,6 +7,9 @@ import Home from "./Home";
 import ManageAPIs from "./ManageAPIs";
 import Settings from "./Settings";
 import PublicTemplates from "./PublicTemplates";
+import Report1 from './Report1';
+import Report2 from './Report2';
+
 
 function App() {
   return (
@@ -20,6 +23,8 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/public-templates" element={<PublicTemplates />} />
         <Route path="/" element={<Signup />} />
+         <Route path="/Report1" element={<Report1 />} />
+        <Route path="/Report2" element={<Report2 />} />
       </Routes>
     </Router>
   );

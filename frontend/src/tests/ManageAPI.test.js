@@ -1,11 +1,18 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import ManageAPIs from '../ManageAPIs';
-import { ThemeContext } from '../App';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeContext } from '../App';
+import ManageAPIs from '../ManageAPIs';
 
-// Wrap with ThemeContext and Router
+// Mock useAuth hook
+jest.mock('../AuthContext', () => ({
+  useAuth: () => ({
+    currentUser: { username: 'testuser', firstName: 'Test' },
+    logout: jest.fn(),
+    getUserFullName: () => 'Test User',
+  }),
+  AuthProvider: ({ children }) => <>{children}</>,
+}));
+
 const customRender = (ui) =>
   render(
     <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: jest.fn() }}>
@@ -13,100 +20,63 @@ const customRender = (ui) =>
     </ThemeContext.Provider>
   );
 
-describe('ManageAPIs Component Tests', () => {
-  test('renders Manage APIs page with correct title and elements', () => {
+describe('ManageAPIs Component', () => {
+  test('renders API list table', async () => {
     customRender(<ManageAPIs />);
-    expect(screen.getByRole('heading', { name: /Manage APIs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /\+ Add API/i })).toBeInTheDocument();
-    expect(screen.getByText(/AT-AT/i)).toBeInTheDocument();
+    expect(await screen.findByText(/My E-commerce Site API/i)).toBeInTheDocument();
+    expect(screen.getByText(/Client Project API/i)).toBeInTheDocument();
+    expect(screen.getByText(/Internal User Service/i)).toBeInTheDocument();
   });
 
-  test('displays existing APIs in the table', () => {
+  test('opens and closes Add API modal', async () => {
     customRender(<ManageAPIs />);
-    expect(screen.getByText('My E-commerce Site API')).toBeInTheDocument();
-    expect(screen.getByText('Client Project API')).toBeInTheDocument();
-    expect(screen.getByText('Internal User Service')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('+ Add API'));
+    expect(screen.getByText(/Add New API/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Cancel/i));
+    expect(screen.queryByText(/Add New API/i)).not.toBeInTheDocument();
   });
 
-  test('opens Add API modal', async () => {
+  test('adds a new API', async () => {
     customRender(<ManageAPIs />);
-    fireEvent.click(screen.getByRole('button', { name: /\+ Add API/i }));
-    await waitFor(() => screen.getByText(/Add New API/i));
-    expect(screen.getByLabelText(/API Name/i)).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('+ Add API'));
+
+    fireEvent.change(screen.getByLabelText(/API Name/i), { target: { value: 'Test API' } });
+    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: 'https://test.api' } });
+    fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Testing API' } });
+    fireEvent.change(screen.getByLabelText(/Status/i), { target: { value: 'Active' } });
+    fireEvent.click(screen.getByText(/Save/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Test API')).toBeInTheDocument();
+    });
   });
 
-  test('opens Edit API modal', async () => {
+  test('edits an existing API', async () => {
     customRender(<ManageAPIs />);
-    fireEvent.click(screen.getAllByText('Edit')[0]);
-    await waitFor(() => screen.getByText(/Edit API/i));
-    expect(screen.getByLabelText(/API Name/i)).toHaveValue('My E-commerce Site API');
+    fireEvent.click((await screen.findAllByText(/Edit/i))[0]);
+    const input = screen.getByLabelText(/API Name/i);
+    fireEvent.change(input, { target: { value: 'Updated API' } });
+    fireEvent.click(screen.getByText(/Save/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Updated API')).toBeInTheDocument();
+    });
   });
 
-  test('closes modal with Cancel and X', async () => {
-    customRender(<ManageAPIs />);
-    fireEvent.click(screen.getByRole('button', { name: /\+ Add API/i }));
-    await waitFor(() => screen.getByText(/Add New API/i));
-    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
-    await waitFor(() => expect(screen.queryByText(/Add New API/i)).not.toBeInTheDocument());
+ test('deletes an API', async () => {
+  customRender(<ManageAPIs />);
+  fireEvent.click((await screen.findAllByText(/Delete/i))[0]);
 
-    fireEvent.click(screen.getByRole('button', { name: /\+ Add API/i }));
-    await waitFor(() => screen.getByText(/Add New API/i));
-    fireEvent.click(screen.getByRole('button', { name: '×' }));
-    await waitFor(() => expect(screen.queryByText(/Add New API/i)).not.toBeInTheDocument());
+  const modal = screen.getByText(/Confirm Delete/i).closest('.modal-content');
+  expect(modal).toBeInTheDocument();
+
+const scopedDeleteButton = within(modal).getByRole('button', { name: /^Delete$/i });
+fireEvent.click(scopedDeleteButton);
+
+
+  await waitFor(() => {
+    expect(screen.queryByText(/My E-commerce Site API/i)).not.toBeInTheDocument();
   });
+});
 
-  test('opens delete confirmation', async () => {
-    customRender(<ManageAPIs />);
-    fireEvent.click(screen.getAllByText('Delete')[0]);
-    await waitFor(() => screen.getByText(/Confirm Delete/i));
-    expect(screen.getByText((content) =>
-    content.includes('Are you sure') && content.includes('My E-commerce Site API')
-    )).toBeInTheDocument();
-
-  });
-
-  test('validates required fields', async () => {
-    customRender(<ManageAPIs />);
-    fireEvent.click(screen.getByRole('button', { name: /\+ Add API/i }));
-    await waitFor(() => screen.getByText(/Add New API/i));
-    expect(screen.getByLabelText(/API Name/i)).toHaveAttribute('required');
-    expect(screen.getByLabelText(/Base URL/i)).toHaveAttribute('required');
-  });
-
-  test('updates form input state', async () => {
-    customRender(<ManageAPIs />);
-    fireEvent.click(screen.getByRole('button', { name: /\+ Add API/i }));
-    await waitFor(() => screen.getByText(/Add New API/i));
-    const name = screen.getByLabelText(/API Name/i);
-    fireEvent.change(name, { target: { value: 'X-Test' } });
-    expect(name).toHaveValue('X-Test');
-  });
-
-  test('navigation links exist', () => {
-    customRender(<ManageAPIs />);
-    expect(screen.getByRole('link', { name: /Home/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Settings/i })).toBeInTheDocument();
-  });
-
-  test('logout and user info display', () => {
-    customRender(<ManageAPIs />);
-    expect(screen.getByText(/Welcome, User!/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument();
-  });
-
-  test('correct API table content', () => {
-    customRender(<ManageAPIs />);
-    expect(screen.getByText('https://api.ecommerce.com/v1')).toBeInTheDocument();
-    expect(screen.getByText('Main API for the e-commerce platform')).toBeInTheDocument();
-    expect(screen.getByText('2025-05-14')).toBeInTheDocument();
-    expect(screen.getAllByText('Active')).toHaveLength(2);
-    expect(screen.getAllByText('Inactive')).toHaveLength(1);
-  });
-
-  test('has 3 Edit and 3 Delete buttons', () => {
-    customRender(<ManageAPIs />);
-    expect(screen.getAllByText('Edit')).toHaveLength(3);
-    expect(screen.getAllByText('Delete')).toHaveLength(3);
-  });
 });

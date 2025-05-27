@@ -163,8 +163,9 @@ const ManageAPIs = () => {
             </div>
             <form className="modal-form">
               <div className="form-group">
-                <label>API Name</label>
+                <label htmlFor="api-name">API Name</label>
                 <input
+                  id="api-name"
                   type="text"
                   name="name"
                   value={currentApi.name}
@@ -173,8 +174,9 @@ const ManageAPIs = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Base URL</label>
+                <label htmlFor="base-url">Base URL</label>
                 <input
+                  id="base-url"
                   type="url"
                   name="baseUrl"
                   value={currentApi.baseUrl}
@@ -183,8 +185,9 @@ const ManageAPIs = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Description</label>
+                <label htmlFor="api-description">Description</label>
                 <textarea
+                  id="api-description"
                   name="description"
                   value={currentApi.description}
                   onChange={handleInputChange}
@@ -192,8 +195,9 @@ const ManageAPIs = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Status</label>
+                <label htmlFor="api-status">Status</label>
                 <select
+                  id="api-status"
                   name="status"
                   value={currentApi.status}
                   onChange={handleInputChange}

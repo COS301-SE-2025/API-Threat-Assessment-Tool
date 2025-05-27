@@ -192,7 +192,38 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 - **BITM** for infrastructure and deployment resources
 
 ---
+---
 
+## 📂 GitHub Repository Overview
+
+Our repository exemplifies professional software engineering practices, featuring:
+
+### 🧱 Git Structure & Organization
+- **Monorepo setup** combining frontend, backend, and documentation for streamlined development
+- Modular directory layout promoting clear separation of concerns and ease of navigation
+
+### 🌿 Branching Strategy
+- **Main branches:** `dev` for active development, `feature/*` for individual features, and `documentation` for docs updates
+- Regular **merges via pull requests** with code reviews to ensure quality and collaboration
+
+### 📊 Code Quality Badges
+Our GitHub repository proudly displays real-time badges showcasing project health and quality metrics:
+
+| Badge Type          | Tool / Service      | Purpose                                  |
+|---------------------|--------------------|------------------------------------------|
+| **Code Coverage**   | Coveralls / Codecov | Tracks test coverage percentages          |
+| **Build Status**    | GitHub Actions      | Continuous Integration build health       |
+| **Requirements**   | shields.io          | Dependency status and security updates    |
+| **Issue Tracking** | GitHub Issues       | Open and resolved issue tracking          |
+| **Monitoring**     | NodePing / Uptime Robot | Service uptime and availability monitoring |
+
+### Badge Display Example
+
+![Build Status](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/actions/workflows/ci.yml/badge.svg)
+![Coverage Status](https://coveralls.io/repos/github/COS301-SE-2025/API-Threat-Assessment-Tool/badge.svg)
+![Dependencies](https://img.shields.io/librariesio/release/npm/react)
+
+---
 <div align="center">
 
 **Built with ❤️ by Team Skill Issue**

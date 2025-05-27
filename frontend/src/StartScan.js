@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import ScanProgress from './ScanProgress'; // Import the scan progress component
 import './StartScan.css';
 
 const StartScan = () => {
@@ -11,6 +12,15 @@ const StartScan = () => {
   const location = useLocation();
   const [api, setApi] = useState('');
   const [profile, setProfile] = useState('');
+  const [scanStarted, setScanStarted] = useState(false);
+  const [selectedApiName, setSelectedApiName] = useState('');
+
+  // API options with display names
+  const apiOptions = {
+    'api1': 'My E-commerce Site API',
+    'api2': 'Client Project API', 
+    'api3': 'Internal User Service'
+  };
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -59,14 +69,84 @@ const StartScan = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (api && profile) {
-      // Add logic to start the scan (e.g., API call)
-      // For now, simulate scan initiation by navigating to the dashboard
-      navigate('/dashboard');
+      // Set the selected API name for display
+      setSelectedApiName(apiOptions[api]);
+      
+      // Start the scan simulation
+      setScanStarted(true);
     } else {
       alert('Please select an API and a testing profile to start the scan.');
     }
   };
 
+  const handleScanComplete = (finalReport) => {
+    console.log('Scan completed:', finalReport);
+    
+    // The scan will automatically show the professional report
+    // No need to redirect to dashboard here - let the user view the report first
+    // They can navigate back to dashboard using the "Back to Dashboard" button in the report
+  };
+
+  const handleScanCancel = () => {
+    setScanStarted(false);
+    setApi('');
+    setProfile('');
+    setSelectedApiName('');
+  };
+
+  // If scan is started, show the scan progress component
+  if (scanStarted) {
+    return (
+      <div className="start-scan-container">
+        <header className="start-scan-header">
+          <div className="logo">AT-AT</div>
+          <nav className="start-scan-nav">
+            <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
+            <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
+            <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>Public Templates</Link>
+            <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
+          </nav>
+          <div className="user-info">
+            <div className="user-profile">
+              <span className="user-avatar">
+                {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+              </span>
+              <div className="user-details">
+                <span className="user-greeting">Welcome back,</span>
+                <span className="user-name">{userFullName}</span>
+              </div>
+            </div>
+            <button onClick={handleLogout} className="logout-btn" title="Logout">
+              Logout
+            </button>
+            <button onClick={toggleDarkMode} className="theme-toggle-btn" title="Toggle Theme">
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+          </div>
+        </header>
+
+        <main className="start-scan-main">
+          <ScanProgress 
+            apiName={selectedApiName}
+            profile={profile}
+            onComplete={handleScanComplete}
+            onCancel={handleScanCancel}
+          />
+        </main>
+
+        <footer className="start-scan-footer">
+          <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+          <div className="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Help Center</a>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Show the original scan setup form
   return (
     <div className="start-scan-container">
       <header className="start-scan-header">
@@ -126,9 +206,9 @@ const StartScan = () => {
                 onChange={(e) => setProfile(e.target.value)}
               >
                 <option value="">-- Choose a Profile --</option>
-                <option value="owasp">OWASP Top 10 Quick Scan</option>
-                <option value="full">Full Comprehensive Scan</option>
-                <option value="auth">Authentication & Authorization Focus</option>
+                <option value="owasp">OWASP Top 10 Quick Scan (~30 seconds)</option>
+                <option value="full">Full Comprehensive Scan (~45 seconds)</option>
+                <option value="auth">Authentication & Authorization Focus (~25 seconds)</option>
               </select>
             </div>
 
@@ -143,11 +223,46 @@ const StartScan = () => {
                   <input type="checkbox" />
                   Include Deprecated Endpoints
                 </label>
+                <label className="checkbox-label">
+                  <input type="checkbox" />
+                  Generate Executive Summary
+                </label>
               </div>
             </div>
 
+            <div className="scan-preview">
+              {api && profile && (
+                <div className="preview-info">
+                  <h3>🔍 Scan Preview</h3>
+                  <p><strong>API:</strong> {apiOptions[api]}</p>
+                  <p><strong>Profile:</strong> {profile === 'owasp' ? 'OWASP Top 10 Quick Scan' : 
+                                               profile === 'full' ? 'Full Comprehensive Scan' : 
+                                               'Authentication & Authorization Focus'}</p>
+                  <p><strong>Estimated Duration:</strong> {
+                    profile === 'owasp' ? '~30 seconds' : 
+                    profile === 'full' ? '~45 seconds' : 
+                    '~25 seconds'
+                  }</p>
+                  <div className="scan-phases">
+                    <strong>Scan Phases:</strong>
+                    <ul>
+                      <li>🔍 Discovery & Enumeration</li>
+                      <li>🔐 Authentication Testing</li>
+                      <li>🛡️ Authorization Testing</li>
+                      <li>📝 Input Validation</li>
+                      <li>🔒 Security Headers Analysis</li>
+                      <li>⚠️ Vulnerability Assessment</li>
+                      <li>📊 Report Generation</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="button-container">
-              <button type="submit" className="start-scan-btn">Start Scan Now</button>
+              <button type="submit" className="start-scan-btn">
+                🚀 Start Security Scan
+              </button>
             </div>
           </form>
         </section>

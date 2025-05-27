@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeContext } from './App';
 import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     name: 'John Doe',
@@ -233,6 +235,9 @@ const Settings = () => {
         <div className="user-info">
           <span>Welcome, User!</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </header>
 

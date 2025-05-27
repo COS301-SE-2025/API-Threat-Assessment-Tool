@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeContext } from './App';
 import './PublicTemplates.css';
 
 const PublicTemplates = () => {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,6 +90,9 @@ const PublicTemplates = () => {
         <div className="user-info">
           <span>Welcome, User!</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       </header>
 
@@ -162,7 +167,7 @@ const PublicTemplates = () => {
               </div>
             ))
           ) : (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px' }}>
+            <div className="no-templates-message">
               No templates found matching your criteria.
             </div>
           )}

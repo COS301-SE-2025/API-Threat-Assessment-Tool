@@ -2,8 +2,14 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: #f5f7fa; /* Light background for light mode */
   font-family: Arial, sans-serif;
+  color: #333; /* Default text color for light mode */
+}
+
+.dark-mode .home-container {
+  background: #1a1a1a;
+  color: #e0e0e0;
 }
 
 .home-header {
@@ -15,10 +21,19 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.dark-mode .home-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #444;
+}
+
 .logo {
   font-size: 1.5em;
   font-weight: bold;
   color: #6b46c1;
+}
+
+.dark-mode .logo {
+  color: #a3bffa;
 }
 
 .home-nav {
@@ -32,8 +47,16 @@
   font-size: 1em;
 }
 
+.dark-mode .home-nav a {
+  color: #a3bffa;
+}
+
 .home-nav a:hover {
   color: #6b46c1;
+}
+
+.dark-mode .home-nav a:hover {
+  color: #c3d4ff;
 }
 
 .user-info {
@@ -46,6 +69,10 @@
   color: #333;
 }
 
+.dark-mode .user-info span {
+  color: #e0e0e0;
+}
+
 .logout-btn {
   background: none;
   border: none;
@@ -54,17 +81,45 @@
   font-size: 1em;
 }
 
+.dark-mode .logout-btn {
+  color: #a3bffa;
+}
+
 .logout-btn:hover {
   text-decoration: underline;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid #6b46c1;
+  color: #6b46c1;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.dark-mode .theme-toggle-btn {
+  border-color: #a3bffa;
+  color: #a3bffa;
+  background: #333;
+}
+
+.theme-toggle-btn:hover {
+  background: #f0f0f0;
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background: #444;
 }
 
 .home-main {
   flex: 1;
   padding: 20px;
-  text-align: center;
 }
 
 .welcome-section {
+  text-align: center;
   margin-bottom: 40px;
 }
 
@@ -74,11 +129,19 @@
   margin-bottom: 10px;
 }
 
+.dark-mode .welcome-section h1 {
+  color: #e0e0e0;
+}
+
 .welcome-section p {
   font-size: 1.1em;
   color: #666;
   max-width: 600px;
   margin: 0 auto 20px;
+}
+
+.dark-mode .welcome-section p {
+  color: #a3a3a3;
 }
 
 .cta-buttons {
@@ -96,9 +159,34 @@
   font-size: 1em;
 }
 
+.dark-mode .cta-btn {
+  background: #7a5cd1;
+}
+
+.cta-btn:hover {
+  background: #5a3da0;
+}
+
+.dark-mode .cta-btn:hover {
+  background: #6a4ac1;
+}
+
 .cta-btn.secondary {
   background: #e0e0e0;
   color: #333;
+}
+
+.dark-mode .cta-btn.secondary {
+  background: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.cta-btn.secondary:hover {
+  background: #d0d0d0;
+}
+
+.dark-mode .cta-btn.secondary:hover {
+  background: #4d4d4d;
 }
 
 .features-section {
@@ -107,22 +195,32 @@
 
 .features-section h2 {
   font-size: 1.8em;
-  color: #333;
+  text-align: center;
   margin-bottom: 20px;
+  color: #333;
+}
+
+.dark-mode .features-section h2 {
+  color: #e0e0e0;
 }
 
 .features-grid {
   display: flex;
   gap: 20px;
-  justify-content: center;
 }
 
 .feature-card {
+  flex: 1;
   background: white;
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  width: 200px;
+  text-align: center;
+}
+
+.dark-mode .feature-card {
+  background: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .feature-card h3 {
@@ -131,39 +229,62 @@
   margin-bottom: 10px;
 }
 
+.dark-mode .feature-card h3 {
+  color: #e0e0e0;
+}
+
 .feature-card p {
   font-size: 0.9em;
   color: #666;
 }
 
+.dark-mode .feature-card p {
+  color: #a3a3a3;
+}
+
 .quick-links {
-  margin-bottom: 40px;
+  text-align: center;
 }
 
 .quick-links h2 {
   font-size: 1.8em;
-  color: #333;
   margin-bottom: 20px;
+  color: #333;
+}
+
+.dark-mode .quick-links h2 {
+  color: #e0e0e0;
 }
 
 .links-grid {
   display: flex;
-  gap: 15px;
+  gap: 20px;
   justify-content: center;
 }
 
 .link-card {
   background: white;
-  padding: 15px 25px;
+  padding: 15px 30px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   text-decoration: none;
-  color: #333;
+  color: #333; /* Ensure text is visible in light mode */
   font-size: 1em;
+  transition: background 0.3s ease;
+}
+
+.dark-mode .link-card {
+  background: #2d2d2d;
+  color: #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .link-card:hover {
   background: #f0f0f0;
+}
+
+.dark-mode .link-card:hover {
+  background: #3d3d3d;
 }
 
 .home-footer {
@@ -172,6 +293,10 @@
   background: #333;
   color: white;
   font-size: 0.8em;
+}
+
+.dark-mode .home-footer {
+  background: #222; /* Slightly darker footer in dark mode */
 }
 
 .footer-links {
@@ -193,17 +318,16 @@
   .features-grid,
   .links-grid {
     flex-direction: column;
-    align-items: center;
-  }
-
-  .feature-card,
-  .link-card {
-    width: 100%;
-    max-width: 300px;
   }
 
   .cta-buttons {
     flex-direction: column;
     gap: 10px;
+  }
+
+  .cta-btn,
+  .cta-btn.secondary {
+    width: 100%;
+    text-align: center;
   }
 }

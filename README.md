@@ -154,7 +154,7 @@ We follow **Agile Scrum methodology** with:
 - **Sprint reviews** with stakeholder feedback
 - **Continuous integration** with automated testing
 
-**Tools**: ClickUp (task management), GitHub (version control), Slack (communication)
+**Tools**: Github Project Boards (task management), GitHub (version control), Slack (communication)
 
 ---
 

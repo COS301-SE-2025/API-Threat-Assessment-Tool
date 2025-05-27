@@ -1,32 +1,84 @@
 import React, { useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
+import { useAuth } from './AuthContext';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { currentUser, logout, getUserFullName } = useAuth();
+  const location = useLocation();
 
   const handleLogout = () => {
-    // Add logout logic here (e.g., clear tokens, state, etc.)
-    navigate('/login');
+    const confirmLogout = window.confirm('Are you sure you want to logout?');
+    if (confirmLogout) {
+      logout();
+      navigate('/login', { replace: true });
+    }
   };
+
+  // Loading state similar to Dashboard
+  if (!currentUser) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: darkMode ? '#1e1e1e' : '#f5f5f5',
+        color: darkMode ? 'white' : '#333',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '3px solid #333',
+            borderTop: '3px solid #6b46c1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <p>Loading...</p>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
+
+  const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
 
   return (
     <div className="home-container">
       <header className="home-header">
         <div className="logo">AT-AT</div>
         <nav className="home-nav">
-          <Link to="/home">Home</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/public-templates">Public Templates</Link>
-          <Link to="/settings">Settings</Link>
+          <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
+          <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
+          <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>Public Templates</Link>
+          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
         </nav>
         <div className="user-info">
-          <span>Welcome, User!</span>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
-          <button onClick={toggleDarkMode} className="theme-toggle-btn">
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          <div className="user-profile">
+            <span className="user-avatar">
+              {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+            </span>
+            <div className="user-details">
+              <span className="user-greeting">Welcome back,</span>
+              <span className="user-name">{userFullName}</span>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="logout-btn" title="Logout">
+            Logout
+          </button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn" title="Toggle Theme">
+            {darkMode ? '☀️' : '🌙'}
           </button>
         </div>
       </header>
@@ -35,7 +87,7 @@ const Home = () => {
         <section className="welcome-section">
           <h1>Welcome to AT-AT</h1>
           <p>
-            API Threat Assessment Tool (AT-AT) helps you secure your APIs by identifying vulnerabilities and ensuring best practices. 
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {currentUser.firstName}! API Threat Assessment Tool (AT-AT) helps you secure your APIs by identifying vulnerabilities and ensuring best practices. 
             Start a new scan, explore public templates, or review your recent activity below.
           </p>
           <div className="cta-buttons">
@@ -78,6 +130,7 @@ const Home = () => {
         <div className="footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>
+          <a href="#">Help Center</a>
         </div>
       </footer>
     </div>

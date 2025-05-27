@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import './Dashboard.css';
@@ -8,9 +8,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const { currentUser, logout, getUserFullName } = useAuth();
+  const location = useLocation();
 
   const handleLogout = () => {
-    // Confirm logout action
     const confirmLogout = window.confirm('Are you sure you want to logout?');
     if (confirmLogout) {
       logout();
@@ -18,7 +18,6 @@ const Dashboard = () => {
     }
   };
 
-  // Show loading state if user data is not available
   if (!currentUser) {
     return (
       <div style={{
@@ -52,15 +51,17 @@ const Dashboard = () => {
     );
   }
 
+  const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
         <div className="logo">AT-AT</div>
         <nav className="dashboard-nav">
-          <Link to="/home">Home</Link>
-          <Link to="/dashboard" className="active">Dashboard</Link>
-          <Link to="/public-templates">Public Templates</Link>
-          <Link to="/settings">Settings</Link>
+          <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
+          <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
+          <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>Public Templates</Link>
+          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
         </nav>
         <div className="user-info">
           <div className="user-profile">
@@ -69,7 +70,7 @@ const Dashboard = () => {
             </span>
             <div className="user-details">
               <span className="user-greeting">Welcome back,</span>
-              <span className="user-name">{getUserFullName()}</span>
+              <span className="user-name">{userFullName}</span>
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn" title="Logout">
@@ -254,33 +255,6 @@ const Dashboard = () => {
                 <h4><Link to="/documentation" className="action-link">Documentation</Link></h4>
                 <p className="action-desc">Help and comprehensive how-to guides</p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="user-activity-summary">
-          <h2>Your Activity Summary</h2>
-          <div className="summary-grid">
-            <div className="summary-item">
-              <span className="summary-label">Account Created:</span>
-              <span className="summary-value">
-                {currentUser.createdAt ? 
-                  new Date(currentUser.createdAt).toLocaleDateString() : 
-                  'Welcome, new user!'
-                }
-              </span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Last Login:</span>
-              <span className="summary-value">Today</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Email:</span>
-              <span className="summary-value">{currentUser.email}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Username:</span>
-              <span className="summary-value">@{currentUser.username}</span>
             </div>
           </div>
         </section>

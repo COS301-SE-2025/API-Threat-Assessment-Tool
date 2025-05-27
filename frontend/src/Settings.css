@@ -5,7 +5,7 @@
   min-height: 100vh;
   background: #f5f7fa;
   font-family: Arial, sans-serif;
-  color: #333; /* Default text color for light mode */
+  color: #333;
 }
 
 .dark-mode .settings-container {
@@ -17,60 +17,127 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 15px 30px;
   background: white;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .dark-mode .settings-header {
   background: #2d2d2d;
-  border-bottom: 1px solid #444;
+  border-bottom: 2px solid #444;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .logo {
-  font-size: 1.5em;
+  font-size: 1.8em;
   font-weight: bold;
   color: #6b46c1;
+  transition: color 0.3s ease;
 }
 
 .dark-mode .logo {
   color: #a3bffa;
 }
 
-.dashboard-nav {
+.settings-nav {
   display: flex;
-  gap: 20px;
+  gap: 25px;
+  background: #f8f9fa;
+  padding: 10px 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dashboard-nav a {
+.dark-mode .settings-nav {
+  background: #2d2d2d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.settings-nav a {
   text-decoration: none;
-  color: #333;
-  font-size: 1em;
+  color: #555;
+  font-size: 1.1em;
+  padding: 8px 15px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
 }
 
-.dark-mode .dashboard-nav a {
-  color: #a3bffa;
+.dark-mode .settings-nav a {
+  color: #a3a3a3;
 }
 
-.dashboard-nav a:hover {
-  color: #6b46c1;
+.settings-nav a:hover {
+  background: #8a63d2;
+  color: white;
+  transform: translateY(-2px);
 }
 
-.dark-mode .dashboard-nav a:hover {
-  color: #c3d4ff;
+.dark-mode .settings-nav a:hover {
+  background: #7a5cd1;
+}
+
+.settings-nav a.active {
+  background: #6b46c1;
+  color: white;
+  font-weight: bold;
+}
+
+.dark-mode .settings-nav a.active {
+  background: #7a5cd1;
 }
 
 .user-info {
   display: flex;
   align-items: center;
+  gap: 15px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.user-info span {
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  background: #6b46c1;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1em;
+  transition: background 0.3s ease;
+}
+
+.dark-mode .user-avatar {
+  background: #7a5cd1;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-greeting {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.dark-mode .user-greeting {
+  color: #a3a3a3;
+}
+
+.user-name {
+  font-size: 1em;
+  font-weight: bold;
   color: #333;
 }
 
-.dark-mode .user-info span {
+.dark-mode .user-name {
   color: #e0e0e0;
 }
 
@@ -80,6 +147,9 @@
   color: #6b46c1;
   cursor: pointer;
   font-size: 1em;
+  padding: 8px 15px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .logout-btn {
@@ -87,17 +157,24 @@
 }
 
 .logout-btn:hover {
-  text-decoration: underline;
+  background: #8a63d2;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.dark-mode .logout-btn:hover {
+  background: #7a5cd1;
 }
 
 .theme-toggle-btn {
   background: none;
   border: 1px solid #6b46c1;
   color: #6b46c1;
-  padding: 5px 10px;
+  padding: 8px 15px;
   border-radius: 5px;
   cursor: pointer;
-  margin-left: 10px;
+  font-size: 1em;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .theme-toggle-btn {
@@ -107,11 +184,15 @@
 }
 
 .theme-toggle-btn:hover {
-  background: #f0f0f0;
+  background: #8a63d2;
+  color: white;
+  border-color: #8a63d2;
+  transform: translateY(-2px);
 }
 
 .dark-mode .theme-toggle-btn:hover {
-  background: #444;
+  background: #7a5cd1;
+  border-color: #7a5cd1;
 }
 
 .settings-main {
@@ -166,6 +247,7 @@
   color: #333;
   text-decoration: none;
   border-radius: 5px;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .settings-menu a {
@@ -174,14 +256,14 @@
 
 .settings-menu a:hover,
 .settings-menu a.active {
-  background: #f0f0f0;
-  color: #6b46c1;
+  background: #8a63d2;
+  color: white;
+  transform: translateY(-1px);
 }
 
 .dark-mode .settings-menu a:hover,
 .dark-mode .settings-menu a.active {
-  background: #3d3d3d;
-  color: #a3bffa;
+  background: #7a5cd1;
 }
 
 .settings-content {
@@ -230,6 +312,7 @@
   font-size: 1em;
   background: white;
   color: #333;
+  transition: border-color 0.3s ease;
 }
 
 .dark-mode .form-group input,
@@ -241,6 +324,16 @@
 
 .dark-mode .form-group input::placeholder {
   color: #a3a3a3;
+}
+
+.form-group input:hover,
+.form-group select:hover {
+  border-color: #8a63d2;
+}
+
+.dark-mode .form-group input:hover,
+.dark-mode .form-group select:hover {
+  border-color: #7a5cd1;
 }
 
 .form-actions {
@@ -255,6 +348,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 1em;
+  transition: all 0.3s ease;
 }
 
 .btn-primary {
@@ -265,6 +359,11 @@
 
 .dark-mode .btn-primary {
   background: #7a5cd1;
+}
+
+.btn-primary:hover {
+  background: #8a63d2;
+  transform: translateY(-2px);
 }
 
 .dark-mode .btn-primary:hover {
@@ -283,8 +382,16 @@
   border-color: #555;
 }
 
+.btn-secondary:hover {
+  background: #8a63d2;
+  color: white;
+  border-color: #8a63d2;
+  transform: translateY(-2px);
+}
+
 .dark-mode .btn-secondary:hover {
-  background: #4d4d4d;
+  background: #7a5cd1;
+  border-color: #7a5cd1;
 }
 
 .avatar-container {
@@ -340,6 +447,7 @@
 
 .notification-item h4 {
   color: #333;
+  margin: 0 0 5px 0;
 }
 
 .dark-mode .notification-item h4 {
@@ -348,6 +456,8 @@
 
 .notification-item p {
   color: #666;
+  margin: 0;
+  font-size: 0.9em;
 }
 
 .dark-mode .notification-item p {
@@ -407,7 +517,7 @@ input:checked + .slider:before {
   transform: translateX(26px);
 }
 
-.dashboard-footer {
+.settings-footer {
   text-align: center;
   padding: 10px;
   background: #333;
@@ -415,7 +525,7 @@ input:checked + .slider:before {
   font-size: 0.8em;
 }
 
-.dark-mode .dashboard-footer {
+.dark-mode .settings-footer {
   background: #222;
 }
 
@@ -441,5 +551,42 @@ input:checked + .slider:before {
   
   .settings-sidebar {
     margin-bottom: 20px;
+  }
+
+  .settings-header {
+    flex-direction: column;
+    padding: 15px;
+    gap: 10px;
+  }
+
+  .settings-nav {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .settings-nav a {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+  }
+
+  .user-info {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .user-profile {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .logout-btn,
+  .theme-toggle-btn {
+    margin-left: 0;
+    width: 100%;
   }
 }

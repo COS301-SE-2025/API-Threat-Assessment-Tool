@@ -1,11 +1,14 @@
 import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
+import { useAuth } from './AuthContext';
 import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { currentUser, logout, getUserFullName } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     name: 'John Doe',
@@ -22,8 +25,48 @@ const Settings = () => {
   });
 
   const handleLogout = () => {
-    navigate('/login');
+    const confirmLogout = window.confirm('Are you sure you want to logout?');
+    if (confirmLogout) {
+      logout();
+      navigate('/login', { replace: true });
+    }
   };
+
+  // Loading state similar to other components
+  if (!currentUser) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: darkMode ? '#1e1e1e' : '#f5f5f5',
+        color: darkMode ? 'white' : '#333',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '3px solid #333',
+            borderTop: '3px solid #6b46c1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <p>Loading Settings...</p>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
+
+  const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,256 +88,243 @@ const Settings = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Add save logic here
+    // Mock save operation (in a real app, this would be an API call)
+    console.log('Saving settings:', formData);
     alert('Settings saved successfully!');
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return (
-          <form onSubmit={handleSubmit}>
-            <div className="avatar-container">
-              <div className="avatar">
-                <span>JD</span>
-              </div>
-              <div className="avatar-actions">
-                <button type="button" className="btn btn-secondary">Change</button>
-                <button type="button" className="btn btn-secondary">Remove</button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Company</label>
-              <input
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Position</label>
-              <input
-                type="text"
-                name="position"
-                value={formData.position}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Timezone</label>
-              <select
-                name="timezone"
-                value={formData.timezone}
-                onChange={handleInputChange}
-              >
-                <option value="UTC+00:00">UTC+00:00 (London)</option>
-                <option value="UTC+01:00">UTC+01:00 (Paris)</option>
-                <option value="UTC+02:00">UTC+02:00 (Athens)</option>
-                <option value="UTC-05:00">UTC-05:00 (New York)</option>
-                <option value="UTC-08:00">UTC-08:00 (Los Angeles)</option>
-              </select>
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary">Cancel</button>
-              <button type="submit" className="btn btn-primary">Save Changes</button>
-            </div>
-          </form>
-        );
-      case 'notifications':
-        return (
-          <div>
-            <h3 className="section-title">Notification Preferences</h3>
-            <div className="notification-item">
-              <div>
-                <h4>Scan Completed</h4>
-                <p>Receive notifications when scans are completed</p>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={formData.notifications.scanCompleted}
-                  onChange={() => handleNotificationChange('scanCompleted')}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <div className="notification-item">
-              <div>
-                <h4>Critical Findings</h4>
-                <p>Receive immediate alerts for critical vulnerabilities</p>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={formData.notifications.criticalFindings}
-                  onChange={() => handleNotificationChange('criticalFindings')}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <div className="notification-item">
-              <div>
-                <h4>Weekly Report</h4>
-                <p>Receive a weekly summary of all activities</p>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={formData.notifications.weeklyReport}
-                  onChange={() => handleNotificationChange('weeklyReport')}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <div className="notification-item">
-              <div>
-                <h4>Product Updates</h4>
-                <p>Receive news about new features and updates</p>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={formData.notifications.productUpdates}
-                  onChange={() => handleNotificationChange('productUpdates')}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary">Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={handleSubmit}>Save Changes</button>
-            </div>
-          </div>
-        );
-      case 'security':
-        return (
-          <div>
-            <h3 className="section-title">Security Settings</h3>
-            <div className="form-group">
-              <label>Change Password</label>
-              <input
-                type="password"
-                placeholder="Current Password"
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <input
-                type="password"
-                placeholder="New Password"
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <input
-                type="password"
-                placeholder="Confirm New Password"
-                className="form-control"
-              />
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary">Cancel</button>
-              <button type="button" className="btn btn-primary">Update Password</button>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
   };
 
   return (
     <div className="settings-container">
       <header className="settings-header">
         <div className="logo">AT-AT</div>
-        <nav className="dashboard-nav">
-          <Link to="/home">Home</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/public-templates">Public Templates</Link>
-          <Link to="/settings">Settings</Link>
+        <nav className="settings-nav">
+          <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
+          <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
+          <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>Public Templates</Link>
+          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
         </nav>
         <div className="user-info">
-          <span>Welcome, User!</span>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
-          <button onClick={toggleDarkMode} className="theme-toggle-btn">
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          <div className="user-profile">
+            <span className="user-avatar">
+              {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+            </span>
+            <div className="user-details">
+              <span className="user-greeting">Welcome back,</span>
+              <span className="user-name">{userFullName}</span>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="logout-btn" title="Logout">
+            Logout
+          </button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn" title="Toggle Theme">
+            {darkMode ? '☀️' : '🌙'}
           </button>
         </div>
       </header>
 
       <main className="settings-main">
-        <h1 className="settings-title">Settings</h1>
+        <h1 className="settings-title">
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {currentUser.firstName}! Manage Your Settings
+        </h1>
+
         <div className="settings-grid">
-          <div className="settings-sidebar">
+          <aside className="settings-sidebar">
             <ul className="settings-menu">
               <li>
-                <a
-                  href="#profile"
+                <Link
+                  to="#profile"
                   className={activeTab === 'profile' ? 'active' : ''}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab('profile');
-                  }}
+                  onClick={() => setActiveTab('profile')}
                 >
                   Profile
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#notifications"
+                <Link
+                  to="#notifications"
                   className={activeTab === 'notifications' ? 'active' : ''}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab('notifications');
-                  }}
+                  onClick={() => setActiveTab('notifications')}
                 >
                   Notifications
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#security"
-                  className={activeTab === 'security' ? 'active' : ''}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab('security');
-                  }}
-                >
-                  Security
-                </a>
+                </Link>
               </li>
             </ul>
-          </div>
+          </aside>
+
           <div className="settings-content">
-            {renderTabContent()}
+            {activeTab === 'profile' && (
+              <div>
+                <h2 className="section-title">Profile Settings</h2>
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label htmlFor="name">Name</label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="company">Company</label>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="position">Position</label>
+                    <input
+                      type="text"
+                      id="position"
+                      name="position"
+                      value={formData.position}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="timezone">Timezone</label>
+                    <select
+                      id="timezone"
+                      name="timezone"
+                      value={formData.timezone}
+                      onChange={handleInputChange}
+                    >
+                      <option value="UTC-12:00">UTC-12:00</option>
+                      <option value="UTC-11:00">UTC-11:00</option>
+                      <option value="UTC-10:00">UTC-10:00</option>
+                      <option value="UTC-09:00">UTC-09:00</option>
+                      <option value="UTC-08:00">UTC-08:00</option>
+                      <option value="UTC-07:00">UTC-07:00</option>
+                      <option value="UTC-06:00">UTC-06:00</option>
+                      <option value="UTC-05:00">UTC-05:00</option>
+                      <option value="UTC-04:00">UTC-04:00</option>
+                      <option value="UTC-03:00">UTC-03:00</option>
+                      <option value="UTC-02:00">UTC-02:00</option>
+                      <option value="UTC-01:00">UTC-01:00</option>
+                      <option value="UTC+00:00">UTC+00:00</option>
+                      <option value="UTC+01:00">UTC+01:00</option>
+                      <option value="UTC+02:00">UTC+02:00</option>
+                      <option value="UTC+03:00">UTC+03:00</option>
+                      <option value="UTC+04:00">UTC+04:00</option>
+                      <option value="UTC+05:00">UTC+05:00</option>
+                      <option value="UTC+06:00">UTC+06:00</option>
+                      <option value="UTC+07:00">UTC+07:00</option>
+                      <option value="UTC+08:00">UTC+08:00</option>
+                      <option value="UTC+09:00">UTC+09:00</option>
+                      <option value="UTC+10:00">UTC+10:00</option>
+                      <option value="UTC+11:00">UTC+11:00</option>
+                      <option value="UTC+12:00">UTC+12:00</option>
+                    </select>
+                  </div>
+                  <div className="form-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => setFormData({
+                      name: 'John Doe',
+                      email: 'john.doe@example.com',
+                      company: 'AT-AT Inc.',
+                      position: 'Security Engineer',
+                      timezone: 'UTC+02:00'
+                    })}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary">Save Changes</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div>
+                <h2 className="section-title">Notification Settings</h2>
+                <div className="notification-item">
+                  <div>
+                    <h4>Scan Completed</h4>
+                    <p>Receive a notification when a scan is completed.</p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.notifications.scanCompleted}
+                      onChange={() => handleNotificationChange('scanCompleted')}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="notification-item">
+                  <div>
+                    <h4>Critical Findings</h4>
+                    <p>Get alerted when critical vulnerabilities are found.</p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.notifications.criticalFindings}
+                      onChange={() => handleNotificationChange('criticalFindings')}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="notification-item">
+                  <div>
+                    <h4>Weekly Report</h4>
+                    <p>Receive a weekly summary of your API security status.</p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.notifications.weeklyReport}
+                      onChange={() => handleNotificationChange('weeklyReport')}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="notification-item">
+                  <div>
+                    <h4>Product Updates</h4>
+                    <p>Stay informed about new features and updates.</p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.notifications.productUpdates}
+                      onChange={() => handleNotificationChange('productUpdates')}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      <footer className="dashboard-footer">
+      <footer className="settings-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>
+          <a href="#">Help Center</a>
         </div>
       </footer>
     </div>

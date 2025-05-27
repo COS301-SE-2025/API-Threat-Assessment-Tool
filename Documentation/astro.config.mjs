@@ -1,9 +1,12 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, passthroughImageService } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	image:{
+		service: passthroughImageService(),
+	},
 	integrations: [
 		starlight({
 			title: 'AT-AT',
@@ -16,6 +19,8 @@ export default defineConfig({
 					//	{ label: 'Setup Guide', slug: 'guides/example' },
 					//],
 				//},
+				//first build, pnpm build
+				//pnpx wrangler pages deploy dist
 				{
 					label: 'Requirements',
 					autogenerate: { directory: 'reference' },

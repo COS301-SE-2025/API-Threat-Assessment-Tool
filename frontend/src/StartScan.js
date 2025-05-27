@@ -1,15 +1,15 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react'; // Add useEffect import
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
-import ScanProgress from './ScanProgress'; // Import the scan progress component
+import ScanProgress from './ScanProgress';
 import './StartScan.css';
 
 const StartScan = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const { currentUser, logout, getUserFullName } = useAuth();
-  const location = useLocation();
   const [api, setApi] = useState('');
   const [profile, setProfile] = useState('');
   const [scanStarted, setScanStarted] = useState(false);
@@ -18,9 +18,18 @@ const StartScan = () => {
   // API options with display names
   const apiOptions = {
     'api1': 'My E-commerce Site API',
-    'api2': 'Client Project API', 
+    'api2': 'Client Project API',
     'api3': 'Internal User Service'
   };
+
+  // Prefill form with selections from Dashboard (if provided)
+  useEffect(() => {
+    if (location.state) {
+      const { api: passedApi, profile: passedProfile } = location.state;
+      if (passedApi) setApi(passedApi);
+      if (passedProfile) setProfile(passedProfile);
+    }
+  }, [location.state]);
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -30,7 +39,6 @@ const StartScan = () => {
     }
   };
 
-  // Loading state similar to other components
   if (!currentUser) {
     return (
       <div style={{
@@ -69,10 +77,7 @@ const StartScan = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (api && profile) {
-      // Set the selected API name for display
       setSelectedApiName(apiOptions[api]);
-      
-      // Start the scan simulation
       setScanStarted(true);
     } else {
       alert('Please select an API and a testing profile to start the scan.');
@@ -81,10 +86,6 @@ const StartScan = () => {
 
   const handleScanComplete = (finalReport) => {
     console.log('Scan completed:', finalReport);
-    
-    // The scan will automatically show the professional report
-    // No need to redirect to dashboard here - let the user view the report first
-    // They can navigate back to dashboard using the "Back to Dashboard" button in the report
   };
 
   const handleScanCancel = () => {
@@ -94,7 +95,6 @@ const StartScan = () => {
     setSelectedApiName('');
   };
 
-  // If scan is started, show the scan progress component
   if (scanStarted) {
     return (
       <div className="start-scan-container">
@@ -146,7 +146,6 @@ const StartScan = () => {
     );
   }
 
-  // Show the original scan setup form
   return (
     <div className="start-scan-container">
       <header className="start-scan-header">

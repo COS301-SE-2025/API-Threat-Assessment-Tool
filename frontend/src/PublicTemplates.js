@@ -1,16 +1,31 @@
-import React, { useState, useContext } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Add useLocation for active nav
 import { ThemeContext } from './App';
-import { useAuth } from './AuthContext';
+import { useAuth } from './AuthContext'; // Import useAuth
+import { mockApi } from './mockData';
 import './PublicTemplates.css';
 
 const PublicTemplates = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // For active nav link highlighting
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-  const { currentUser, logout, getUserFullName } = useAuth();
-  const location = useLocation();
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { currentUser, logout, getUserFullName } = useAuth(); // Add useAuth for user info
+
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [message, setMessage] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const templatesPerPage = 4;
+
+  useEffect(() => {
+    mockApi.getTemplates().then(data => {
+      setTemplates(data);
+      setLoading(false);
+    });
+  }, []);
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -20,105 +35,86 @@ const PublicTemplates = () => {
     }
   };
 
-  // Loading state similar to Dashboard and Home
-  if (!currentUser) {
+  const handleUseTemplate = (template) => {
+    setLoading(true);
+    mockApi.useTemplate(template.id).then(response => {
+      if (response.success) {
+        setMessage(response.message);
+        setTemplates(templates.map(t => 
+          t.id === template.id ? { ...t, usageCount: t.usageCount + 1 } : t
+        ));
+      } else {
+        setMessage('Error: ' + response.message);
+      }
+      setTimeout(() => setMessage(''), 3000);
+      setLoading(false);
+    });
+  };
+
+  const handleViewDetails = (template) => {
+    setSelectedTemplate(template);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedTemplate(null);
+  };
+
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filter === 'all' || 
+                         (filter === 'popular' && template.usageCount > 50) ||
+                         (filter === 'recent' && new Date(template.dateAdded) > new Date('2025-04-01'));
+    return matchesSearch && matchesFilter;
+  });
+
+  const totalPages = Math.ceil(filteredTemplates.length / templatesPerPage);
+  const startIndex = (currentPage - 1) * templatesPerPage;
+  const currentTemplates = filteredTemplates.slice(startIndex, startIndex + templatesPerPage);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Add loading state for user authentication
+  if (!currentUser || loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: darkMode ? '#1e1e1e' : '#f5f5f5',
-        color: darkMode ? 'white' : '#333',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '3px solid #333',
-            borderTop: '3px solid #6b46c1',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          <p>Loading Templates...</p>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
+      <div className="public-templates-container">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: darkMode ? '#1e1e1e' : '#f5f5f5',
+          color: darkMode ? 'white' : '#333',
+          fontFamily: 'Arial, sans-serif'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '50px',
+              height: '50px',
+              border: '3px solid #333',
+              borderTop: '3px solid #6b46c1',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 20px'
+            }}></div>
+            <p>{!currentUser ? 'Loading User...' : 'Loading Templates...'}</p>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Get user full name
   const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
-
-  const templates = [
-    {
-      id: 1,
-      name: 'OWASP Top 10 Quick Scan',
-      description: 'Comprehensive scan for OWASP Top 10 vulnerabilities',
-      category: 'security',
-      downloads: 1245,
-      rating: 4.8,
-      author: 'Security Team'
-    },
-    {
-      id: 2,
-      name: 'REST API Full Assessment',
-      description: 'Complete assessment for REST API endpoints',
-      category: 'rest',
-      downloads: 892,
-      rating: 4.6,
-      author: 'API Experts'
-    },
-    {
-      id: 3,
-      name: 'Authentication Test Suite',
-      description: 'Focuses on authentication and authorization vulnerabilities',
-      category: 'auth',
-      downloads: 756,
-      rating: 4.5,
-      author: 'Auth Specialists'
-    },
-    {
-      id: 4,
-      name: 'GraphQL Security Scan',
-      description: 'Specialized scan for GraphQL API vulnerabilities',
-      category: 'graphql',
-      downloads: 532,
-      rating: 4.3,
-      author: 'GraphQL Team'
-    },
-    {
-      id: 5,
-      name: 'PCI Compliance Check',
-      description: 'Verifies compliance with PCI DSS requirements',
-      category: 'compliance',
-      downloads: 421,
-      rating: 4.7,
-      author: 'Compliance Group'
-    },
-    {
-      id: 6,
-      name: 'Basic API Health Check',
-      description: 'Quick health check for any API endpoint',
-      category: 'health',
-      downloads: 1203,
-      rating: 4.2,
-      author: 'API Health'
-    }
-  ];
-
-  const filteredTemplates = templates.filter(template => {
-    const matchesFilter = activeFilter === 'all' || template.category === activeFilter;
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
 
   return (
     <div className="public-templates-container">
@@ -133,17 +129,15 @@ const PublicTemplates = () => {
         <div className="user-info">
           <div className="user-profile">
             <span className="user-avatar">
-              {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+              {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'} {/* Display first initial */}
             </span>
             <div className="user-details">
               <span className="user-greeting">Welcome back,</span>
               <span className="user-name">{userFullName}</span>
             </div>
           </div>
-          <button onClick={handleLogout} className="logout-btn" title="Logout">
-            Logout
-          </button>
-          <button onClick={toggleDarkMode} className="theme-toggle-btn" title="Toggle Theme">
+          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <button onClick={toggleDarkMode} className="theme-toggle-btn">
             {darkMode ? '☀️' : '🌙'}
           </button>
         </div>
@@ -156,65 +150,60 @@ const PublicTemplates = () => {
             <input
               type="text"
               placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </section>
 
         <div className="filter-controls">
           <button
-            className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('all')}
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
           >
-            All Templates
+            All
           </button>
           <button
-            className={`filter-btn ${activeFilter === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('security')}
+            className={`filter-btn ${filter === 'popular' ? 'active' : ''}`}
+            onClick={() => setFilter('popular')}
           >
-            Security
+            Popular
           </button>
           <button
-            className={`filter-btn ${activeFilter === 'rest' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('rest')}
+            className={`filter-btn ${filter === 'recent' ? 'active' : ''}`}
+            onClick={() => setFilter('recent')}
           >
-            REST API
-          </button>
-          <button
-            className={`filter-btn ${activeFilter === 'auth' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('auth')}
-          >
-            Authentication
-          </button>
-          <button
-            className={`filter-btn ${activeFilter === 'graphql' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('graphql')}
-          >
-            GraphQL
+            Recent
           </button>
         </div>
 
         <div className="templates-grid">
-          {filteredTemplates.length > 0 ? (
-            filteredTemplates.map(template => (
+          {currentTemplates.length > 0 ? (
+            currentTemplates.map((template) => (
               <div key={template.id} className="template-card">
-                <div className="template-image">
-                  {template.category.toUpperCase()}
-                </div>
+                <div className="template-image">Preview</div>
                 <div className="template-content">
                   <h3>{template.name}</h3>
                   <p>{template.description}</p>
                   <div className="template-meta">
-                    <span>Downloads: {template.downloads}</span>
-                    <span>Rating: {template.rating}/5</span>
-                  </div>
-                  <div className="template-meta">
                     <span>By: {template.author}</span>
+                    <span>Added: {template.dateAdded}</span>
                   </div>
                   <div className="template-actions">
-                    <button className="use-template-btn">Use Template</button>
-                    <button className="view-details-btn">View Details</button>
+                    <button
+                      className="use-template-btn"
+                      onClick={() => handleUseTemplate(template)}
+                      disabled={loading}
+                    >
+                      {loading ? 'Applying...' : 'Use Template'}
+                    </button>
+                    <button
+                      className="view-details-btn"
+                      onClick={() => handleViewDetails(template)}
+                      disabled={loading}
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
               </div>
@@ -226,13 +215,57 @@ const PublicTemplates = () => {
           )}
         </div>
 
-        <div className="pagination">
-          <button className="active">1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>Next</button>
-        </div>
+        {message && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            color: message.includes('Error') ? '#dc3545' : '#28a745'
+          }}>
+            {message}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map(page => (
+              <button
+                key={page}
+                className={currentPage === page ? 'active' : ''}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </button>
+            ))}
+            {currentPage < totalPages && (
+              <button onClick={() => handlePageChange(currentPage + 1)}>Next</button>
+            )}
+            {currentPage > 1 && (
+              <button onClick={() => handlePageChange(currentPage - 1)}>Previous</button>
+            )}
+          </div>
+        )}
       </main>
+
+      {selectedTemplate && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{selectedTemplate.name} Details</h2>
+              <button onClick={handleCloseModal} className="close-btn">×</button>
+            </div>
+            <div className="modal-body">
+              <p><strong>Description:</strong> {selectedTemplate.description}</p>
+              <p><strong>Author:</strong> {selectedTemplate.author}</p>
+              <p><strong>Added:</strong> {selectedTemplate.dateAdded}</p>
+              <p><strong>Usage Count:</strong> {selectedTemplate.usageCount}</p>
+              <p><strong>Features:</strong> Vulnerability scanning, OWASP compliance, detailed reporting</p>
+            </div>
+            <div className="modal-actions">
+              <button onClick={handleCloseModal} className="cancel-btn">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="public-templates-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>

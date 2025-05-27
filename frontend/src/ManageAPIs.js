@@ -41,6 +41,8 @@ const ManageAPIs = () => {
   const [currentApi, setCurrentApi] = useState(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [apiToDelete, setApiToDelete] = useState(null);
+  const [uploadMessage, setUploadMessage] = useState(''); // For feedback on file upload
+  const [isFileUploaded, setIsFileUploaded] = useState(false); // Track if file was uploaded
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -94,11 +96,15 @@ const ManageAPIs = () => {
       description: '',
       status: 'Active'
     });
+    setUploadMessage(''); // Clear any previous message
+    setIsFileUploaded(false); // Reset file upload state
     setIsModalOpen(true);
   };
 
   const handleEditApi = (api) => {
     setCurrentApi({ ...api });
+    setUploadMessage(''); // Clear any previous message
+    setIsFileUploaded(false); // Reset file upload state
     setIsModalOpen(true);
   };
 
@@ -108,6 +114,7 @@ const ManageAPIs = () => {
   };
 
   const handleSaveApi = () => {
+    if (!currentApi) return; // Guard against null currentApi
     if (currentApi.id) {
       setApis(apis.map(api => api.id === currentApi.id ? currentApi : api));
     } else {
@@ -132,6 +139,59 @@ const ManageAPIs = () => {
       ...currentApi,
       [name]: value
     });
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setUploadMessage('No file selected.');
+      setIsFileUploaded(false);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target.result;
+        let apiData;
+        try {
+          apiData = JSON.parse(content); // Attempt to parse as JSON
+        } catch (jsonError) {
+          setUploadMessage('Invalid file format. Please upload a JSON file.');
+          setIsFileUploaded(false);
+          return;
+        }
+
+        // Validate required fields
+        if (!apiData.name || !apiData.baseUrl) {
+          setUploadMessage('File must contain "name" and "baseUrl" fields.');
+          setIsFileUploaded(false);
+          return;
+        }
+
+        const newApi = {
+          id: Math.max(...apis.map(a => a.id), 0) + 1,
+          name: apiData.name,
+          baseUrl: apiData.baseUrl,
+          description: apiData.description || '',
+          status: apiData.status || 'Active',
+          lastScanned: 'Never'
+        };
+        setApis([...apis, newApi]);
+        setUploadMessage('API successfully imported from file.');
+        setIsFileUploaded(true); // Mark file as uploaded
+        setCurrentApi(null); // Clear the form
+      } catch (error) {
+        setUploadMessage('Error processing file: ' + error.message);
+        setIsFileUploaded(false);
+      }
+    };
+    reader.onerror = () => {
+      setUploadMessage('Error reading file.');
+      setIsFileUploaded(false);
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -204,6 +264,15 @@ const ManageAPIs = () => {
             </div>
           )}
         </section>
+        {uploadMessage && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            color: uploadMessage.includes('success') || uploadMessage.includes('imported') ? '#28a745' : '#dc3545'
+          }}>
+            {uploadMessage}
+          </div>
+        )}
       </main>
 
       {/* Add/Edit API Modal */}
@@ -211,8 +280,8 @@ const ManageAPIs = () => {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{currentApi.id ? 'Edit API' : 'Add New API'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="close-btn">&times;</button>
+              <h2>{currentApi?.id ? 'Edit API' : 'Add New API'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="close-btn">×</button>
             </div>
             <form className="modal-form">
               <div className="form-group">
@@ -221,7 +290,7 @@ const ManageAPIs = () => {
                   id="api-name"
                   type="text"
                   name="name"
-                  value={currentApi.name}
+                  value={currentApi?.name || ''}
                   onChange={handleInputChange}
                   required
                 />
@@ -232,7 +301,7 @@ const ManageAPIs = () => {
                   id="base-url"
                   type="url"
                   name="baseUrl"
-                  value={currentApi.baseUrl}
+                  value={currentApi?.baseUrl || ''}
                   onChange={handleInputChange}
                   required
                 />
@@ -242,7 +311,7 @@ const ManageAPIs = () => {
                 <textarea
                   id="api-description"
                   name="description"
-                  value={currentApi.description}
+                  value={currentApi?.description || ''}
                   onChange={handleInputChange}
                   rows="3"
                 />
@@ -252,16 +321,33 @@ const ManageAPIs = () => {
                 <select
                   id="api-status"
                   name="status"
-                  value={currentApi.status}
+                  value={currentApi?.status || 'Active'}
                   onChange={handleInputChange}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label htmlFor="api-file">Upload API Spec File (JSON)</label>
+                <input
+                  id="api-file"
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                />
+                <small style={{ color: '#666' }}>Upload a JSON file with API details (name, baseUrl, optional description, status).</small>
+              </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="cancel-btn">Cancel</button>
-                <button type="button" onClick={handleSaveApi} className="save-btn">Save</button>
+                <button
+                  type="button"
+                  onClick={handleSaveApi}
+                  className="save-btn"
+                  disabled={isFileUploaded} // Disable if file was uploaded
+                >
+                  {isFileUploaded ? 'API Added' : 'Save'}
+                </button>
               </div>
             </form>
           </div>
@@ -274,7 +360,7 @@ const ManageAPIs = () => {
           <div className="modal-content">
             <div className="modal-header">
               <h2>Confirm Delete</h2>
-              <button onClick={() => setIsDeleteConfirmOpen(false)} className="close-btn">&times;</button>
+              <button onClick={() => setIsDeleteConfirmOpen(false)} className="close-btn">×</button>
             </div>
             <p>Are you sure you want to delete "{apiToDelete?.name}" API? This action cannot be undone.</p>
             <div className="modal-actions">

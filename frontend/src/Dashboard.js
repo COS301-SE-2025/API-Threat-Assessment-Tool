@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react'; // Ensure useState is imported
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
@@ -9,6 +9,10 @@ const Dashboard = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const { currentUser, logout, getUserFullName } = useAuth();
   const location = useLocation();
+
+  // State to track selected API and profile
+  const [selectedApi, setSelectedApi] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState('');
 
   const handleLogout = () => {
     const confirmLogout = window.confirm('Are you sure you want to logout?');
@@ -52,6 +56,20 @@ const Dashboard = () => {
   }
 
   const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
+
+  // Handle navigation to StartScan with selected configurations
+  const handleRunScan = () => {
+    if (!selectedApi || !selectedProfile) {
+      alert('Please select both an API and a testing profile to proceed.');
+      return;
+    }
+    navigate('/start-scan', {
+      state: {
+        api: selectedApi,
+        profile: selectedProfile
+      }
+    });
+  };
 
   return (
     <div className="dashboard-container">
@@ -100,7 +118,11 @@ const Dashboard = () => {
           <div className="config-options">
             <div className="config-item">
               <label htmlFor="api-select">Select API to Assess:</label>
-              <select id="api-select">
+              <select
+                id="api-select"
+                value={selectedApi}
+                onChange={(e) => setSelectedApi(e.target.value)}
+              >
                 <option value="">-- Choose an API --</option>
                 <option value="api1">My E-commerce Site API</option>
                 <option value="api2">Client Project API</option>
@@ -109,16 +131,20 @@ const Dashboard = () => {
             </div>
             <div className="config-item">
               <label htmlFor="profile-select">Select Testing Profile:</label>
-              <select id="profile-select">
+              <select
+                id="profile-select"
+                value={selectedProfile}
+                onChange={(e) => setSelectedProfile(e.target.value)}
+              >
                 <option value="">-- Choose a Profile --</option>
                 <option value="owasp">OWASP Top 10 Quick Scan</option>
                 <option value="full">Full Comprehensive Scan</option>
                 <option value="auth">Authentication & Authorization Focus</option>
               </select>
             </div>
-            <Link to="/start-scan" className="run-scan-btn">
+            <button onClick={handleRunScan} className="run-scan-btn">
               Run Scan with Selected Configuration
-            </Link>
+            </button>
           </div>
         </section>
 

@@ -7,16 +7,17 @@ SRS Document for Demo 1 as of 28 May 2025 - Will be updated as the project conti
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [Purpose](#purpose)
 - [Functional Requirements](#functional-requirements)
-- [Architectural Requirements](#architectural-requirements)
+- [User Stories](#user-storiescharacteristics)
+- [Domain Model](#domain-model)
+- [Use Case Diagrams](#use-case-diagram)
+- [Architectural Constraints](#architectural-constraints)
 - [Architectural Quality Requirements](#architectural-quality-requirements)
 - [Architectural Patterns](#architectural-patterns)
 - [Technology Requirements](#technology-requirements)
 - [Service Contracts](#service-contracts)
-- [Use Case Diagrams](#use-case-diagram)
-- [Testing Policy Document](#testing-policy-document)
-- [Constraints](#constraints)
+- [Testing Policy Document](../testingpolicy)
+- [Appendix](#appendix)
 
 ## Introduction
 
@@ -192,7 +193,7 @@ As a Penetration Tester I would like to:
 ### Reports
 ![Reports](/images/ReportGeneration.jpg) 
 ### Account Management System
-![AccountManagement](/images/AccountManagementSystem.jpg)
+![AccountManagement](/images/Account-Management-System.jpg)
 ## Architectural Constraints
 ### Deployment
 
@@ -504,4 +505,5 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 
 
 ## Testing Policy Document
+- [Go To Testing Policy Document](../testingpolicy)
 ## Appendix

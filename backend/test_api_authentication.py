@@ -20,5 +20,3 @@ def test_api_authentication(url, auth_credentials):
             print("API authentication test failed:", e)
         except Exception as e:
             print("An error occurred:", e)
-
-

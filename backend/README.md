@@ -1,4 +1,4 @@
-# tldr
+# tldr (open this in edit to view properly)
 Import api from some spec file
 -> Use APIImport.import()
 -> APIClient object is created, Sets relevant information about API based of file contents.

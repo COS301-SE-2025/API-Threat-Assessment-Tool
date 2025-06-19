@@ -66,3 +66,10 @@ CREATE TABLE scan_results (
     FOREIGN KEY (scan_id) REFERENCES scans(id),
     FOREIGN KEY (endpoint_id) REFERENCES endpoints(id)
 );
+CREATE TABLE vulnerability_tests (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT,
+    description TEXT,
+    default_severity TEXT
+);

@@ -1,4 +1,5 @@
 # user management 
+# Make sure user can actually access the api's they're meants to
 
 class UserManager:
     def __init__(self, db_path):

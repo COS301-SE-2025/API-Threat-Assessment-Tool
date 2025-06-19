@@ -14,3 +14,11 @@ CREATE TABLE apis (
     imported_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+CREATE TABLE api_access (
+    user_id INTEGER NOT NULL,
+    api_id INTEGER NOT NULL,
+    permission TEXT DEFAULT 'read',  -- e.g. 'read', 'write', 'admin'
+    PRIMARY KEY (user_id, api_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (api_id) REFERENCES apis(id)
+);

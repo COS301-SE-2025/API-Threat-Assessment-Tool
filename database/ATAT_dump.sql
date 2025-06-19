@@ -40,3 +40,15 @@ CREATE TABLE scan_profiles (
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+CREATE TABLE scans (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    api_id INTEGER NOT NULL,
+    profile_id INTEGER NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    status TEXT DEFAULT 'running',
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (api_id) REFERENCES apis(id),
+    FOREIGN KEY (profile_id) REFERENCES scan_profiles(id)
+);

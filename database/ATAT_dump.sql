@@ -22,3 +22,13 @@ CREATE TABLE api_access (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (api_id) REFERENCES apis(id)
 );
+CREATE TABLE endpoints (
+    id SERIAL PRIMARY KEY,
+    api_id INTEGER NOT NULL,
+    method TEXT NOT NULL,
+    url TEXT NOT NULL,
+    requires_auth BOOLEAN DEFAULT FALSE,
+    tags TEXT,
+    category TEXT,
+    FOREIGN KEY (api_id) REFERENCES apis(id)
+);

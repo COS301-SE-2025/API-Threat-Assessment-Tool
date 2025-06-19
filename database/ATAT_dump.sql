@@ -32,3 +32,11 @@ CREATE TABLE endpoints (
     category TEXT,
     FOREIGN KEY (api_id) REFERENCES apis(id)
 );
+CREATE TABLE scan_profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);

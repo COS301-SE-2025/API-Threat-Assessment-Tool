@@ -73,3 +73,11 @@ CREATE TABLE vulnerability_tests (
     description TEXT,
     default_severity TEXT
 );
+CREATE TABLE reports (
+    id SERIAL PRIMARY KEY,
+    scan_id INTEGER NOT NULL,
+    format TEXT,
+    file_path TEXT,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (scan_id) REFERENCES scans(id)
+);

@@ -52,3 +52,17 @@ CREATE TABLE scans (
     FOREIGN KEY (api_id) REFERENCES apis(id),
     FOREIGN KEY (profile_id) REFERENCES scan_profiles(id)
 );
+CREATE TABLE scan_results (
+    id SERIAL PRIMARY KEY,
+    scan_id INTEGER NOT NULL,
+    endpoint_id INTEGER NOT NULL,
+    test_name TEXT NOT NULL,
+    severity TEXT,
+    cvss_score REAL,
+    description TEXT,
+    mitigation TEXT,
+    evidence TEXT,
+    response_code INTEGER,
+    FOREIGN KEY (scan_id) REFERENCES scans(id),
+    FOREIGN KEY (endpoint_id) REFERENCES endpoints(id)
+);

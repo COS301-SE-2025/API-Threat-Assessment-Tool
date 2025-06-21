@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Upload & Tag Editor</title>
+</head>
+<body>
+    <h1>Upload OpenAPI Spec</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="api_file" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    {% if api_client %}
+        <hr>
+        <h2>API Info</h2>
+        <p><strong>Title:</strong> {{ api_client.title }}</p>
+        <p><strong>Version:</strong> {{ api_client.version }}</p>
+        <p><strong>Base URL:</strong> {{ api_client.base_url }}</p>
+
+        <h3>Endpoints</h3>
+        {% for endpoint in api_client.endpoints %}
+            <div style="margin-bottom: 15px;">
+                <strong>[{{ endpoint.method }}]</strong> {{ endpoint.path }}<br>
+                <em>{{ endpoint.summary }}</em><br>
+                <label>Tags:</label>
+                <ul id="tag-list-{{ loop.index }}">
+                    {% for tag in endpoint.tags %}
+                        <li>{{ tag }}</li>
+                    {% endfor %}
+                </ul>
+                <input type="text" id="tag-input-{{ loop.index }}" placeholder="Add tag">
+                <button type="button" onclick="addTag({{ loop.index }})">Add</button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <script>
+        function addTag(index) {
+            const input = document.getElementById("tag-input-" + index);
+            const tagList = document.getElementById("tag-list-" + index);
+            const tag = input.value.trim();
+            if (tag) {
+                const li = document.createElement("li");
+                li.textContent = tag;
+                tagList.appendChild(li);
+                input.value = "";
+            }
+        }
+    </script>
+</body>
+</html>

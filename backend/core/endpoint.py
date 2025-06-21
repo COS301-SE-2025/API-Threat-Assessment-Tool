@@ -2,16 +2,26 @@
 # Probably need more variables, research api specification docs to get all common ones
 
 class Endpoint:
-    def __init__(self):
-        self.name = ""
-        self.requestType = ""
-        self.tags = ""
-        self.category = ""
+    def __init__(self, path, method, summary, parameters, request_body, responses, tags):
+        self.path = path
+        self.method = method
+        self.summary = summary
+        self.parameters = parameters
+        self.request_body = request_body
+        self.responses = responses
+        self.tags = tags or []
+
     
     #getters and setters for each variable
-    def set_value():
+    def set_value(self):
         print("do something")
 
-    def get_value():
+    def get_value(self):
         print("do something")
 
+    def add_tag(self, tag):
+        if tag and tag not in self.tags:
+            self.tags.append(tag)
+
+    def get_tags(self):
+        return self.tags

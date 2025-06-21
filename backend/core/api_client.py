@@ -4,15 +4,15 @@
 # save and load info from file/db
 
 class APIClient:
-    def __init__(self, host: str, base_path: str):
-        self.host = host.rstrip("/")
-        self.base_path = base_path.strip("/")
-        self.base_url = f"{self.host}/{self.base_path}"
-        self.endpoints = [Endpoints] 
-        self.apiSpecType = ""
+    def __init__(self, title, base_url, version):
+        self.title = title
+        self.base_url = base_url
+        self.version = version
+        self.endpoints = []
 
-    def add_endpoint():
-        print("do something")
+
+    def add_endpoint(self, endpoint):
+        self.endpoints.append(endpoint)
 
     def remove_endpoint():
         print("do something")
@@ -29,3 +29,5 @@ class APIClient:
     #might remove this later
     def classify_endpoint():
         print("do something")
+
+        

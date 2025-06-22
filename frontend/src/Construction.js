@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Logo from "./components/Logo";
 import './Construction.css';
 
 const Construction = () => {
@@ -57,7 +58,18 @@ const Construction = () => {
   return (
     <div className="construction-container">
       <header className="construction-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
         <nav className="construction-nav">
           <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
           <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>

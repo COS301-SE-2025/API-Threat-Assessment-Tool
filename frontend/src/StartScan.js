@@ -161,7 +161,18 @@ const StartScan = () => {
   return (
     <div className="start-scan-container">
       <header className="start-scan-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
         <nav className="start-scan-nav">
           <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
           <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>

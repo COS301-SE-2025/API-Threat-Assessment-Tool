@@ -2,7 +2,9 @@ import React, { useContext, useState } from 'react'; // Ensure useState is impor
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Logo from "./components/Logo";
 import './Dashboard.css';
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -74,7 +76,19 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
-        <div className="logo">AT-AT</div>
+   <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+  <Logo />
+  <span style={{
+    fontWeight: 700,
+    fontSize: 24,
+    letterSpacing: 2,
+    color: darkMode ? "#fff" : "#222",
+    userSelect: "none"
+  }}>
+    AT-AT
+  </span>
+</div>
+
         <nav className="dashboard-nav">
           <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
           <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>

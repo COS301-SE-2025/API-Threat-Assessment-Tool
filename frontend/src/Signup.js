@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Logo from "./components/Logo";
 import './Signup.css';
 
 const Signup = () => {
@@ -112,7 +113,18 @@ const Signup = () => {
   return (
     <div className="signup-container">
       <header className="signup-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
         <div className="user-info">
           <button onClick={toggleDarkMode} className="theme-toggle-btn">
             {darkMode ? 'Light Mode' : 'Dark Mode'}

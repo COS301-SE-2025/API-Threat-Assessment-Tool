@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeContext } from './App';
+import Logo from "./components/Logo";
 import './Reports.css';
 
 const Reports = () => {
@@ -14,7 +15,18 @@ const Reports = () => {
   return (
     <div className="reports-container">
       <header className="reports-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
         <nav className="reports-nav">
           <Link to="/home">Home</Link>
           <Link to="/dashboard">Dashboard</Link>

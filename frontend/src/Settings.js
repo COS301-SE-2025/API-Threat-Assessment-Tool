@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import Cookies from 'js-cookie'; // Import js-cookie for cookie handling
+import Logo from "./components/Logo";
 import './Settings.css';
 
 const Settings = () => {
@@ -114,7 +115,19 @@ const Settings = () => {
   return (
     <div className="settings-container">
       <header className="settings-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
+
         <nav className="settings-nav">
           <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
           <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>

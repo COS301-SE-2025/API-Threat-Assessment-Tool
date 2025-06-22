@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Logo from "./components/Logo";
 import './Login.css';
 
 const Login = () => {
@@ -117,7 +118,18 @@ const Login = () => {
   return (
     <div className="login-container">
       <header className="login-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: darkMode ? "#fff" : "#222",
+            userSelect: "none"
+          }}>
+            AT-AT
+          </span>
+        </div>
         <div className="user-info">
           <button onClick={toggleDarkMode} className="theme-toggle-btn">
             {darkMode ? 'Light Mode' : 'Dark Mode'}

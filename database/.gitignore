@@ -1,0 +1,12 @@
+# Node modules
+node_modules/
+
+# Dependency lock file
+package-lock.json
+
+# Environment variables
+.env
+
+# OS junk files
+.DS_Store
+Thumbs.db

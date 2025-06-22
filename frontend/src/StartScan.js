@@ -1,53 +1,17 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ThemeContext } from './App';
+import { useAuth } from './AuthContext';
+import Logo from './components/Logo';
 import ScanProgress from './ScanProgress';
 import './StartScan.css';
 
-// Safe imports with fallbacks
-let ThemeContext, useAuth, Logo;
-
-try {
-  const AppModule = require('./App');
-  ThemeContext = AppModule.ThemeContext || React.createContext({ darkMode: false, toggleDarkMode: () => {} });
-} catch {
-  ThemeContext = React.createContext({ darkMode: false, toggleDarkMode: () => {} });
-}
-
-try {
-  const AuthModule = require('./AuthContext');
-  useAuth = AuthModule.useAuth || (() => ({ 
-    currentUser: null, 
-    logout: () => {}, 
-    getUserFullName: () => 'User' 
-  }));
-} catch {
-  useAuth = () => ({ 
-    currentUser: { firstName: 'Demo' }, 
-    logout: () => {}, 
-    getUserFullName: () => 'Demo User' 
-  });
-}
-
-try {
-  const LogoModule = require('./components/Logo');
-  Logo = LogoModule.default || (() => React.createElement('div', { style: { width: 32, height: 32, background: '#6b46c1', borderRadius: '50%' } }));
-} catch {
-  Logo = () => React.createElement('div', { style: { width: 32, height: 32, background: '#6b46c1', borderRadius: '50%' } });
-}
-
 const StartScan = () => {
-  // Safe hooks with error handling
-  const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
-  const location = useLocation?.() || { pathname: '/start-scan' };
-  
-  // Safe context usage
-  const themeContext = useContext(ThemeContext) || { darkMode: false, toggleDarkMode: () => {} };
-  const { darkMode = false, toggleDarkMode = () => {} } = themeContext;
-  
-  const authContext = useAuth() || { currentUser: null, logout: () => {}, getUserFullName: () => 'User' };
-  const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { currentUser, logout, getUserFullName } = useAuth();
 
-  // State management
   const [api, setApi] = useState('');
   const [profile, setProfile] = useState('');
   const [scanStarted, setScanStarted] = useState(false);
@@ -61,7 +25,6 @@ const StartScan = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // API options with enhanced details
   const apiOptions = {
     'api1': {
       name: 'E-commerce API',
@@ -89,7 +52,6 @@ const StartScan = () => {
     }
   };
 
-  // Profile options with enhanced details
   const profileOptions = {
     'owasp': {
       name: 'OWASP Top 10 Quick Scan',
@@ -114,181 +76,95 @@ const StartScan = () => {
     }
   };
 
-  // Safe intersection observer setup
   useEffect(() => {
-    try {
-      if (typeof IntersectionObserver === 'undefined') {
-        console.warn('IntersectionObserver not supported');
-        return;
-      }
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
 
-      const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-      };
-
-      const observer = new IntersectionObserver((entries) => {
-        try {
-          entries.forEach(entry => {
-            if (entry.isIntersecting && entry.target.id) {
-              setIsVisible(prev => ({
-                ...prev,
-                [entry.target.id]: true
-              }));
-            }
-          });
-        } catch (error) {
-          console.warn('Error in intersection observer callback:', error);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.target.id) {
+          setIsVisible(prev => ({
+            ...prev,
+            [entry.target.id]: true
+          }));
         }
-      }, observerOptions);
+      });
+    }, observerOptions);
 
-      const setupObserver = () => {
-        try {
-          const sections = document.querySelectorAll('.animate-on-scroll');
-          if (sections.length > 0) {
-            sections.forEach(section => {
-              if (section) observer.observe(section);
-            });
-          }
-        } catch (error) {
-          console.warn('Error setting up intersection observer:', error);
-        }
-      };
+    const sections = document.querySelectorAll('.animate-on-scroll');
+    sections.forEach(section => observer.observe(section));
 
-      const timeoutId = setTimeout(setupObserver, 100);
-
-      return () => {
-        clearTimeout(timeoutId);
-        try {
-          observer.disconnect();
-        } catch (error) {
-          console.warn('Error disconnecting observer:', error);
-        }
-      };
-    } catch (error) {
-      console.warn('Error setting up intersection observer:', error);
-    }
+    return () => observer.disconnect();
   }, []);
 
-  // Prefill form with selections from Dashboard (if provided)
   useEffect(() => {
-    try {
-      if (location.state) {
-        const { api: passedApi, profile: passedProfile } = location.state;
-        if (passedApi && apiOptions[passedApi]) setApi(passedApi);
-        if (passedProfile && profileOptions[passedProfile]) setProfile(passedProfile);
-      }
-    } catch (error) {
-      console.warn('Error processing location state:', error);
+    if (location.state) {
+      const { api: passedApi, profile: passedProfile } = location.state;
+      if (passedApi && apiOptions[passedApi]) setApi(passedApi);
+      if (passedProfile && profileOptions[passedProfile]) setProfile(passedProfile);
     }
   }, [location.state]);
 
-  // Safe logout handler
   const handleLogout = useCallback(() => {
-    try {
-      const confirmLogout = window.confirm('Are you sure you want to logout?');
-      if (confirmLogout) {
-        logout();
-        if (navigate?.replace) {
-          navigate.replace('/login');
-        } else if (navigate) {
-          navigate('/login');
-        } else {
-          window.location.href = '/login';
-        }
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-      setError('Error during logout. Please try again.');
+    const confirmLogout = window.confirm('Are you sure you want to logout?');
+    if (confirmLogout) {
+      logout();
+      navigate('/login', { replace: true });
     }
   }, [logout, navigate]);
 
-  // Safe user info handling
-  const safeCurrentUser = currentUser || { firstName: 'Demo' };
-  const userFullName = (() => {
-    try {
-      return getUserFullName() || 
-             (safeCurrentUser.firstName ? `${safeCurrentUser.firstName} User` : 'User');
-    } catch (error) {
-      console.warn('Error getting user full name:', error);
-      return 'User';
-    }
-  })();
+  const userFullName = getUserFullName() || (currentUser?.firstName ? `${currentUser.firstName} User` : 'User');
 
-  // Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
-    try {
-      setError(null);
-      
-      if (!api || !profile) {
-        setError('Please select both an API and a testing profile to start the scan.');
-        return;
-      }
+    setError(null);
 
-      const selectedApi = apiOptions[api];
-      if (!selectedApi) {
-        setError('Invalid API selection. Please choose a valid API.');
-        return;
-      }
-
-      setIsLoading(true);
-      
-      // Simulate pre-scan validation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSelectedApiName(selectedApi.name);
-      setScanStarted(true);
-    } catch (error) {
-      console.error('Error starting scan:', error);
-      setError('Failed to start scan. Please try again.');
-    } finally {
-      setIsLoading(false);
+    if (!api || !profile) {
+      setError('Please select both an API and a testing profile to start the scan.');
+      return;
     }
+
+    const selectedApi = apiOptions[api];
+    if (!selectedApi) {
+      setError('Invalid API selection. Please choose a valid API.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setSelectedApiName(selectedApi.name);
+    setScanStarted(true);
+    setIsLoading(false);
   }, [api, profile, apiOptions]);
 
-  // Handle scan completion
   const handleScanComplete = useCallback((finalReport) => {
-    try {
-      console.log('Scan completed:', finalReport);
-      // Could navigate to results page or show success message
-    } catch (error) {
-      console.error('Error handling scan completion:', error);
-    }
+    console.log('Scan completed:', finalReport);
   }, []);
 
-  // Handle scan cancellation
   const handleScanCancel = useCallback(() => {
-    try {
-      setScanStarted(false);
-      setApi('');
-      setProfile('');
-      setSelectedApiName('');
-      setAdvancedOptions({
-        detailedLogging: false,
-        includeDeprecated: false,
-        executiveSummary: true
-      });
-      setError(null);
-    } catch (error) {
-      console.error('Error canceling scan:', error);
-    }
+    setScanStarted(false);
+    setApi('');
+    setProfile('');
+    setSelectedApiName('');
+    setAdvancedOptions({
+      detailedLogging: false,
+      includeDeprecated: false,
+      executiveSummary: true
+    });
+    setError(null);
   }, []);
 
-  // Handle advanced options change
   const handleAdvancedOptionChange = useCallback((option, value) => {
-    try {
-      setAdvancedOptions(prev => ({
-        ...prev,
-        [option]: value
-      }));
-    } catch (error) {
-      console.error('Error updating advanced options:', error);
-    }
+    setAdvancedOptions(prev => ({
+      ...prev,
+      [option]: value
+    }));
   }, []);
 
-  // Get scan phases for preview
   const getScanPhases = useCallback(() => {
     return [
       '🔍 Discovery & Enumeration',
@@ -301,8 +177,7 @@ const StartScan = () => {
     ];
   }, []);
 
-  // Loading state
-  if (!safeCurrentUser && currentUser === null) {
+  if (!currentUser) {
     return (
       <div style={{
         display: 'flex',
@@ -335,13 +210,12 @@ const StartScan = () => {
     );
   }
 
-  // If scan is started, show progress component
   if (scanStarted) {
     return (
       <div className="start-scan-container">
         <header className="start-scan-header">
           <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {Logo && <Logo />}
+            <Logo />
             <span style={{
               fontWeight: 700,
               fontSize: 24,
@@ -363,7 +237,7 @@ const StartScan = () => {
           <div className="user-info">
             <div className="user-profile">
               <span className="user-avatar">
-                {safeCurrentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
               </span>
               <div className="user-details">
                 <span className="user-greeting">Welcome back,</span>
@@ -391,9 +265,9 @@ const StartScan = () => {
         <footer className="start-scan-footer">
           <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
           <div className="footer-links">
-            <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Terms of Service</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>Help Center</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Help Center</a>
           </div>
         </footer>
       </div>
@@ -402,13 +276,12 @@ const StartScan = () => {
 
   return (
     <div className="start-scan-container">
-      {/* Error Display */}
       {error && (
         <div style={{
           position: 'fixed',
           top: '20px',
           right: '20px',
-          background: '#dc3545',
+          background: darkMode ? '#ef5350' : '#dc3545',
           color: 'white',
           padding: '15px 25px',
           borderRadius: '8px',
@@ -433,7 +306,7 @@ const StartScan = () => {
 
       <header className="start-scan-header">
         <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {Logo && <Logo />}
+          <Logo />
           <span style={{
             fontWeight: 700,
             fontSize: 24,
@@ -455,7 +328,7 @@ const StartScan = () => {
         <div className="user-info">
           <div className="user-profile">
             <span className="user-avatar">
-              {safeCurrentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+              {currentUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
             </span>
             <div className="user-details">
               <span className="user-greeting">Welcome back,</span>
@@ -472,7 +345,6 @@ const StartScan = () => {
       </header>
 
       <main className="start-scan-main">
-        {/* Header Section */}
         <section className="start-scan-header-section">
           <h1 className="section-title">
             Start Security 
@@ -483,7 +355,6 @@ const StartScan = () => {
           </Link>
         </section>
 
-        {/* Form Section */}
         <section 
           id="scan-form" 
           className={`scan-form-section animate-on-scroll ${isVisible['scan-form'] ? 'visible' : ''}`}
@@ -570,7 +441,6 @@ const StartScan = () => {
                 </div>
               </div>
 
-              {/* Scan Preview */}
               {api && profile && (
                 <div className="scan-preview">
                   <div className="preview-info">
@@ -642,9 +512,9 @@ const StartScan = () => {
       <footer className="start-scan-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">
-          <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>
-          <a href="#" onClick={(e) => e.preventDefault()}>Terms of Service</a>
-          <a href="#" onClick={(e) => e.preventDefault()}>Help Center</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Help Center</a>
         </div>
       </footer>
     </div>

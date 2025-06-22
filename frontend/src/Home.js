@@ -80,11 +80,27 @@ const Home = () => {
 
   const userFullName = getUserFullName() || (currentUser.firstName ? `${currentUser.firstName} Doe` : 'User');
 
-  const apiStats = [
-    { number: '50K+', label: 'APIs Scanned', icon: '🔍' },
-    { number: '10K+', label: 'Vulnerabilities Found', icon: '🛡️' },
-    { number: '500+', label: 'Security Reports', icon: '📊' },
-    { number: '99.9%', label: 'Uptime', icon: '⚡' }
+  const whatIsATAT = [
+    { 
+      title: 'API Security Scanner', 
+      description: 'Comprehensive vulnerability assessment for REST APIs using industry-standard testing methodologies.',
+      icon: '🔍'
+    },
+    { 
+      title: 'OWASP Compliance', 
+      description: 'Built-in testing profiles for OWASP Top 10 API security risks and custom security frameworks.',
+      icon: '🛡️'
+    },
+    { 
+      title: 'Automated Testing', 
+      description: 'Intelligent automated testing that identifies authentication flaws, injection attacks, and data exposure.',
+      icon: '🤖'
+    },
+    { 
+      title: 'Actionable Reports', 
+      description: 'Detailed security reports with prioritized recommendations and step-by-step remediation guides.',
+      icon: '📊'
+    }
   ];
 
   const howItWorksSteps = [
@@ -210,17 +226,21 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* What is AT-AT Section */}
         <section 
-          id="stats-section" 
-          className={`stats-section animate-on-scroll ${isVisible['stats-section'] ? 'visible' : ''}`}
+          id="what-is-atat-section" 
+          className={`what-is-atat-section animate-on-scroll ${isVisible['what-is-atat-section'] ? 'visible' : ''}`}
         >
-          <div className="stats-grid">
-            {apiStats.map((stat, index) => (
-              <div key={index} className="stat-card" style={{animationDelay: `${index * 0.1}s`}}>
-                <div className="stat-icon">{stat.icon}</div>
-                <div className="stat-number">{stat.number}</div>
-                <div className="stat-label">{stat.label}</div>
+          <div className="section-header">
+            <h2>What is AT-AT?</h2>
+            <p>API Threat Assessment Tool - Your comprehensive solution for API security testing</p>
+          </div>
+          <div className="what-is-grid">
+            {whatIsATAT.map((item, index) => (
+              <div key={index} className="what-is-card" style={{animationDelay: `${index * 0.1}s`}}>
+                <div className="what-is-icon">{item.icon}</div>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
               </div>
             ))}
           </div>

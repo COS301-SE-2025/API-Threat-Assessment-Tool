@@ -236,11 +236,14 @@
 }
 
 .cta-btn.primary {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  color: white;
+  background: white;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
 }
 
 .cta-btn.primary:hover {
+  background: var(--primary-color);
+  color: white;
   transform: translateY(-3px);
   box-shadow: var(--shadow-medium);
 }
@@ -295,21 +298,41 @@
   animation: glow 2s ease-in-out infinite alternate;
 }
 
-/* Stats Section */
-.stats-section {
+/* What is AT-AT Section */
+.what-is-atat-section {
   padding: 80px 40px;
   background: var(--bg-secondary);
 }
 
-.stats-grid {
+.section-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.section-header h2 {
+  font-size: 2.5em;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.section-header p {
+  font-size: 1.2em;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.what-is-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 30px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.stat-card {
+.what-is-card {
   background: var(--bg-primary);
   padding: 40px 30px;
   border-radius: var(--border-radius);
@@ -317,30 +340,52 @@
   box-shadow: var(--shadow-light);
   transition: var(--transition);
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
 }
 
-.stat-card:hover {
-  transform: translateY(-5px);
+.what-is-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(107, 70, 193, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.what-is-card:hover::before {
+  left: 100%;
+}
+
+.what-is-card:hover {
+  transform: translateY(-8px);
   box-shadow: var(--shadow-medium);
   border-color: var(--primary-color);
 }
 
-.stat-icon {
-  font-size: 3em;
+.what-is-icon {
+  font-size: 3.5em;
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.what-is-card h3 {
+  font-size: 1.5em;
+  color: var(--text-primary);
   margin-bottom: 20px;
+  font-weight: 600;
 }
 
-.stat-number {
-  font-size: 2.5em;
-  font-weight: 700;
-  color: var(--primary-color);
-  margin-bottom: 10px;
-}
-
-.stat-label {
+.what-is-card p {
   font-size: 1.1em;
   color: var(--text-secondary);
-  font-weight: 500;
+  line-height: 1.6;
+  margin: 0;
 }
 
 /* Features Section */
@@ -626,7 +671,7 @@
 
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 30px;
   max-width: 1200px;
   margin: 0 auto;
@@ -642,6 +687,28 @@
   box-shadow: var(--shadow-light);
   transition: var(--transition);
   border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(107, 70, 193, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.action-card:hover::before {
+  left: 100%;
 }
 
 .action-card:hover {
@@ -652,18 +719,37 @@
 }
 
 .action-icon {
-  font-size: 3em;
-  margin-bottom: 20px;
+  font-size: 3.5em;
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .action-card h3 {
-  font-size: 1.3em;
-  margin-bottom: 10px;
+  font-size: 1.4em;
+  margin-bottom: 15px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .action-card p {
   color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  font-size: 1em;
+}
+
+.action-arrow {
+  font-size: 1.5em;
+  color: var(--primary-color);
+  transition: var(--transition);
+  margin-top: 15px;
+}
+
+.action-card:hover .action-arrow {
+  transform: translateX(5px);
 }
 
 /* Security Tips Section */
@@ -717,26 +803,41 @@
 /* Footer */
 .home-footer {
   text-align: center;
-  padding: 40px 20px;
-  background: var(--text-primary);
-  color: var(--bg-secondary);
+  padding: 30px 20px;
+  background: #3a3a3a;
+  color: #f0f0f0;
   font-size: 0.9em;
+  border-top: 1px solid #4a4a4a;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .home-footer {
+  background: #2a2a2a;
+  color: #d0d0d0;
+  border-top: 1px solid #3a3a3a;
 }
 
 .footer-links {
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
 .footer-links a {
-  color: var(--bg-secondary);
+  color: #f0f0f0;
   margin: 0 15px;
   text-decoration: none;
   transition: var(--transition);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.dark-mode .footer-links a {
+  color: #d0d0d0;
 }
 
 .footer-links a:hover {
   color: var(--primary-light);
-  text-decoration: underline;
+  background: rgba(107, 70, 193, 0.1);
+  text-decoration: none;
 }
 
 /* Animation Classes */
@@ -863,7 +964,7 @@
   }
   
   .features-grid,
-  .stats-grid,
+  .what-is-grid,
   .steps-container,
   .actions-grid,
   .tips-container {
@@ -872,7 +973,7 @@
   
   .step-card,
   .feature-card,
-  .stat-card,
+  .what-is-card,
   .action-card,
   .tip-card {
     margin: 0 10px;
@@ -889,6 +990,7 @@
   }
   
   .features-section h2,
+  .what-is-atat-section h2,
   .how-it-works-section h2,
   .threats-section h2,
   .quick-actions-section h2,
@@ -901,7 +1003,8 @@
   }
   
   .feature-icon,
+  .what-is-icon,
   .action-icon {
-    font-size: 2.5em;
+    font-size: 2.8em;
   }
 }

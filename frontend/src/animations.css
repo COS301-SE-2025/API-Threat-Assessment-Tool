@@ -1,0 +1,619 @@
+/**
+ * animations.css
+ * Dedicated file for all animation keyframes and reusable animation classes
+ * Import this file into your main CSS for consistent animations across the application
+ */
+
+/* ========================================
+   ENTRANCE ANIMATIONS
+   ======================================== */
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========================================
+   EXIT ANIMATIONS
+   ======================================== */
+
+@keyframes slideOutToTop {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+
+@keyframes slideOutToBottom {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+
+@keyframes fadeOutScale {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   LOADING ANIMATIONS
+   ======================================== */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(1.1);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes dots {
+  0%, 20% {
+    color: rgba(0,0,0,0);
+    text-shadow: .25em 0 0 rgba(0,0,0,0),
+                 .5em 0 0 rgba(0,0,0,0);
+  }
+  40% {
+    color: black;
+    text-shadow: .25em 0 0 rgba(0,0,0,0),
+                 .5em 0 0 rgba(0,0,0,0);
+  }
+  60% {
+    text-shadow: .25em 0 0 black,
+                 .5em 0 0 rgba(0,0,0,0);
+  }
+  80%, 100% {
+    text-shadow: .25em 0 0 black,
+                 .5em 0 0 black;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes wave {
+  0%, 60%, 100% {
+    transform: initial;
+  }
+  30% {
+    transform: translateY(-15px);
+  }
+}
+
+/* ========================================
+   INTERACTION ANIMATIONS
+   ======================================== */
+
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes buttonHover {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 7% {
+    transform: rotateZ(0);
+  }
+  15% {
+    transform: rotateZ(-15deg);
+  }
+  20% {
+    transform: rotateZ(10deg);
+  }
+  25% {
+    transform: rotateZ(-10deg);
+  }
+  30% {
+    transform: rotateZ(6deg);
+  }
+  35% {
+    transform: rotateZ(-4deg);
+  }
+  40%, 100% {
+    transform: rotateZ(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -30px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -15px, 0);
+  }
+  90% {
+    transform: translate3d(0,-4px,0);
+  }
+}
+
+/* ========================================
+   FORM VALIDATION ANIMATIONS
+   ======================================== */
+
+@keyframes inputFocus {
+  from {
+    box-shadow: 0 0 0 0 rgba(107, 70, 193, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+  }
+}
+
+@keyframes darkInputFocus {
+  from {
+    box-shadow: 0 0 0 0 rgba(163, 191, 250, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 3px rgba(163, 191, 250, 0.2);
+  }
+}
+
+@keyframes inputError {
+  0%, 100% {
+    transform: translateX(0);
+    border-color: #e53e3e;
+  }
+  25% {
+    transform: translateX(-5px);
+    border-color: #fc8181;
+  }
+  75% {
+    transform: translateX(5px);
+    border-color: #fc8181;
+  }
+}
+
+@keyframes inputSuccess {
+  0% {
+    border-color: #e53e3e;
+  }
+  100% {
+    border-color: #38a169;
+  }
+}
+
+/* ========================================
+   MESSAGE ANIMATIONS
+   ======================================== */
+
+@keyframes slideInShake {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes successPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-10px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    background-color: #fed7d7;
+    border-color: #feb2b2;
+  }
+  50% {
+    background-color: #fbb6ce;
+    border-color: #f687b3;
+  }
+}
+
+/* ========================================
+   BACKGROUND AND THEME ANIMATIONS
+   ======================================== */
+
+@keyframes backgroundBlur {
+  from {
+    filter: blur(0px) brightness(1);
+  }
+  to {
+    filter: blur(5px) brightness(0.9);
+  }
+}
+
+@keyframes darkBackgroundBlur {
+  from {
+    filter: blur(0px) brightness(1);
+  }
+  to {
+    filter: blur(5px) brightness(0.7);
+  }
+}
+
+@keyframes themeTransition {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ========================================
+   REUSABLE ANIMATION CLASSES
+   ======================================== */
+
+/* Entrance animations */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out both;
+}
+
+.animate-slide-in-top {
+  animation: slideInFromTop 0.5s ease-out both;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom 0.5s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 0.5s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.5s ease-out both;
+}
+
+.animate-scale-in {
+  animation: fadeInScale 0.6s ease-out both;
+}
+
+.animate-zoom-in {
+  animation: zoomIn 0.5s ease-out both;
+}
+
+/* Exit animations */
+.animate-fade-out {
+  animation: fadeOut 0.3s ease-out both;
+}
+
+.animate-slide-out-top {
+  animation: slideOutToTop 0.3s ease-out both;
+}
+
+.animate-slide-out-bottom {
+  animation: slideOutToBottom 0.3s ease-out both;
+}
+
+.animate-scale-out {
+  animation: fadeOutScale 0.3s ease-out both;
+}
+
+/* Loading animations */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Interaction animations */
+.animate-button-press {
+  animation: buttonPress 0.2s ease-out;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-wiggle {
+  animation: wiggle 1s ease-in-out;
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out;
+}
+
+/* Validation animations */
+.animate-input-error {
+  animation: inputError 0.5s ease-in-out;
+}
+
+.animate-input-success {
+  animation: inputSuccess 0.3s ease-out;
+}
+
+/* Message animations */
+.animate-success-pop {
+  animation: successPop 0.6s ease-out;
+}
+
+.animate-warning-pulse {
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   ANIMATION DELAY UTILITIES
+   ======================================== */
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-800 { animation-delay: 0.8s; }
+.delay-900 { animation-delay: 0.9s; }
+.delay-1000 { animation-delay: 1s; }
+
+/* ========================================
+   ANIMATION DURATION UTILITIES
+   ======================================== */
+
+.duration-fast { animation-duration: 0.2s; }
+.duration-normal { animation-duration: 0.3s; }
+.duration-slow { animation-duration: 0.5s; }
+.duration-slower { animation-duration: 0.8s; }
+.duration-slowest { animation-duration: 1.2s; }
+
+/* ========================================
+   HOVER EFFECT ANIMATIONS
+   ======================================== */
+
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(107, 70, 193, 0.3);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-rotate {
+  transition: transform 0.3s ease;
+}
+
+.hover-rotate:hover {
+  transform: rotate(5deg);
+}
+
+/* ========================================
+   ACCESSIBILITY CONSIDERATIONS
+   ======================================== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations for users who prefer reduced motion */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Remove transform-based animations */
+  .hover-lift:hover,
+  .hover-scale:hover,
+  .hover-rotate:hover {
+    transform: none !important;
+  }
+  
+  /* Keep essential opacity transitions for visibility */
+  .animate-fade-in,
+  .animate-fade-out {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

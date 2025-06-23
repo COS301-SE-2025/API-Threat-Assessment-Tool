@@ -1,0 +1,91 @@
+/* Logo Component Styles */
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.logo-link:hover {
+  transform: scale(1.05);
+  opacity: 0.8;
+}
+
+.logo-link:focus {
+  outline: 2px solid #6b46c1;
+  outline-offset: 2px;
+}
+
+/* Logo Image Styles */
+.logo-image {
+  height: 40px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
+
+/* Logo Text Styles */
+.logo-text {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #6b46c1;
+  transition: color 0.3s ease;
+}
+
+/* Dark mode logo text */
+.dark-mode .logo-text {
+  color: #a3bffa;
+}
+
+/* Hover effects for logo text */
+.logo-link:hover .logo-text {
+  color: #8a63d2;
+}
+
+.dark-mode .logo-link:hover .logo-text {
+  color: #c3d9ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .logo-image {
+    height: 32px;
+    max-width: 120px;
+  }
+  
+  .logo-text {
+    font-size: 1.5em;
+  }
+  
+  .logo-link {
+    padding: 6px 8px;
+  }
+}
+
+/* High contrast accessibility */
+@media (prefers-contrast: high) {
+  .logo-link:focus {
+    outline: 3px solid #000;
+  }
+  
+  .dark-mode .logo-link:focus {
+    outline: 3px solid #fff;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .logo-link,
+  .logo-image,
+  .logo-text {
+    transition: none;
+  }
+  
+  .logo-link:hover {
+    transform: none;
+  }
+}

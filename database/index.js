@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config(); // <-- Add this line
 
-// Replace with your Supabase project details:
-const supabaseUrl = 'https://xqgojtkyfewmirozikok.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZ29qdGt5ZmV3bWlyb3ppa29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzMzk3MDgsImV4cCI6MjA2NTkxNTcwOH0.wMqWY37Liri5ZmGAxENJRq1SXsYLEMb6WXJ6uM_VxUs'; // <-- Put your anon key here!
+// Load Supabase details from .env
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
@@ -22,6 +23,11 @@ app.get('/users', async (req, res) => {
   }
 });
 
+app.get('/', (req, res) => {
+  res.send('API is running!');
+});
+
 app.listen(3001, () => {
   console.log('API listening on port 3001');
 });
+//link to test : http://localhost:3001/users

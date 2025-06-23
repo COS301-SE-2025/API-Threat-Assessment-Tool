@@ -1,25 +1,29 @@
 {
-  "name": "database",
+  "name": "api-threat-assessment-backend",
   "version": "1.0.0",
-  "description": "One of the README files of all time",
+  "description": "Express API for AT-AT (API Threat Assessment Tool) - COS301 Capstone Project",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write ."
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["express", "supabase", "api", "threat-assessment", "backend"],
+  "author": "Your Name or Team",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "prettier": "^3.2.5"
   }
 }

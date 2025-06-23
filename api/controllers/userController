@@ -1,0 +1,13 @@
+// controllers/userController.js
+// Placeholder - will be implemented later
+const getUserList = (req, res) => {
+  res.json({
+    success: true,
+    message: 'User controller - coming soon!',
+    timestamp: new Date().toISOString()
+  });
+};
+
+module.exports = {
+  getUserList
+};

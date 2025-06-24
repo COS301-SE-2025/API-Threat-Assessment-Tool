@@ -156,39 +156,66 @@ app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res
 // Login
 app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return sendError(res, 'Missing credentials', null, 400);
+    const { username, email, password } = req.body;
+    if ((!username && !email) || !password) return sendError(res, 'Missing credentials', null, 400);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.trim().toLowerCase())
-      .single();
+    let query = supabase.from('users').select('*');
+    
+    const identifier = email ? email.trim().toLowerCase() : username.trim().toLowerCase();
+    if (email) {
+      query = query.eq('email', identifier);
+    } else if (username) {
+      query = query.ilike('username', identifier); // Use ilike for case-insensitive matching
+    } else {
+      return sendError(res, 'Must provide either username or email', null, 400);
+    }
 
-    if (error || !data) return sendError(res, 'Invalid email or password', null, 401);
-    const isMatch = await bcrypt.compare(password, data.password);
-    if (!isMatch) return sendError(res, 'Invalid email or password', null, 401);
+    console.log('Querying with identifier:', identifier);
+    const { data, error, status } = await query;
 
-const token = jwt.sign({ id: data.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    if (error) {
+      console.error('Supabase error:', { message: error.message, code: error.code, status });
+      return sendError(res, 'Database error', error.message, 500);
+    }
 
-sendSuccess(res, 'Login successful', {
-  user: {
-    id: data.id,
-    email: data.email,
-    username: data.username,
-    firstName: data.first_name,
-    lastName: data.last_name,
-    emailConfirmed: data.email_confirmed,
-    createdAt: data.created_at
-  },
-  token
-});
+    if (!data || data.length === 0) {
+      console.log('No user found for identifier:', identifier);
+      return sendError(res, 'Invalid credentials', null, 401);
+    }
+
+    if (data.length > 1) {
+      console.warn('Multiple users found for:', identifier);
+      return sendError(res, 'Multiple users found, contact support', null, 400);
+    }
+
+    const user = data[0];
+    console.log('User found:', { email: user.email, username: user.username, hasPassword: !!user.password });
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
+    if (!isMatch) {
+      console.log('Password mismatch - Input:', password, 'Hashed:', user.password.substring(0, 10) + '...');
+      return sendError(res, 'Invalid credentials', null, 401);
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    sendSuccess(res, 'Login successful', {
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        emailConfirmed: user.email_confirmed,
+        createdAt: user.created_at
+      },
+      token
+    });
 
   } catch (err) {
+    console.error('Unexpected error:', err.message);
     sendError(res, 'Login error', err.message, 500);
   }
 });
-
 // Logout
 app.post('/api/auth/logout', async (req, res) => {
   try {

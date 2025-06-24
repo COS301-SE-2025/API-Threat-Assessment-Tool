@@ -1,3 +1,10 @@
+# Running tests
+- /venv/bin/python3 -m tests.test_file_importer 
+    - NB! Don't add .py at the end
+
+# Running Demo's
+- /venv/bin/python demo/import_demo.py 
+
 # Classes intended functionality
 APIImporter
     - Implement import_openAPI in api_importer.py for the backed

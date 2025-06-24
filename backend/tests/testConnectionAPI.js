@@ -1,7 +1,7 @@
 const net = require('net');
 
 const HOST = '127.0.0.1';
-const PORT = 9004;
+const PORT = 9011;
 
 const request = {
   command: "connection.test"

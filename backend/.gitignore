@@ -3,3 +3,5 @@
 
 # Ignore all .pyc files
 *.pyc
+
+combinedcode.py

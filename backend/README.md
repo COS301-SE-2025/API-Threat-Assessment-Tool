@@ -5,6 +5,21 @@
 # Running Demo's
 - /venv/bin/python demo/import_demo.py 
 
+# Request/Response format
+#### requests should have a command and data field.
+request = {
+    "command": "commandName",
+    "data": data
+}
+
+#### all responses will contain a code an data json object.
+response = {
+    "status": "200", # success/
+    "data": data
+    }
+
+#### Types of accepted requests and responses can be found in Usage.MD
+
 # Classes intended functionality
 APIImporter
     - Implement import_openAPI in api_importer.py for the backed

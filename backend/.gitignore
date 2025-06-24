@@ -4,4 +4,6 @@
 # Ignore all .pyc files
 *.pyc
 
+**/venv/
+
 combinedcode.py

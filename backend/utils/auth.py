@@ -1,4 +1,4 @@
-# Managae authenticatoin and authorisation
+# Managae authenticatoin and authorisation a
 
 import jwt
 import datetime

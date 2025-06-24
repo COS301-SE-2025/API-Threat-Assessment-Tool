@@ -42,11 +42,11 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  const login = async (emailOrUsername, password) => {
+  const login = async (identifier, password) => {
     setIsLoading(true);
     try {
       const res = await axios.post('http://localhost:3001/api/auth/login', {
-        email: emailOrUsername,
+        [identifier.includes('@') ? 'email' : 'username']: identifier,
         password
       });
 
@@ -66,31 +66,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-const signup = async (userData) => {
-  setIsLoading(true);
-  try {
-    const res = await axios.post('http://localhost:3001/api/auth/signup', userData);
-    if (res.data.success) {
-      // Immediately login after successful signup
-      const loginRes = await login(userData.email, userData.password);
-      if (loginRes.success) {
-        return { success: true, user: loginRes.user };
+  const signup = async (userData) => {
+    setIsLoading(true);
+    try {
+      const res = await axios.post('http://localhost:3001/api/auth/signup', userData);
+      if (res.data.success) {
+        const loginRes = await login(userData.email, userData.password);
+        if (loginRes.success) {
+          return { success: true, user: loginRes.user };
+        } else {
+          return { success: false, error: 'Signup succeeded but auto-login failed.' };
+        }
       } else {
-        return { success: false, error: 'Signup succeeded but auto-login failed.' };
+        return { success: false, error: res.data.message };
       }
-    } else {
-      return { success: false, error: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Signup failed'
+      };
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    return {
-      success: false,
-      error: err.response?.data?.message || 'Signup failed'
-    };
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const logout = () => {
     localStorage.removeItem('at_at_token');

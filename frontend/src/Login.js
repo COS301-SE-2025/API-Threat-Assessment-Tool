@@ -11,7 +11,7 @@ const Login = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const { login, isLoading, isAuthenticated } = useAuth();
   
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +40,7 @@ const Login = () => {
   }, [isAuthenticated, navigate, location.state]);
 
   const handleInputChange = (field, value) => {
-    if (field === 'username') setUsername(value);
+    if (field === 'identifier') setIdentifier(value);
     if (field === 'password') setPassword(value);
     if (error) {
       setError('');
@@ -65,8 +65,8 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !password) {
-      showError('Please enter both username/email and password');
+    if (!identifier.trim() || !password) {
+      showError('Please enter both identifier and password');
       return;
     }
 
@@ -77,7 +77,7 @@ const Login = () => {
     }
 
     try {
-      const result = await login(username.trim(), password);
+      const result = await login(identifier.trim(), password);
       if (result.success) {
         showSuccessMessage('Login successful! Redirecting...');
         setAnimationPhase('success');
@@ -132,13 +132,13 @@ const Login = () => {
           {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
 
           <form onSubmit={handleLogin} noValidate>
-            <div className={`form-group ${error && !username.trim() ? 'error' : ''}`}>
-              <label htmlFor="username">Username or Email:</label>
+            <div className={`form-group ${error && !identifier.trim() ? 'error' : ''}`}>
+              <label htmlFor="identifier">Username or Email:</label>
               <input
                 type="text"
-                id="username"
-                value={username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
+                id="identifier"
+                value={identifier}
+                onChange={(e) => handleInputChange('identifier', e.target.value)}
                 disabled={isSubmitting}
                 placeholder="Enter your username or email"
                 required

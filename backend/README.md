@@ -1,3 +1,7 @@
+# Starting the engine 
+run `main.py` with python
+Refer to tests/testConection on how to establish connection with engine 
+
 # Running tests
 - /venv/bin/python3 -m tests.test_file_importer 
     - NB! Don't add .py at the end

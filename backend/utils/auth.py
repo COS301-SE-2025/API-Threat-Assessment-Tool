@@ -3,8 +3,9 @@
 import jwt
 import datetime
 from user_manager import UserManager
+from secrets import load_secret_key
 
-secret_key = "your_secret_key_here"
+secret_key = load_secret_key()
 
 def checkLogin(username, password):
     user_manager = UserManager('localhost', 'mydatabase', 'myuser', 'mypassword')
@@ -15,8 +16,8 @@ def checkLogin(username, password):
 
 def get_auth_token(username):
     payload = {
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1),
+        'iat': datetime.datetime.now(datetime.timezone.utc),
         'sub': username
     }
     return jwt.encode(payload, secret_key, algorithm='HS256')

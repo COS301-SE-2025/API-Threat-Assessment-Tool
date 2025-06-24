@@ -158,6 +158,10 @@ def handle_request(request: dict):
         response = download_report(request)
         return response
 
+    elif command == "connection.test":
+        response = connection_test(request)
+        return response
+
     else:
         return bad_request(f"Unknown command '{command}'")
 

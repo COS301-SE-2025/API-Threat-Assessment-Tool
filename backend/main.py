@@ -5,7 +5,8 @@ from core.vulnerability_scanner import VulnerabilityScanner
 from core.report_generator import ReportGenerator
 from core.scan_manager import ScanManager
 from core.result_manager import ResultManager
-from utils.query import success, bad_request, not_found, server_error
+from utils.query import success, bad_request, not_found, server_error, connection_test
+
 import socket
 import json
 
@@ -159,7 +160,7 @@ def handle_request(request: dict):
         return response
 
     elif command == "connection.test":
-        response = connection_test(request)
+        response = connection_test()
         return response
 
     else:
@@ -173,6 +174,7 @@ def run_server():
         while True:
             conn, addr = s.accept()
             with conn:
+                print("New connection")
                 data = b""
                 while True:
                     chunk = conn.recv(4096)

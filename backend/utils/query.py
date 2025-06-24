@@ -29,3 +29,7 @@ def not_found(message: str):
 
 def server_error(message: str):
     return response(HTTPCode.SERVER_ERROR, {"message": message})
+
+def connection_test():
+    return response(HTTPCode.SUCCESS, {"message": "Connection Established"})
+

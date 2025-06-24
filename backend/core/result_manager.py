@@ -3,7 +3,7 @@
 class ResultManager:
     def __init__(self):
         self.apiName = ""
-        self.scans = {"some key value" : [ScanResult]}
+        self.scans = ""  # {"some key value" : [ScanResult]}
 
     def add_result():
         print("do something")

@@ -3,7 +3,7 @@
 
 class ScanManager:
     def __init__(self):
-        self.vulnScanners = {"Scan profile name": VulnerabilityScanner()}
+        self.vulnScanners = "" # {"Scan profile name": VulnerabilityScanner()}
         self.apiType = ""
         self.resultManager = ""
         self.APIClient = ""

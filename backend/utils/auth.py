@@ -2,7 +2,7 @@
 
 import jwt
 import datetime
-from user_manager import UserManager
+from utils.user_manager import UserManager
 
 secret_key = "your_secret_key_here"
 

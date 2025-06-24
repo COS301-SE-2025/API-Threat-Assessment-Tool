@@ -3,6 +3,8 @@ from utils.db import DatabaseManager
 from input.api_importer import APIImporter
 from core.vulnerability_scanner import VulnerabilityScanner
 from core.report_generator import ReportGenerator
+from core.scan_manager import ScanManager
+from core.result_manager import ResultManager
 from utils.query import success, bad_request, not_found, server_error
 import socket
 import json

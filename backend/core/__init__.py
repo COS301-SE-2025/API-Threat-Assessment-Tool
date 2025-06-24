@@ -1,1 +1,1 @@
-__all__ = ["APIClient", "function2"]
+__all__ = ["APIClient", "ScanManager"]

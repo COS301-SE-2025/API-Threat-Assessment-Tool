@@ -1,7 +1,7 @@
 # user management 
 # Make sure user can actually access the api's they're meants to
 
-from db import DatabaseManager
+from utils.db import DatabaseManager
 
 class UserManager:
     def __init__(self, db_config):

@@ -1,9 +1,28 @@
+# Starting the engine 
+run `main.py` with python
+Refer to tests/testConection on how to establish connection with engine 
+
 # Running tests
 - /venv/bin/python3 -m tests.test_file_importer 
     - NB! Don't add .py at the end
 
 # Running Demo's
 - /venv/bin/python demo/import_demo.py 
+
+# Request/Response format
+#### requests should have a command and data field.
+request = {
+    "command": "commandName",
+    "data": data
+}
+
+#### all responses will contain a code an data json object.
+response = {
+    "status": "200", # success/
+    "data": data
+    }
+
+#### Types of accepted requests and responses can be found in Usage.MD
 
 # Classes intended functionality
 APIImporter

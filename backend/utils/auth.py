@@ -1,9 +1,9 @@
-# Managae authenticatoin and authorisation
+# Managae authenticatoin and authorisation a
 
 import jwt
 import datetime
-from user_manager import UserManager
-from secrets import load_secret_key
+from utils.user_manager import UserManager
+from utils.secrets import load_secret_key
 
 secret_key = load_secret_key()
 

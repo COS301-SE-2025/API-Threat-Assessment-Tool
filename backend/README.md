@@ -1,4 +1,80 @@
-# tldr (open this in edit to view properly)
+# Starting the engine 
+run `main.py` with python
+Refer to tests/testConection on how to establish connection with engine 
+
+# Running tests
+- /venv/bin/python3 -m tests.test_file_importer 
+    - NB! Don't add .py at the end
+
+# Running Demo's
+- /venv/bin/python demo/import_demo.py 
+
+# Request/Response format
+#### requests should have a command and data field.
+request = {
+    "command": "commandName",
+    "data": data
+}
+
+#### all responses will contain a code an data json object.
+response = {
+    "status": "200", # success/
+    "data": data
+    }
+
+#### Types of accepted requests and responses can be found in Usage.MD
+
+# Classes intended functionality
+APIImporter
+    - Implement import_openAPI in api_importer.py for the backed
+
+APIClient
+    - Stores information about api and provides basic interactions
+
+Endpoint
+    - Internal representation of an api endpoint'
+
+HTTPInterface
+    - Provides for dynamic http interactions with the api
+
+VulnerabilityTests
+    - Class that interacts with the APIclient and HTTPInterface to run specific tests
+
+VulnerabilityScanner
+    - Vulnerability scanner uses APIclient and VulnerabilityTests to test the api
+
+ScanManager
+    - Managers VulnerabilityScanner instances
+
+ScanResult
+    - Each VulnerabilityTests unit should return a ScanResult object which stores information about that test result
+
+VulnerabilityReport
+    - Internal representation of the vulnerability report
+
+ReportGenerator
+    - Report Generator uses ScanResult objects to create a VulnerabilityReport object
+    - Export Executive and Techincal reports in different formats
+
+ResultManager
+    - Manages ScanResults
+
+Auth
+    - Backend structure for making sure a user is who they say they are and has access to what's being requested
+
+Database
+    - Implement class to interact with database
+
+Secrets
+    - Class that deals with secret information
+
+UserManager
+    - Class that deals with user interactions and creation
+
+
+
+
+# Class interaction
 Import api from some spec file
 -> Use APIImport.import()
 -> APIClient object is created, Sets relevant information about API based of file contents.

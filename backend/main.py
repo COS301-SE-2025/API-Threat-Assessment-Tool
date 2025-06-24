@@ -23,6 +23,10 @@ CLIENT_STORE = {}
 def handle_request(request: dict):
     command = request.get("command")
 
+    if command == "auth.register":
+        response = auth_register(request)
+        return response
+
     if command == "auth.login":
         response = auth_login(request)
         return response
@@ -236,6 +240,9 @@ def create_scan(request):
 
 
 # === Auth ===
+def auth_register(request): 
+    return server_error("Not yet implemented")
+
 def auth_login(request): 
     return server_error("Not yet implemented")
 

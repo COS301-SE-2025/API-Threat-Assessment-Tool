@@ -16,6 +16,7 @@ class APIImporter:
         print("do something")
 
     def import_openapi(self, fp):
+        print("Importing new openAPI file")
         self.filepath = fp
         if self.filepath.endswith(".json"):
             with open(self.filepath, "r") as f:

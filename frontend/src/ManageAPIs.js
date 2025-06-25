@@ -3,6 +3,16 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
 
 
+async function fetchAllTags() {
+  const res = await fetch('/api/tags', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch tags');
+    return data.data.tags;
+}
 
 async function fetchApiEndpoints(api_id) {
   const res = await fetch('/api/endpoints', {
@@ -26,7 +36,9 @@ async function addTagsToEndpoint({ path, method, tags }) {
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
   return data.data;
 }
-function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
+
+
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "" }) {
   const [tagInput, setTagInput] = React.useState('');
   const [removeInput, setRemoveInput] = React.useState('');
   const [replaceInput, setReplaceInput] = React.useState('');
@@ -34,6 +46,8 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
   const [removing, setRemoving] = React.useState(false);
   const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
+
+
 
   const handleAddTags = async () => {
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
@@ -108,7 +122,24 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
   };
 
   return (
+    
     <div style={{ marginTop: 8 }}>
+      {tagsLoading ? (
+  <div style={{ fontSize: 13, color: "#888" }}>Loading tags...</div>
+) : tagsError ? (
+  <div style={{ fontSize: 13, color: "#e53e3e" }}>❌ {tagsError}</div>
+) : allTags && allTags.length > 0 ? (
+  <div style={{ marginBottom: 5, fontSize: 12, color: "#888", whiteSpace: 'pre-line' }}>
+    <strong>Available tags:</strong>{" "}
+    {allTags.map(tag => (
+      <span key={tag} style={{
+        display: 'inline-block', background: "#f3f4f6", color: "#6366f1",
+        borderRadius: 8, padding: "2px 8px", marginRight: 4, marginBottom: 2, fontWeight: 600
+      }}>{tag}</span>
+    ))}
+  </div>
+) : null}
+
       {/* Add tags */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
         <input
@@ -274,6 +305,10 @@ const [selectedApiEndpoints, setSelectedApiEndpoints] = useState(null);
 const [selectedApiForEndpoints, setSelectedApiForEndpoints] = useState(null);
 const [endpointsLoading, setEndpointsLoading] = useState(false);
 const [endpointsError, setEndpointsError] = useState('');
+const [allTags, setAllTags] = useState([]);
+const [tagsLoading, setTagsLoading] = useState(false);
+const [tagsError, setTagsError] = useState('');
+
 
 
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
@@ -415,6 +450,15 @@ useEffect(() => {
     }
     
   }, []);
+  useEffect(() => {
+  setTagsLoading(true);
+  setTagsError('');
+  fetchAllTags()
+    .then(tags => setAllTags(Array.isArray(tags) ? tags : []))
+    .catch(e => setTagsError(e.message || "Failed to fetch tags"))
+    .finally(() => setTagsLoading(false));
+}, []);
+
   // Safe View Endpoint handler
  const handleViewEndpoints = async (api) => {
     setEndpointsLoading(true);
@@ -1328,7 +1372,13 @@ if (e.target) e.target.value = '';
               {ep.summary || ep.description ? (
                 <div className="endpoint-summary">{ep.summary || ep.description}</div>
               ) : null}
-              <EndpointTagEditor endpoint={ep} />
+              <EndpointTagEditor 
+                endpoint={ep}
+                allTags={allTags}
+                tagsLoading={tagsLoading}
+                tagsError={tagsError}
+              />
+
             </li>
           ))}
         </ul>

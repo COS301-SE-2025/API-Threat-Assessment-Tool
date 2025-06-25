@@ -507,6 +507,14 @@ const Dashboard = () => {
         >
           <h2>⚡ Quick Actions</h2>
           <div className="actions-grid">
+          <Link to="/import-api" className="action-card">
+            <div className="action-icon">⬆️</div>
+            <div className="action-content">
+              <h4>Import API Spec</h4>
+              <p>Upload an OpenAPI or Swagger file for security scanning</p>
+              <span className="action-arrow">→</span>
+            </div>
+          </Link>
             <Link to="/manage-apis" className="action-card">
               <div className="action-icon">🔧</div>
               <div className="action-content">
@@ -539,6 +547,8 @@ const Dashboard = () => {
                 <span className="action-arrow">→</span>
               </div>
             </Link>
+
+
           </div>
         </section>
       </main>

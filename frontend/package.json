@@ -47,5 +47,6 @@
     "cross-env": "^7.0.3",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.3.3"
-  }
+  },"proxy": "http://localhost:3001"
+
 }

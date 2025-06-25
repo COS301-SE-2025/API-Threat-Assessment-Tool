@@ -16,6 +16,7 @@ import PublicTemplates from "./PublicTemplates";
 import ScanReport from "./ScanReport";
 // Import the scan simulation module
 import { ScanSimulation } from "./scanSimulation";
+import ImportAPI from "./ImportAPI";
 
 // Define ThemeContext at the top level and export it
 export const ThemeContext = createContext();
@@ -181,6 +182,15 @@ function App() {
                   } 
                 />
                 
+                <Route
+                  path="/import-api"
+                  element={
+                    <ProtectedRoute>
+                      <ImportAPI />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Root route - redirect to home for better user experience */}
                 <Route 
                   path="/" 

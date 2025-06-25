@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
 
+
+
 // Safe imports with fallbacks
 let ThemeContext, useAuth, Logo;
 
@@ -36,6 +38,10 @@ try {
 
 const ManageAPIs = () => {
   // Safe hooks with error handling
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState("");
+
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
   const location = useLocation?.() || { pathname: '/manage-apis' };
   
@@ -289,7 +295,55 @@ const ManageAPIs = () => {
       setError('Error updating field. Please try again.');
     }
   }, []);
+  // ----------- IMPORT API MODAL (BACKEND) -----------
+  const handleImportAPISubmit = async (e) => {
+    e.preventDefault();
+    setImportLoading(true);
+    setImportError("");
+    const fileInput = document.getElementById("import-api-file");
+    const file = fileInput.files[0];
+    if (!file) {
+      setImportError("Please select a file.");
+      setImportLoading(false);
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
 
+    try {
+      const res = await fetch("/api/import", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message || "Import failed");
+
+      // Add to API list (extract name from filename for now)
+      const { filename, api_id } = result.data;
+      setApis((prevApis) => [
+        ...prevApis,
+        {
+          id: Math.max(...prevApis.map(a => a.id), 0) + 1,
+          name: filename.replace(/\.[^/.]+$/, ''),
+          baseUrl: "",
+          description: `Imported from ${filename}. Edit details as needed.`,
+          status: "Active",
+          lastScanned: "Never",
+          scanCount: 0,
+          lastScanResult: "Pending",
+          api_id: api_id,
+          filename: filename,
+        }
+      ]);
+      showMessage(`✅ Imported API "${filename}" successfully!`, "success");
+      setIsImportModalOpen(false);
+    } catch (err) {
+      setImportError(err.message || "Unexpected error.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
   // Safe API save handler
   const handleSaveApi = useCallback(async () => {
     try {
@@ -422,31 +476,46 @@ const ManageAPIs = () => {
             return;
           }
 
-          // Validate required fields
-          if (!apiData.name || !apiData.baseUrl) {
-            showMessage('File must contain "name" and "baseUrl" fields.', 'error');
-            return;
-          }
+// Recognize OpenAPI/Swagger
+const isOpenAPI = apiData.openapi || apiData.swagger;
+let name, baseUrl, description;
 
-          const newApi = {
-            id: Math.max(...apis.map(a => a.id), 0) + 1,
-            name: apiData.name,
-            baseUrl: apiData.baseUrl,
-            description: apiData.description || '',
-            status: apiData.status || 'Active',
-            lastScanned: 'Never',
-            scanCount: 0,
-            lastScanResult: 'Pending'
-          };
-          
-          setApis(prevApis => [...prevApis, newApi]);
-          showMessage(`✅ API "${newApi.name}" imported successfully!`, 'success');
-          setIsModalOpen(false);
-          
-          // Reset file input
-          if (e.target) {
-            e.target.value = '';
-          }
+if (isOpenAPI) {
+  name = apiData.info?.title || 'Imported OpenAPI';
+  baseUrl = apiData.servers?.[0]?.url || '';
+  description = apiData.info?.description || '';
+  if (!baseUrl) {
+    showMessage('No servers.url found in OpenAPI file.', 'error');
+    return;
+  }
+} else {
+  // Fallback: legacy simple format
+  name = apiData.name;
+  baseUrl = apiData.baseUrl;
+  description = apiData.description || '';
+  if (!name || !baseUrl) {
+    showMessage('File must contain "name" and "baseUrl" fields.', 'error');
+    return;
+  }
+}
+
+const newApi = {
+  id: Math.max(...apis.map(a => a.id), 0) + 1,
+  name,
+  baseUrl,
+  description,
+  status: apiData.status || 'Active',
+  lastScanned: 'Never',
+  scanCount: 0,
+  lastScanResult: 'Pending'
+};
+
+setApis(prevApis => [...prevApis, newApi]);
+showMessage(`✅ API "${name}" imported successfully!`, 'success');
+setIsModalOpen(false);
+
+if (e.target) e.target.value = '';
+
         } catch (error) {
           console.error('Error processing file:', error);
           showMessage('Error processing file: ' + error.message, 'error');
@@ -576,7 +645,7 @@ const ManageAPIs = () => {
         </div>
       </header>
 
-      <main className="manage-apis-main">
+          <main className="manage-apis-main">
         {/* Hero Section */}
         <section className="manage-apis-hero">
           <div className="hero-content">
@@ -596,13 +665,24 @@ const ManageAPIs = () => {
               Centrally manage your API endpoints, configure security scans, and monitor your API ecosystem.
             </p>
             <div className="hero-actions">
-              <button onClick={handleAddApi} className="add-api-btn">
-                🚀 Add New API
+              <button onClick={handleAddApi} className="add-api-btn">🚀 Add New API</button>
+              <button
+                onClick={() => { setIsImportModalOpen(true); setImportError(""); }}
+                className="import-api-btn"
+                style={{
+                  marginLeft: 16,
+                  background: "#a78bfa",
+                  color: "#222",
+                  borderRadius: 7,
+                  fontWeight: 700,
+                  padding: "9px 24px"
+                }}
+              >
+                ⬆️ Import API Spec
               </button>
             </div>
-          </div>
+          </div> 
         </section>
-
         {/* API Statistics */}
         <section 
           id="api-stats" 
@@ -861,7 +941,71 @@ const ManageAPIs = () => {
           </div>
         </div>
       )}
-
+{isImportModalOpen && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsImportModalOpen(false)}>
+    <div className="modal-content" style={{ minWidth: 380 }}>
+      <div className="modal-header">
+        <h2>⬆️ Import API Spec</h2>
+        <button onClick={() => setIsImportModalOpen(false)} className="close-btn">×</button>
+      </div>
+      <form
+        className="modal-form"
+        style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 10 }}
+        onSubmit={handleImportAPISubmit}
+      >
+        <label style={{ fontWeight: 600 }}>
+          <span>Choose .json, .yaml, or .yml file:</span>
+          <input
+            id="import-api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            style={{
+              marginTop: 8,
+              padding: "7px",
+              background: "#23232b",
+              color: "#fff",
+              borderRadius: 7,
+              fontWeight: 600,
+            }}
+            disabled={importLoading}
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={importLoading}
+          style={{
+            background: "#6366f1",
+            color: "#fff",
+            borderRadius: 7,
+            fontWeight: 700,
+            padding: "12px 0",
+            fontSize: 16,
+            marginTop: 10,
+            cursor: importLoading ? "not-allowed" : "pointer"
+          }}
+        >
+          {importLoading ? "Uploading..." : "Import & Add API"}
+        </button>
+        {importError && (
+          <div style={{
+            background: "#ef444420",
+            color: "#f87171",
+            borderRadius: 8,
+            marginTop: 10,
+            padding: "8px 12px",
+            fontWeight: 600
+          }}>
+            ❌ {importError}
+          </div>
+        )}
+      </form>
+      <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
+        Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
+        After import, you can edit API details.
+      </div>
+    </div>
+  </div>
+)}
       <footer className="manage-apis-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">

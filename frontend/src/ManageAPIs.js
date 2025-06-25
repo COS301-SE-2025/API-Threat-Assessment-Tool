@@ -1185,22 +1185,22 @@ if (e.target) e.target.value = '';
         ) : selectedApiEndpoints.length === 0 ? (
           <div>No endpoints found.</div>
         ) : (
-<ul className="endpoint-list">
-  {selectedApiEndpoints.map((ep, idx) => (
-    <li key={idx} className="endpoint-card">
-      <div className="endpoint-method-path">
-        <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
-          {(ep.method || "GET").toUpperCase()}
-        </span>
-        <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
-      </div>
-      {ep.summary || ep.description ? (
-        <div className="endpoint-summary">{ep.summary || ep.description}</div>
-      ) : null}
-      <EndpointTagEditor endpoint={ep} />
-    </li>
-  ))}
-</ul>
+        <ul className="endpoint-list">
+          {selectedApiEndpoints.map((ep, idx) => (
+            <li key={idx} className="endpoint-card">
+              <div className="endpoint-method-path">
+                <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
+                  {(ep.method || "GET").toUpperCase()}
+                </span>
+                <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
+              </div>
+              {ep.summary || ep.description ? (
+                <div className="endpoint-summary">{ep.summary || ep.description}</div>
+              ) : null}
+              <EndpointTagEditor endpoint={ep} />
+            </li>
+          ))}
+        </ul>
 
         )}
       </div>

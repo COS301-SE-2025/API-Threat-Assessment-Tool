@@ -2,6 +2,19 @@ import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
 
+const APIS_LOCAL_STORAGE_KEY = 'atat_saved_apis';
+
+function saveApisToLocal(apis) {
+  localStorage.setItem(APIS_LOCAL_STORAGE_KEY, JSON.stringify(apis));
+}
+
+function loadApisFromLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(APIS_LOCAL_STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
 
 
 // Safe imports with fallbacks
@@ -53,48 +66,56 @@ const ManageAPIs = () => {
   const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
 
   // State management with safe defaults
-  const [apis, setApis] = useState([
-    {
-      id: 1,
-      name: 'E-commerce API',
-      baseUrl: 'https://api.ecommerce.com/v1',
-      description: 'Main API for the e-commerce platform with user authentication and product management',
-      lastScanned: '2025-06-20',
-      status: 'Active',
-      scanCount: 12,
-      lastScanResult: 'Clean'
-    },
-    {
-      id: 2,
-      name: 'Payment Gateway API',
-      baseUrl: 'https://api.payments.com/v2',
-      description: 'Secure payment processing API with PCI compliance',
-      lastScanned: '2025-06-18',
-      status: 'Active',
-      scanCount: 8,
-      lastScanResult: 'Issues Found'
-    },
-    {
-      id: 3,
-      name: 'User Management Service',
-      baseUrl: 'https://api.users.internal/v1',
-      description: 'Internal user authentication and profile management service',
-      lastScanned: '2025-06-15',
-      status: 'Inactive',
-      scanCount: 5,
-      lastScanResult: 'Pending'
-    },
-    {
-      id: 4,
-      name: 'Analytics API',
-      baseUrl: 'https://api.analytics.com/v3',
-      description: 'Data analytics and reporting API for business intelligence',
-      lastScanned: '2025-06-22',
-      status: 'Active',
-      scanCount: 15,
-      lastScanResult: 'Clean'
-    }
-  ]);
+const fallbackApis = [
+  {
+    id: 1,
+    name: 'E-commerce API',
+    baseUrl: 'https://api.ecommerce.com/v1',
+    description: 'Main API for the e-commerce platform with user authentication and product management',
+    lastScanned: '2025-06-20',
+    status: 'Active',
+    scanCount: 12,
+    lastScanResult: 'Clean'
+  },
+  {
+    id: 2,
+    name: 'Payment Gateway API',
+    baseUrl: 'https://api.payments.com/v2',
+    description: 'Secure payment processing API with PCI compliance',
+    lastScanned: '2025-06-18',
+    status: 'Active',
+    scanCount: 8,
+    lastScanResult: 'Issues Found'
+  },
+  {
+    id: 3,
+    name: 'User Management Service',
+    baseUrl: 'https://api.users.internal/v1',
+    description: 'Internal user authentication and profile management service',
+    lastScanned: '2025-06-15',
+    status: 'Inactive',
+    scanCount: 5,
+    lastScanResult: 'Pending'
+  },
+  {
+    id: 4,
+    name: 'Analytics API',
+    baseUrl: 'https://api.analytics.com/v3',
+    description: 'Data analytics and reporting API for business intelligence',
+    lastScanned: '2025-06-22',
+    status: 'Active',
+    scanCount: 15,
+    lastScanResult: 'Clean'
+  }
+];
+const [apis, setApis] = useState(() => {
+  const local = loadApisFromLocal();
+  return local.length > 0 ? local : fallbackApis;
+});
+useEffect(() => {
+  saveApisToLocal(apis);
+}, [apis]);
+
 
   const [isVisible, setIsVisible] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1006,6 +1027,7 @@ if (e.target) e.target.value = '';
     </div>
   </div>
 )}
+
       <footer className="manage-apis-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">

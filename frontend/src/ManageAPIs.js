@@ -2,6 +2,21 @@ import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
 
+
+
+async function fetchApiEndpoints(api_id) {
+  const res = await fetch('/api/endpoints', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_id }),
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch endpoints');
+  return data.data;
+}
+
+
 const APIS_LOCAL_STORAGE_KEY = 'atat_saved_apis';
 
 function saveApisToLocal(apis) {
@@ -54,6 +69,12 @@ const ManageAPIs = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState("");
+  const [selectedApi, setSelectedApi] = useState(null);
+const [selectedApiEndpoints, setSelectedApiEndpoints] = useState(null);
+const [selectedApiForEndpoints, setSelectedApiForEndpoints] = useState(null);
+const [endpointsLoading, setEndpointsLoading] = useState(false);
+const [endpointsError, setEndpointsError] = useState('');
+
 
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
   const location = useLocation?.() || { pathname: '/manage-apis' };
@@ -64,6 +85,17 @@ const ManageAPIs = () => {
   
   const authContext = useAuth() || { currentUser: null, logout: () => {}, getUserFullName: () => 'User' };
   const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
+  useEffect(() => {
+    const classTarget = document.body;
+    if (darkMode) {
+      classTarget.classList.add('dark-mode');
+    } else {
+      classTarget.classList.remove('dark-mode');
+    }
+    return () => {
+      classTarget.classList.remove('dark-mode');
+    };
+  }, [darkMode]);
 
   // State management with safe defaults
 const fallbackApis = [
@@ -181,7 +213,35 @@ useEffect(() => {
     } catch (error) {
       console.warn('Error setting up intersection observer:', error);
     }
+    
   }, []);
+  // Safe View Endpoint handler
+ const handleViewEndpoints = async (api) => {
+    setEndpointsLoading(true);
+    setEndpointsError('');
+    setSelectedApiForEndpoints(api);
+    try {
+      const id = api.api_id || api.id;
+      const endpointsData = await fetchApiEndpoints(id);
+      let endpoints = endpointsData;
+      if (endpoints && typeof endpoints === 'object' && Array.isArray(endpoints.endpoints)) {
+        endpoints = endpoints.endpoints;
+      } else if (!Array.isArray(endpoints)) {
+        endpoints = [];
+      }
+      setSelectedApiEndpoints(endpoints);
+    } catch (err) {
+      setEndpointsError(err.message || "Failed to load endpoints");
+      setSelectedApiEndpoints([]);
+    }
+    setEndpointsLoading(false);
+  };
+  const closeEndpointsModal = () => {
+    setSelectedApiEndpoints(null);
+    setSelectedApiForEndpoints(null);
+    setEndpointsError('');
+  };
+
 
   // Safe logout handler
   const handleLogout = useCallback(() => {
@@ -285,6 +345,7 @@ useEffect(() => {
     }
   }, []);
 
+ 
   const handleScanApi = useCallback((api) => {
     try {
       if (!api) return;
@@ -796,6 +857,15 @@ if (e.target) e.target.value = '';
                         >
                           🗑️ Delete
                         </button>
+                        <button
+                          onClick={() => handleViewEndpoints(api)}
+                          className="action-btn endpoints"
+                          title="View Endpoints"
+                          style={{ background: "#6366f1", color: "#fff" }}
+                        >
+                          📂 Endpoints
+                        </button>
+
                       </div>
                     </div>
                   ))}
@@ -1027,6 +1097,46 @@ if (e.target) e.target.value = '';
     </div>
   </div>
 )}
+
+
+{selectedApiEndpoints !== null && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeEndpointsModal()}>
+    <div className="modal-content" style={{ minWidth: 420, maxHeight: 540, overflow: 'auto' }}>
+      <div className="modal-header">
+        <h2>📂 Endpoints for "{selectedApiForEndpoints?.name || ''}"</h2>
+        <button onClick={closeEndpointsModal} className="close-btn">×</button>
+      </div>
+      <div style={{ padding: 16 }}>
+        {endpointsLoading ? (
+          <div>Loading endpoints...</div>
+        ) : endpointsError ? (
+          <div style={{ color: '#e53e3e' }}>❌ {endpointsError}</div>
+        ) : !Array.isArray(selectedApiEndpoints) ? (
+          <div>No endpoints found.</div>
+        ) : selectedApiEndpoints.length === 0 ? (
+          <div>No endpoints found.</div>
+        ) : (
+        <ul className="endpoint-list">
+  {selectedApiEndpoints.map((ep, idx) => (
+    <li key={idx} className="endpoint-card">
+      <div className="endpoint-method-path">
+        <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
+          {(ep.method || "GET").toUpperCase()}
+        </span>
+        <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
+      </div>
+      {ep.summary || ep.description ? (
+        <div className="endpoint-summary">{ep.summary || ep.description}</div>
+      ) : null}
+    </li>
+  ))}
+</ul>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
 
       <footer className="manage-apis-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>

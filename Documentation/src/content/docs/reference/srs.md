@@ -13,6 +13,7 @@ SRS Document for Demo 1 as of 28 May 2025 - Will be updated as the project conti
 - [Use Case Diagrams](#use-case-diagram)
 - [Architectural Constraints](#architectural-constraints)
 - [Architectural Quality Requirements](#architectural-quality-requirements)
+- [Non-Functional Requirements](#non-functional-requirements)
 - [Architectural Patterns](#architectural-patterns)
 - [Technology Requirements](#technology-requirements)
 - [Service Contracts](#service-contracts)
@@ -338,6 +339,9 @@ As a critical assessment tool, users must trust AT-AT to always be available, re
     - R5.3.1: System errors must be logged and developers notified.  
 **Implementation:** A log aggregator like Logtail or custom webhook will track critical backend crashes.
 
+
+## Non-Functional Requirements
+# to-do
 ## Architectural Patterns
 
 ### Client-Server Architecture
@@ -468,7 +472,7 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 
 
 #### Authentication
-**Tool:** OAuth 2.0 (Google/GitHub), JWT
+**Tool:** OAuth 2.0 (Google/GitHub), JWT + Email/Password
 
 **Advantage:** Supports secure, standardized login mechanisms with token-based sessions, enabling flexible integration with external identity providers.
 

@@ -31,7 +31,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 
 // Engine config
 const ENGINE_HOST = '127.0.0.1';
-const ENGINE_PORT = 9011;
+const ENGINE_PORT = process.env.ENGINE_PORT || 9011;
 const ENGINE_SCRIPT = 'main.py'; // Script name in backend folder
 
 // Engine process management
@@ -200,8 +200,10 @@ const sendToEngine = async (request) => {
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
     let responseData = '';
+    const startTime = Date.now();
 
-    client.setTimeout(120000); // Increase to 2 minutes
+    console.log(`🔍 Setting socket timeout to 120 seconds`);
+    client.setTimeout(120000); // 2 minutes
 
     client.on('connect', () => {
       console.log(`🔗 Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT}`);
@@ -211,10 +213,12 @@ const sendToEngine = async (request) => {
 
     client.on('data', (data) => {
       responseData += data.toString();
+      console.log(`📨 Received data chunk: ${data.toString().length} bytes`);
     });
 
     client.on('close', () => {
-      console.log(`🔌 Connection to engine closed`);
+      const elapsed = Date.now() - startTime;
+      console.log(`🔌 Connection to engine closed after ${elapsed}ms`);
       console.log(`📦 Raw response data: [${responseData}]`);
       try {
         const response = JSON.parse(responseData);
@@ -234,12 +238,14 @@ const sendToEngine = async (request) => {
     });
 
     client.on('error', (err) => {
-      console.error(`❌ Engine connection error:`, err.message);
+      const elapsed = Date.now() - startTime;
+      console.error(`❌ Engine connection error after ${elapsed}ms:`, err.message);
       reject(new Error(`Engine connection failed: ${err.message}`));
     });
 
     client.on('timeout', () => {
-      console.error(`⏰ Engine connection timeout`);
+      const elapsed = Date.now() - startTime;
+      console.error(`⏰ Engine connection timeout after ${elapsed}ms`);
       client.destroy();
       reject(new Error('Engine request timeout'));
     });
@@ -285,7 +291,13 @@ app.get('/', (req, res) => {
       logout: 'POST /api/auth/logout',
       profile: 'GET /api/auth/profile',
       users: 'GET /users',
-      importApi: 'POST /api/import'
+      importApi: 'POST /api/import',
+      listEndpoints: 'POST /api/endpoints',
+      endpointDetails: 'POST /api/endpoints/details',
+      addTags: 'POST /api/endpoints/tags/add',
+      removeTags: 'POST /api/endpoints/tags/remove',
+      replaceTags: 'POST /api/endpoints/tags/replace',
+      listTags: 'GET /api/tags'
     }
   });
 });
@@ -528,7 +540,210 @@ app.post('/api/import', upload.single('file'), async (req, res) => {
   }
 });
 
-// 404 handler
+// List API endpoints
+app.post('/api/endpoints', async (req, res) => {
+  try {
+    const { api_id } = req.body;
+    
+    // Send request to engine - for demo, always use empty data since Python uses global API
+    const engineRequest = {
+      command: "endpoints.list",
+      data: {}  // Empty data for demo - Python backend uses global API
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Endpoints retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve endpoints';
+      sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Endpoints error:', err.message);
+    sendError(res, 'Endpoints retrieval failed', err.message, 500);
+  }
+});
+
+// Add endpoint tags
+app.post('/api/endpoints/tags/add', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!tags || !Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.tags.add",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags added successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to add tags';
+      sendError(res, 'Add tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Add tags error:', err.message);
+    sendError(res, 'Add tags failed', err.message, 500);
+  }
+});
+
+// Remove endpoint tags
+app.post('/api/endpoints/tags/remove', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!tags || !Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.tags.remove",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags removed successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to remove tags';
+      sendError(res, 'Remove tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Remove tags error:', err.message);
+    sendError(res, 'Remove tags failed', err.message, 500);
+  }
+});
+
+// Replace endpoint tags
+app.post('/api/endpoints/tags/replace', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.tags.replace",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags replaced successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to replace tags';
+      sendError(res, 'Replace tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Replace tags error:', err.message);
+    sendError(res, 'Replace tags failed', err.message, 500);
+  }
+});
+
+// List all tags
+app.get('/api/tags', async (req, res) => {
+  try {
+    // Send request to engine
+    const engineRequest = {
+      command: "tags.list",
+      data: {}
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve tags';
+      sendError(res, 'Tags retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('List tags error:', err.message);
+    sendError(res, 'List tags failed', err.message, 500);
+  }
+});
+
+// Get endpoint details
+app.post('/api/endpoints/details', async (req, res) => {
+  try {
+    const { endpoint_id, path, method } = req.body;
+    
+    if (!endpoint_id) {
+      return sendError(res, 'Missing endpoint_id', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.details",
+      data: {
+        id: endpoint_id,        // Python expects "id"
+        path: path,             // Python expects "path"  
+        method: method          // Python expects "method"
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Endpoint details retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve endpoint details';
+      sendError(res, 'Endpoint details retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Endpoint details error:', err.message);
+    sendError(res, 'Endpoint details retrieval failed', err.message, 500);
+  }
+});
+
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);
 });
@@ -537,9 +752,6 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   sendError(res, 'Unhandled error', err.message, 500);
 });
-
-// Run server
-const PORT = process.env.PORT || 3001;
 
 // Graceful shutdown
 const gracefulShutdown = () => {
@@ -565,7 +777,13 @@ const gracefulShutdown = () => {
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`⚡ Engine will auto-start when needed`);
-});
+// Export the app for testing, start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
+    console.log(`⚡ Engine will auto-start when needed`);
+  });
+}
+
+module.exports = app;

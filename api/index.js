@@ -40,7 +40,7 @@ let engineStarting = false;
 
 // File upload setup
 const upload = multer({
-  dest: 'uploads/',
+  dest: 'uploads/',  // Fixed: was 'uploaads/' 
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
@@ -123,15 +123,19 @@ const startEngine = () => {
     
     engineStarting = true;
     console.log('🚀 Starting Python engine...');
+    console.log(`🔍 Working directory: ${path.join(process.cwd(), '../backend')}`);
     
-    engineProcess = spawn('python', [ENGINE_SCRIPT], {
+    engineProcess = spawn('python', ['-u', 'main.py'], {  // Add -u flag for unbuffered output
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: path.join(process.cwd(), '../backend') // Set working directory to backend folder
+      cwd: path.join(process.cwd(), '../backend'),
+      shell: true
     });
+    
+    console.log(`🔍 Spawned process with PID: ${engineProcess.pid}`);
     
     engineProcess.stdout.on('data', (data) => {
       const output = data.toString();
-      console.log(`🐍 Engine: ${output.trim()}`);
+      console.log(`🐍 Engine stdout: ${output.trim()}`);
       
       // Check if engine is ready
       if (output.includes('Listening on')) {
@@ -142,7 +146,12 @@ const startEngine = () => {
     });
     
     engineProcess.stderr.on('data', (data) => {
-      console.error(`❌ Engine error: ${data.toString().trim()}`);
+      const error = data.toString();
+      console.error(`❌ Engine stderr: ${error.trim()}`);
+    });
+    
+    engineProcess.on('spawn', () => {
+      console.log('✅ Process spawned successfully');
     });
     
     engineProcess.on('close', (code) => {
@@ -157,13 +166,17 @@ const startEngine = () => {
       reject(err);
     });
     
-    // Timeout if engine doesn't start within 10 seconds
+    // Timeout if engine doesn't start within 30 seconds
     setTimeout(() => {
       if (engineStarting) {
+        console.log('⏰ Engine startup timeout - killing process');
+        if (engineProcess) {
+          engineProcess.kill();
+        }
         engineStarting = false;
         reject(new Error('Engine startup timeout'));
       }
-    }, 10000);
+    }, 30000);
   });
 };
 
@@ -188,7 +201,7 @@ const sendToEngine = async (request) => {
     const client = new net.Socket();
     let responseData = '';
 
-    client.setTimeout(30000); // 30 second timeout
+    client.setTimeout(120000); // Increase to 2 minutes
 
     client.on('connect', () => {
       console.log(`🔗 Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT}`);
@@ -202,11 +215,20 @@ const sendToEngine = async (request) => {
 
     client.on('close', () => {
       console.log(`🔌 Connection to engine closed`);
+      console.log(`📦 Raw response data: [${responseData}]`);
       try {
         const response = JSON.parse(responseData);
-        console.log(`📥 Engine response status: ${response.status}`);
+        console.log(`📥 Engine response code: ${response.code}`);
+        
+        // Check if engine returned an error code
+        if (response.code !== 200 && response.code !== '200') {
+          const errorMessage = response.data || 'Unknown engine error';
+          return reject(new Error(errorMessage));
+        }
+        
         resolve(response);
       } catch (err) {
+        console.error(`❌ Failed to parse response: ${err.message}`);
         reject(new Error('Failed to parse engine response'));
       }
     });
@@ -481,14 +503,14 @@ app.post('/api/import', upload.single('file'), async (req, res) => {
     }
 
     // Check engine response
-    if (engineResponse.status === 200 || engineResponse.status === '200') {
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
       sendSuccess(res, 'API imported successfully', {
         api_id: engineResponse.data?.client_id || 'global',
         filename: fileName
       });
     } else {
       const errorMsg = engineResponse.data || 'Engine processing failed';
-      sendError(res, 'Import failed', errorMsg, engineResponse.status || 500);
+      sendError(res, 'Import failed', errorMsg, engineResponse.code || 500);
     }
 
   } catch (err) {

@@ -25,6 +25,7 @@ async function fetchApiEndpoints(api_id) {
   if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch endpoints');
   return data.data;
 }
+
 async function addTagsToEndpoint({ path, method, tags }) {
   const res = await fetch('/api/endpoints/tags/add', {
     method: 'POST',
@@ -36,6 +37,18 @@ async function addTagsToEndpoint({ path, method, tags }) {
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
   return data.data;
 }
+async function fetchEndpointDetails({ endpoint_id, path, method }) {
+  const res = await fetch('/api/endpoints/details', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ endpoint_id, path, method }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch endpoint details");
+  return data.data;
+}
+
 
 
 function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "" }) {
@@ -192,6 +205,8 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
           {removing ? "Removing..." : "Remove Tag"}
         </button>
       </div>
+     
+
       {/* Replace tags */}
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
         <input
@@ -308,6 +323,11 @@ const [endpointsError, setEndpointsError] = useState('');
 const [allTags, setAllTags] = useState([]);
 const [tagsLoading, setTagsLoading] = useState(false);
 const [tagsError, setTagsError] = useState('');
+const [endpointDetail, setEndpointDetail] = useState(null);
+const [detailModalOpen, setDetailModalOpen] = useState(false);
+const [detailLoading, setDetailLoading] = useState(false);
+const [detailError, setDetailError] = useState('');
+
 
 
 
@@ -458,6 +478,22 @@ useEffect(() => {
     .catch(e => setTagsError(e.message || "Failed to fetch tags"))
     .finally(() => setTagsLoading(false));
 }, []);
+const handleViewDetails = async (endpoint) => {
+  setDetailLoading(true);
+  setDetailError('');
+  try {
+    const details = await fetchEndpointDetails({
+      endpoint_id: endpoint.id,
+      path: endpoint.path,
+      method: endpoint.method
+    });
+    setEndpointDetail(details);
+    setDetailModalOpen(true);
+  } catch (e) {
+    setDetailError(e.message);
+  }
+  setDetailLoading(false);
+};
 
   // Safe View Endpoint handler
  const handleViewEndpoints = async (api) => {
@@ -1360,28 +1396,46 @@ if (e.target) e.target.value = '';
         ) : selectedApiEndpoints.length === 0 ? (
           <div>No endpoints found.</div>
         ) : (
-        <ul className="endpoint-list">
-          {selectedApiEndpoints.map((ep, idx) => (
-            <li key={idx} className="endpoint-card">
-              <div className="endpoint-method-path">
-                <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
-                  {(ep.method || "GET").toUpperCase()}
-                </span>
-                <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
-              </div>
-              {ep.summary || ep.description ? (
-                <div className="endpoint-summary">{ep.summary || ep.description}</div>
-              ) : null}
-              <EndpointTagEditor 
-                endpoint={ep}
-                allTags={allTags}
-                tagsLoading={tagsLoading}
-                tagsError={tagsError}
-              />
+<ul className="endpoint-list">
+  {selectedApiEndpoints.map((ep, idx) => (
+    <li key={idx} className="endpoint-card">
+      <div className="endpoint-method-path">
+        <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
+          {(ep.method || "GET").toUpperCase()}
+        </span>
+        <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
+      </div>
+      {ep.summary || ep.description ? (
+        <div className="endpoint-summary">{ep.summary || ep.description}</div>
+      ) : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <EndpointTagEditor 
+          endpoint={ep}
+          allTags={allTags}
+          tagsLoading={tagsLoading}
+          tagsError={tagsError}
+        />
+        <button
+          onClick={() => handleViewDetails(ep)}
+          className="action-btn details"
+          style={{
+            marginLeft: 4,
+            background: "#a78bfa",
+            color: "#222",
+            borderRadius: 6,
+            padding: "4px 10px",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer"
+          }}
+        >
+          📖 View Details
+        </button>
+      </div>
+    </li>
+  ))}
+</ul>
 
-            </li>
-          ))}
-        </ul>
 
         )}
       </div>
@@ -1389,6 +1443,29 @@ if (e.target) e.target.value = '';
   </div>
 )}
 
+{detailModalOpen && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDetailModalOpen(false)}>
+    <div className="modal-content" style={{ minWidth: 340, maxWidth: 540, maxHeight: 540, overflow: 'auto' }}>
+      <div className="modal-header">
+        <h2>📖 Endpoint Details</h2>
+        <button onClick={() => setDetailModalOpen(false)} className="close-btn">×</button>
+      </div>
+      <div style={{ padding: 18 }}>
+        {detailLoading ? (
+          <div>Loading...</div>
+        ) : detailError ? (
+          <div style={{ color: '#e53e3e' }}>❌ {detailError}</div>
+        ) : endpointDetail ? (
+          <pre style={{ fontSize: 13, background: "#23232b", color: "#fff", padding: 12, borderRadius: 8, whiteSpace: 'pre-wrap' }}>
+            {JSON.stringify(endpointDetail, null, 2)}
+          </pre>
+        ) : (
+          <div>No detail available.</div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       <footer className="manage-apis-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>

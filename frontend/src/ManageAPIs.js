@@ -1,6 +1,14 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
+export {
+  fetchAllTags,
+  fetchApiEndpoints,
+  addTagsToEndpoint,
+  removeTagsFromEndpoint,
+  replaceTagsOnEndpoint,
+  fetchEndpointDetails
+};
 
 
 async function fetchAllTags() {

@@ -26,9 +26,11 @@ async function addTagsToEndpoint({ path, method, tags }) {
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
   return data.data;
 }
-function EndpointTagEditor({ endpoint, onTagsAdded }) {
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
   const [tagInput, setTagInput] = React.useState('');
+  const [removeInput, setRemoveInput] = React.useState('');
   const [adding, setAdding] = React.useState(false);
+  const [removing, setRemoving] = React.useState(false);
   const [message, setMessage] = React.useState('');
 
   const handleAddTags = async () => {
@@ -55,34 +57,99 @@ function EndpointTagEditor({ endpoint, onTagsAdded }) {
     }
   };
 
+  const handleRemoveTags = async () => {
+    const tags = removeInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter at least one tag to remove.');
+      return;
+    }
+    setRemoving(true);
+    setMessage('');
+    try {
+      await removeTagsFromEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags removed!');
+      setRemoveInput('');
+      if (onTagsRemoved) onTagsRemoved(tags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
     <div style={{ marginTop: 8 }}>
-      <input
-        type="text"
-        placeholder="Add tags (comma separated)"
-        value={tagInput}
-        onChange={e => setTagInput(e.target.value)}
-        disabled={adding}
-        style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
-      />
-      <button
-        onClick={handleAddTags}
-        disabled={adding}
-        style={{
-          marginLeft: 6,
-          padding: '4px 12px',
-          borderRadius: 4,
-          background: '#818cf8',
-          color: 'white',
-          fontWeight: 600,
-          cursor: adding ? 'not-allowed' : 'pointer'
-        }}
-      >
-        {adding ? "Adding..." : "Add Tag"}
-      </button>
+      {/* Add tags */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+        <input
+          type="text"
+          placeholder="Add tags (comma separated)"
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+          disabled={adding}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleAddTags}
+          disabled={adding}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#818cf8',
+            color: 'white',
+            fontWeight: 600,
+            cursor: adding ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {adding ? "Adding..." : "Add Tag"}
+        </button>
+      </div>
+      {/* Remove tags */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Remove tags (comma separated)"
+          value={removeInput}
+          onChange={e => setRemoveInput(e.target.value)}
+          disabled={removing}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleRemoveTags}
+          disabled={removing}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#f87171',
+            color: 'white',
+            fontWeight: 600,
+            cursor: removing ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {removing ? "Removing..." : "Remove Tag"}
+        </button>
+      </div>
       {message && <div style={{ fontSize: 13, marginTop: 3 }}>{message}</div>}
     </div>
   );
+}
+
+async function removeTagsFromEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove tags");
+  return data.data;
 }
 
 

@@ -15,6 +15,75 @@ async function fetchApiEndpoints(api_id) {
   if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch endpoints');
   return data.data;
 }
+async function addTagsToEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
+  return data.data;
+}
+function EndpointTagEditor({ endpoint, onTagsAdded }) {
+  const [tagInput, setTagInput] = React.useState('');
+  const [adding, setAdding] = React.useState(false);
+  const [message, setMessage] = React.useState('');
+
+  const handleAddTags = async () => {
+    const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter at least one tag.');
+      return;
+    }
+    setAdding(true);
+    setMessage('');
+    try {
+      await addTagsToEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags added!');
+      setTagInput('');
+      if (onTagsAdded) onTagsAdded(tags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <input
+        type="text"
+        placeholder="Add tags (comma separated)"
+        value={tagInput}
+        onChange={e => setTagInput(e.target.value)}
+        disabled={adding}
+        style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+      />
+      <button
+        onClick={handleAddTags}
+        disabled={adding}
+        style={{
+          marginLeft: 6,
+          padding: '4px 12px',
+          borderRadius: 4,
+          background: '#818cf8',
+          color: 'white',
+          fontWeight: 600,
+          cursor: adding ? 'not-allowed' : 'pointer'
+        }}
+      >
+        {adding ? "Adding..." : "Add Tag"}
+      </button>
+      {message && <div style={{ fontSize: 13, marginTop: 3 }}>{message}</div>}
+    </div>
+  );
+}
 
 
 const APIS_LOCAL_STORAGE_KEY = 'atat_saved_apis';
@@ -1116,7 +1185,7 @@ if (e.target) e.target.value = '';
         ) : selectedApiEndpoints.length === 0 ? (
           <div>No endpoints found.</div>
         ) : (
-        <ul className="endpoint-list">
+<ul className="endpoint-list">
   {selectedApiEndpoints.map((ep, idx) => (
     <li key={idx} className="endpoint-card">
       <div className="endpoint-method-path">
@@ -1128,9 +1197,11 @@ if (e.target) e.target.value = '';
       {ep.summary || ep.description ? (
         <div className="endpoint-summary">{ep.summary || ep.description}</div>
       ) : null}
+      <EndpointTagEditor endpoint={ep} />
     </li>
   ))}
 </ul>
+
         )}
       </div>
     </div>

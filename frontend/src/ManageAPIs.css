@@ -1305,12 +1305,14 @@
   }
 }
 
+/* -- Ensure Endpoint List Styles Dominate -- */
 .endpoint-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  font-family: "JetBrains Mono", "Fira Mono", "Consolas", monospace;
+  background: transparent;
 }
-
 .endpoint-card {
   background: var(--bg-secondary);
   border-radius: 10px;
@@ -1320,22 +1322,21 @@
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.16s, border 0.16s;
-  border: 1px solid var(--secondary-color);
+  border: 1.5px solid var(--secondary-color);
+  font-size: 15px;
+  font-family: inherit;
 }
-
 .endpoint-card:hover {
   box-shadow: 0 4px 18px 0 var(--primary-light);
   border-color: var(--primary-light);
 }
-
 .endpoint-method-path {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: "JetBrains Mono", "Fira Mono", "Consolas", monospace;
+  font-family: inherit;
   margin-bottom: 4px;
 }
-
 .endpoint-method {
   font-weight: 700;
   font-size: 16px;
@@ -1344,40 +1345,34 @@
   border-radius: 5px 0 0 5px;
   text-transform: uppercase;
   opacity: 0.92;
-  /* No background here, handled per method below */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  min-width: 54px;
+  display: inline-block;
+  text-align: center;
 }
-
-/* Use color variables for HTTP methods (accessible & dark mode friendly!) */
-.endpoint-method.GET    { color: #2563eb; background: #dbeafe; }
-.endpoint-method.POST   { color: #ea580c; background: #ffedd5; }
-.endpoint-method.PUT    { color: #0891b2; background: #cffafe; }
-.endpoint-method.PATCH  { color: #a21caf; background: #f3e8ff; }
-.endpoint-method.DELETE { color: #b91c1c; background: #fee2e2; }
-.endpoint-method.HEAD   { color: #84cc16; background: #ecfccb; }
-.endpoint-method.OPTIONS{ color: #f59e42; background: #fef9c3; }
-.endpoint-method.DEFAULT{ color: var(--text-secondary); background: var(--bg-primary); }
-
-.dark-mode .endpoint-method.GET    { color: #60a5fa; background: #1e293b; }
-.dark-mode .endpoint-method.POST   { color: #fdba74; background: #2b2621; }
-.dark-mode .endpoint-method.PUT    { color: #67e8f9; background: #164e63; }
-.dark-mode .endpoint-method.PATCH  { color: #d8b4fe; background: #3b185f; }
-.dark-mode .endpoint-method.DELETE { color: #f87171; background: #7f1d1d; }
-.dark-mode .endpoint-method.HEAD   { color: #bbf7d0; background: #365314; }
-.dark-mode .endpoint-method.OPTIONS{ color: #fde68a; background: #92400e; }
-.dark-mode .endpoint-method.DEFAULT{ color: var(--text-secondary); background: var(--bg-secondary); }
-
 .endpoint-path {
   font-weight: 600;
   color: var(--primary-light);
-  text-decoration: underline dotted;
   font-size: 15px;
   margin-left: 2px;
-  user-select: text;
+  text-decoration: underline dotted;
+  word-break: break-all;
 }
-
 .endpoint-summary {
   color: var(--text-secondary);
   font-size: 14px;
   margin-top: 5px;
   padding-left: 2px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  opacity: 0.93;
+}
+.dark-mode .endpoint-card {
+  background: var(--bg-primary);
+  border-color: var(--primary-dark);
+}
+.dark-mode .endpoint-method-path {
+  color: #ccc;
+}
+.dark-mode .endpoint-path {
+  color: var(--primary-light);
 }

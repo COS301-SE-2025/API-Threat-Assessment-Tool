@@ -29,8 +29,10 @@ async function addTagsToEndpoint({ path, method, tags }) {
 function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
   const [tagInput, setTagInput] = React.useState('');
   const [removeInput, setRemoveInput] = React.useState('');
+  const [replaceInput, setReplaceInput] = React.useState('');
   const [adding, setAdding] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
+  const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
 
   const handleAddTags = async () => {
@@ -78,6 +80,30 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
       setMessage('❌ ' + err.message);
     } finally {
       setRemoving(false);
+    }
+  };
+
+  const handleReplaceTags = async () => {
+    const tags = replaceInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter tags to replace.');
+      return;
+    }
+    setReplacing(true);
+    setMessage('');
+    try {
+      await replaceTagsOnEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags replaced!');
+      setReplaceInput('');
+      if (onTagsAdded) onTagsAdded(tags); // Or a dedicated onTagsReplaced callback
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setReplacing(false);
     }
   };
 
@@ -135,10 +161,37 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved }) {
           {removing ? "Removing..." : "Remove Tag"}
         </button>
       </div>
+      {/* Replace tags */}
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+        <input
+          type="text"
+          placeholder="Replace all tags (comma separated)"
+          value={replaceInput}
+          onChange={e => setReplaceInput(e.target.value)}
+          disabled={replacing}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleReplaceTags}
+          disabled={replacing}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#34d399',
+            color: 'white',
+            fontWeight: 600,
+            cursor: replacing ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {replacing ? "Replacing..." : "Replace Tags"}
+        </button>
+      </div>
       {message && <div style={{ fontSize: 13, marginTop: 3 }}>{message}</div>}
     </div>
   );
 }
+
 
 async function removeTagsFromEndpoint({ path, method, tags }) {
   const res = await fetch('/api/endpoints/tags/remove', {
@@ -149,6 +202,17 @@ async function removeTagsFromEndpoint({ path, method, tags }) {
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove tags");
+  return data.data;
+}
+async function replaceTagsOnEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/replace', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to replace tags");
   return data.data;
 }
 

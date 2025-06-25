@@ -7,8 +7,15 @@ export {
   addTagsToEndpoint,
   removeTagsFromEndpoint,
   replaceTagsOnEndpoint,
-  fetchEndpointDetails
+  fetchEndpointDetails,
+  saveApisToLocal,
+  loadApisFromLocal,
+  APIS_LOCAL_STORAGE_KEY,
+  // UI
+  EndpointTagEditor
 };
+
+export { ManageAPIs };
 
 
 async function fetchAllTags() {
@@ -270,8 +277,7 @@ async function replaceTagsOnEndpoint({ path, method, tags }) {
   return data.data;
 }
 
-
-const APIS_LOCAL_STORAGE_KEY = 'atat_saved_apis';
+const APIS_LOCAL_STORAGE_KEY = 'apiList';
 
 function saveApisToLocal(apis) {
   localStorage.setItem(APIS_LOCAL_STORAGE_KEY, JSON.stringify(apis));

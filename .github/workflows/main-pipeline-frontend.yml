@@ -3,7 +3,7 @@ name: Frontend
 on:
   push:
     branches:
-      - main
+      - none
   workflow_dispatch:
 
 jobs:

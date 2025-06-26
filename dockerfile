@@ -49,8 +49,8 @@ RUN cd api && npm install
 RUN cd frontend && npm install
 
 # Add script to launch everything
-COPY start.sh .
-RUN chmod +x start.sh
+COPY setup.sh .
+RUN chmod +x setup.sh
 
 
 # Expose ports backend api frontend

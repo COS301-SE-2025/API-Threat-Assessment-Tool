@@ -70,23 +70,6 @@ For error handling, try-catch statements are used to ensure errors are properly 
 - `snake_case` for variables, functions, and filenames
 - `PascalCase` for class names
 
-### Docstrings
-
-Use triple-quoted docstrings following PEP257:
-
-```python
-def analyze_spec(file_path):
-    """
-    Analyze an OpenAPI spec for threats.
-
-    Args:
-        file_path (str): Path to the spec file
-
-    Returns:
-        dict: Analysis results
-    """
-    pass
-```
 
 ### Logging
 

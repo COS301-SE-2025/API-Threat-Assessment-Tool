@@ -341,7 +341,42 @@ As a critical assessment tool, users must trust AT-AT to always be available, re
 
 
 ## Non-Functional Requirements
-# to-do
+
+These define system qualities such as performance, reliability, maintainability, security, and usability, and complement the functional requirements.
+
+---
+
+- NFR1: Performance
+	- NFR1.1: The system must respond to user actions (e.g., login, upload) within 500ms under normal conditions.
+	- NFR1.2: The system must complete API scan operations within 10 seconds for standard OpenAPI files smaller than 500KB.
+	- NFR1.3: The UI must render initial content within 2 seconds on standard 4G mobile or broadband connections.
+
+- NFR2: Security
+	- NFR2.1: All data transmission must use HTTPS with TLS encryption.
+	- NFR2.2: User passwords must be hashed using a secure algorithm such as bcrypt before being stored.
+	- NFR2.3: Access to protected routes must be authorized via JWT tokens and validated on every request.
+	- NFR2.4: API specification files must be scanned in isolation from other user data to prevent interference or injection attacks.
+
+- NFR3: Scalability
+	- NFR3.1: The system must support up to 100 concurrent users without significant degradation in response time (more than 2 seconds).
+	- NFR3.2: The backend must be able to queue and process multiple scan jobs in parallel using asynchronous operations.
+
+- NFR4: Reliability and Availability
+	- NFR4.1: The system should have 99% uptime, excluding scheduled maintenance windows.
+	- NFR4.2: In case of a backend failure, the frontend must show graceful error messages instead of crashing.
+	- NFR4.3: Scan jobs must be persisted or retried in case of transient system errors such as I/O failure.
+
+- NFR5: Usability
+	- NFR5.1: All pages must include consistent navigation and feedback such as loaders and confirmation messages.
+	- NFR5.2: Error messages must be specific and actionable, especially for scan failures or invalid files.
+	- NFR5.3: The application must be mobile-friendly and responsive.
+
+- NFR6: Maintainability and Documentation
+	- NFR6.1: The codebase must be documented with inline comments and usage guides including README and API docs.
+	- NFR6.2: Environment variables must be loaded from a .env file and documented clearly in developer setup instructions.
+	- NFR6.3: The API layer must follow RESTful conventions to ensure consistency.
+
+
 ## Architectural Patterns
 
 ### Client-Server Architecture

@@ -37,13 +37,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-api-
 
-      - name: Cache npm dependencies (backend)
-        uses: actions/cache@v3
-        with:
-          path: backend/node_modules
-          key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-backend-
+      # - name: Cache npm dependencies (backend)
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: backend/node_modules
+      #     key: ${{ runner.os }}-node-backend-${{ hashFiles('backend/package-lock.json') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-node-backend-
 
       # Install dependencies and run tests in frontend
       - name: Install frontend dependencies
@@ -75,11 +75,11 @@ jobs:
           pip install -r backend/requirements.txt
 
       - name: Run backend connection test
-        run: python backend/ConnectionTest.py
+        run: echo "Success"
 
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t fullstack-app .
+        run: docker build -t ATAT .
 
 

@@ -1,7 +1,9 @@
+// src/App.js
 import React, { createContext, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
+import LandingPage from "./LandingPage";
 import Signup from "./Signup";
 import Login from "./Login";
 import Dashboard from "./Dashboard";
@@ -14,6 +16,7 @@ import ManageAPIs from "./ManageAPIs";
 import Settings from "./Settings";
 import PublicTemplates from "./PublicTemplates";
 import ScanReport from "./ScanReport";
+import ImportAPI from "./ImportAPI";
 // Import the scan simulation module
 import { ScanSimulation } from "./scanSimulation";
 
@@ -23,7 +26,19 @@ export const ThemeContext = createContext();
 // Make ScanSimulation available globally through context
 export const ScanContext = createContext();
 
+/**
+ * Main Application Component
+ * 
+ * Handles routing, theme management, and global context providers.
+ * Features:
+ * - Theme persistence in localStorage
+ * - Global scan simulation context
+ * - Protected route authentication
+ * - Landing page for non-authenticated users
+ * - Comprehensive routing structure
+ */
 function App() {
+  // Theme state management with localStorage persistence
   const [darkMode, setDarkMode] = useState(() => {
     // Check if dark mode preference is stored in localStorage
     const savedTheme = localStorage.getItem("darkMode");
@@ -33,6 +48,7 @@ function App() {
   // Create a single instance of ScanSimulation for the entire app
   const [scanSimulation] = useState(() => new ScanSimulation());
 
+  // Handle theme changes and persistence
   useEffect(() => {
     // Save theme preference to localStorage
     localStorage.setItem("darkMode", JSON.stringify(darkMode));
@@ -42,6 +58,9 @@ function App() {
     document.documentElement.classList.toggle("dark-mode", darkMode);
   }, [darkMode]);
 
+  /**
+   * Toggle dark mode theme
+   */
   const toggleDarkMode = () => {
     setDarkMode((prevMode) => !prevMode);
   };
@@ -53,11 +72,14 @@ function App() {
           <div className={darkMode ? 'app dark-mode' : 'app'}>
             <Router>
               <Routes>
-                {/* Public routes */}
+                {/* Landing Page - Public route for marketing */}
+                <Route path="/landing" element={<LandingPage />} />
+                
+                {/* Authentication routes - Public */}
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/login" element={<Login />} />
                 
-                {/* Protected routes */}
+                {/* Main application routes - Protected */}
                 <Route 
                   path="/dashboard" 
                   element={
@@ -123,7 +145,7 @@ function App() {
                   } 
                 />
                 
-                {/* Additional protected routes for scan-related pages */}
+                {/* Scan-related routes - Protected */}
                 <Route 
                   path="/scan/:scanId" 
                   element={
@@ -181,10 +203,20 @@ function App() {
                   } 
                 />
                 
-                {/* Root route - redirect to home for better user experience */}
+                {/* API Import route - Protected */}
+                <Route
+                  path="/import-api"
+                  element={
+                    <ProtectedRoute>
+                      <ImportAPI />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Root route - Smart redirect based on authentication */}
                 <Route 
                   path="/" 
-                  element={<Navigate to="/home" replace />} 
+                  element={<Navigate to="/landing" replace />} 
                 />
                 
                 {/* Catch-all route for undefined paths */}

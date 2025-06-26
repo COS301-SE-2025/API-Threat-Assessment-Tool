@@ -1,44 +1,215 @@
-.login-container {
+/* ========================================
+   KEYFRAME ANIMATIONS
+   ======================================== */
+
+/* Page entrance animations */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Loading animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Button animations */
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Form field animations */
+@keyframes inputFocus {
+  from {
+    box-shadow: 0 0 0 0 rgba(107, 70, 193, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+  }
+}
+
+@keyframes darkInputFocus {
+  from {
+    box-shadow: 0 0 0 0 rgba(163, 191, 250, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 3px rgba(163, 191, 250, 0.2);
+  }
+}
+
+/* Error message animations */
+@keyframes slideInShake {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Background blur animation */
+@keyframes backgroundBlur {
+  from {
+    filter: blur(0px) brightness(1);
+  }
+  to {
+    filter: blur(5px) brightness(0.9);
+  }
+}
+
+@keyframes darkBackgroundBlur {
+  from {
+    filter: blur(0px) brightness(1);
+  }
+  to {
+    filter: blur(5px) brightness(0.7);
+  }
+}
+
+/* Theme transition animations */
+@keyframes themeTransition {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   MAIN CONTAINER STYLES WITH ANIMATIONS
+   ======================================== */
+
+.login-page .login-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   font-family: Arial, sans-serif;
-  color: #333; /* Default text color for light mode */
+  color: #333;
   position: relative;
   overflow: hidden;
+  animation: fadeInScale 0.6s ease-out;
+  transition: color 0.3s ease;
 }
 
-.dark-mode .login-container {
+.dark-mode .login-page .login-container {
   color: #e0e0e0;
+  animation: themeTransition 0.4s ease-out;
 }
 
-.login-container::before {
+.login-page .login-container::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('img/71fjyQJIHOL._AC_UF8941000_QL80_.jpg') no-repeat center center/cover;
+  background: url('img/71fjyQJIHOL._AC_UF8941000_QL80_.jpg') no-repeat center center/cover !important;
   filter: blur(5px);
   z-index: -1;
+  animation: backgroundBlur 1s ease-out;
+  transition: filter 0.3s ease;
 }
 
-.dark-mode .login-container::before {
-  filter: blur(5px) brightness(0.7); /* Slightly darker blur for dark mode */
+.dark-mode .login-page .login-container::before {
+  filter: blur(5px) brightness(0.7);
+  animation: darkBackgroundBlur 1s ease-out;
 }
+
+/* ========================================
+   HEADER STYLES WITH ANIMATIONS
+   ======================================== */
 
 .login-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.9); /* Semi-transparent for light mode */
+  background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid #e0e0e0;
+  animation: slideInFromTop 0.5s ease-out;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .dark-mode .login-header {
-  background: rgba(45, 45, 45, 0.9); /* Semi-transparent for dark mode */
+  background: rgba(45, 45, 45, 0.9);
   border-bottom: 1px solid #444;
 }
 
@@ -46,6 +217,12 @@
   font-size: 1.5em;
   font-weight: bold;
   color: #6b46c1;
+  transition: all 0.3s ease;
+  animation: slideInFromTop 0.6s ease-out;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .dark-mode .logo {
@@ -56,6 +233,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  animation: slideInFromTop 0.7s ease-out;
 }
 
 .theme-toggle-btn {
@@ -65,6 +243,24 @@
   padding: 5px 10px;
   border-radius: 5px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.theme-toggle-btn:hover::before {
+  left: 100%;
 }
 
 .dark-mode .theme-toggle-btn {
@@ -75,11 +271,21 @@
 
 .theme-toggle-btn:hover {
   background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .dark-mode .theme-toggle-btn:hover {
   background: rgba(68, 68, 68, 0.7);
 }
+
+.theme-toggle-btn:active {
+  animation: buttonPress 0.2s ease;
+}
+
+/* ========================================
+   MAIN CONTENT AREA ANIMATIONS
+   ======================================== */
 
 .login-main {
   flex: 1;
@@ -87,27 +293,42 @@
   justify-content: center;
   align-items: center;
   padding: 20px;
+  animation: fadeInScale 0.8s ease-out 0.2s both;
 }
 
 .login-form-section {
-  background: rgba(255, 255, 255, 0.95); /* Semi-transparent white for light mode */
+  background: rgba(255, 255, 255, 0.95);
   padding: 30px;
   border-radius: 10px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   max-width: 400px;
   width: 100%;
   text-align: center;
+  animation: slideInFromBottom 0.6s ease-out 0.3s both;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.login-form-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .dark-mode .login-form-section {
-  background: rgba(45, 45, 45, 0.95); /* Semi-transparent dark for dark mode */
+  background: rgba(45, 45, 45, 0.95);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .login-form-section:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
 .login-form-section h1 {
   font-size: 2em;
   color: #333;
   margin-bottom: 10px;
+  animation: fadeInScale 0.5s ease-out 0.5s both;
+  transition: color 0.3s ease;
 }
 
 .dark-mode .login-form-section h1 {
@@ -118,13 +339,18 @@
   color: #666;
   margin-bottom: 25px;
   font-size: 0.95em;
+  animation: fadeInScale 0.5s ease-out 0.6s both;
+  transition: color 0.3s ease;
 }
 
 .dark-mode .login-subtitle {
   color: #a3a3a3;
 }
 
-/* Google Login Button Styles */
+/* ========================================
+   GOOGLE LOGIN BUTTON ANIMATIONS
+   ======================================== */
+
 .google-login-btn {
   width: 100%;
   display: flex;
@@ -140,8 +366,26 @@
   font-weight: 500;
   color: #3c4043;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: slideInFromBottom 0.5s ease-out 0.7s both;
+  position: relative;
+  overflow: hidden;
+}
+
+.google-login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.google-login-btn:hover::before {
+  left: 100%;
 }
 
 .dark-mode .google-login-btn {
@@ -154,30 +398,46 @@
 .google-login-btn:hover:not(:disabled) {
   background: #f8f9fa;
   border-color: #c1c5c9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .dark-mode .google-login-btn:hover:not(:disabled) {
   background: #374151;
   border-color: #6b7280;
+  transform: translateY(-2px);
+}
+
+.google-login-btn:active {
+  animation: buttonPress 0.2s ease;
 }
 
 .google-login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: pulse 1.5s infinite;
 }
 
 .google-login-btn img {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+  transition: transform 0.3s ease;
 }
 
-/* OR Separator */
+.google-login-btn:hover:not(:disabled) img {
+  transform: rotate(360deg);
+}
+
+/* ========================================
+   OR SEPARATOR WITH ANIMATION
+   ======================================== */
+
 .or-separator {
   position: relative;
   margin: 20px 0;
   text-align: center;
+  animation: fadeInScale 0.5s ease-out 0.8s both;
 }
 
 .or-separator::before {
@@ -188,6 +448,7 @@
   right: 0;
   height: 1px;
   background: #e0e0e0;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .or-separator::before {
@@ -200,6 +461,7 @@
   padding: 0 15px;
   font-size: 0.9em;
   position: relative;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .or-separator span {
@@ -207,7 +469,10 @@
   color: #a3a3a3;
 }
 
-/* Error Message */
+/* ========================================
+   ERROR MESSAGE ANIMATIONS
+   ======================================== */
+
 .error-message {
   background: #fee;
   border: 1px solid #fcc;
@@ -216,6 +481,8 @@
   border-radius: 5px;
   margin-bottom: 15px;
   font-size: 0.9em;
+  animation: slideInShake 0.6s ease-out;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .error-message {
@@ -224,16 +491,26 @@
   color: #f87171;
 }
 
+/* ========================================
+   FORM ELEMENTS WITH ANIMATIONS
+   ======================================== */
+
 .form-group {
   margin-bottom: 15px;
   text-align: left;
+  animation: slideInFromBottom 0.5s ease-out calc(0.9s + var(--delay, 0s)) both;
 }
+
+.form-group:nth-child(1) { --delay: 0s; }
+.form-group:nth-child(2) { --delay: 0.1s; }
+.form-group:nth-child(3) { --delay: 0.2s; }
 
 .form-group label {
   display: block;
   font-size: 1em;
   color: #333;
   margin-bottom: 5px;
+  transition: all 0.3s ease;
 }
 
 .dark-mode .form-group label {
@@ -249,6 +526,15 @@
   background: white;
   color: #333;
   box-sizing: border-box;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #6b46c1;
+  animation: inputFocus 0.3s ease-out both;
+  transform: translateY(-2px);
 }
 
 .dark-mode .form-group input {
@@ -257,9 +543,18 @@
   color: #e0e0e0;
 }
 
+.dark-mode .form-group input:focus {
+  border-color: #a3bffa;
+  animation: darkInputFocus 0.3s ease-out both;
+}
+
 .dark-mode .form-group input::placeholder {
   color: #a3a3a3;
 }
+
+/* ========================================
+   LOGIN BUTTON ANIMATIONS
+   ======================================== */
 
 .login-btn {
   width: 100%;
@@ -271,8 +566,26 @@
   font-size: 1em;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
   margin-bottom: 20px;
+  animation: slideInFromBottom 0.5s ease-out 1.2s both;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.login-btn:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .dark-mode .login-btn {
@@ -281,24 +594,42 @@
 
 .login-btn:hover:not(:disabled) {
   background: #5a3da0;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
 }
 
 .dark-mode .login-btn:hover:not(:disabled) {
   background: #6a4ac1;
+  box-shadow: 0 6px 20px rgba(122, 92, 209, 0.4);
+}
+
+.login-btn:active {
+  animation: buttonPress 0.2s ease;
 }
 
 .login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: pulse 1.5s infinite;
 }
 
-/* Demo Section */
+/* ========================================
+   DEMO SECTION ANIMATIONS
+   ======================================== */
+
 .demo-section {
   margin: 20px 0;
   padding: 20px;
   background: rgba(240, 240, 240, 0.5);
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  animation: slideInFromBottom 0.5s ease-out 1.3s both;
+  transition: all 0.3s ease;
+}
+
+.demo-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .dark-mode .demo-section {
@@ -310,6 +641,7 @@
   color: #333;
   margin-bottom: 8px;
   font-size: 1.1em;
+  transition: color 0.3s ease;
 }
 
 .dark-mode .demo-section h3 {
@@ -320,6 +652,7 @@
   color: #666;
   margin-bottom: 15px;
   font-size: 0.9em;
+  transition: color 0.3s ease;
 }
 
 .dark-mode .demo-section p {
@@ -339,8 +672,27 @@
   border-radius: 4px;
   font-size: 0.85em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   color: #333;
+  animation: slideInFromBottom 0.4s ease-out calc(1.4s + var(--btn-delay, 0s)) both;
+}
+
+.demo-btn:nth-child(1) { --btn-delay: 0s; }
+.demo-btn:nth-child(2) { --btn-delay: 0.1s; }
+
+.demo-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.demo-btn:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .dark-mode .demo-btn {
@@ -352,6 +704,8 @@
 .demo-btn:hover:not(:disabled) {
   background: #e8e8e8;
   border-color: #bbb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .dark-mode .demo-btn:hover:not(:disabled) {
@@ -359,15 +713,25 @@
   border-color: #777;
 }
 
+.demo-btn:active {
+  animation: buttonPress 0.2s ease;
+}
+
 .demo-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: pulse 1.5s infinite;
 }
+
+/* ========================================
+   LOGIN LINKS ANIMATIONS
+   ======================================== */
 
 .login-links {
   margin-top: 15px;
   display: flex;
   justify-content: space-between;
+  animation: fadeInScale 0.5s ease-out 1.5s both;
 }
 
 .create-account-link,
@@ -375,6 +739,25 @@
   color: #6b46c1;
   text-decoration: none;
   font-size: 0.9em;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.create-account-link::after,
+.forgot-password-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #6b46c1;
+  transition: width 0.3s ease;
+}
+
+.create-account-link:hover::after,
+.forgot-password-link:hover::after {
+  width: 100%;
 }
 
 .dark-mode .create-account-link,
@@ -382,10 +765,20 @@
   color: #a3bffa;
 }
 
+.dark-mode .create-account-link::after,
+.dark-mode .forgot-password-link::after {
+  background: #a3bffa;
+}
+
 .create-account-link:hover,
 .forgot-password-link:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  transform: translateY(-1px);
 }
+
+/* ========================================
+   FOOTER ANIMATIONS
+   ======================================== */
 
 .login-footer {
   text-align: center;
@@ -393,6 +786,8 @@
   background: #333;
   color: white;
   font-size: 0.8em;
+  animation: slideInFromBottom 0.5s ease-out 1.6s both;
+  transition: background 0.3s ease;
 }
 
 .dark-mode .login-footer {
@@ -407,16 +802,86 @@
   color: white;
   margin: 0 10px;
   text-decoration: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: white;
+  transition: width 0.3s ease;
+}
+
+.footer-links a:hover::after {
+  width: 100%;
 }
 
 .footer-links a:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  transform: translateY(-1px);
 }
 
-/* Responsive adjustments */
+/* ========================================
+   LOADING STATES AND SPECIAL ANIMATIONS
+   ======================================== */
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #6b46c1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+.dark-mode .loading-spinner {
+  border-color: #444;
+  border-top-color: #a3bffa;
+}
+
+/* Form validation animation */
+.form-group.error input {
+  border-color: #e53e3e;
+  animation: shake 0.5s ease-in-out;
+}
+
+.dark-mode .form-group.error input {
+  border-color: #f87171;
+}
+
+/* Success animation */
+.success-message {
+  background: #e6fffa;
+  border: 1px solid #38d9a9;
+  color: #065f46;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-size: 0.9em;
+  animation: slideInFromTop 0.5s ease-out;
+}
+
+.dark-mode .success-message {
+  background: #1a3636;
+  border-color: #38d9a9;
+  color: #6ee7b7;
+}
+
+/* ========================================
+   RESPONSIVE ANIMATIONS
+   ======================================== */
+
 @media (max-width: 768px) {
   .login-form-section {
     padding: 20px;
+    animation: slideInFromBottom 0.4s ease-out 0.2s both;
   }
 
   .login-form-section h1 {
@@ -430,5 +895,40 @@
 
   .demo-buttons {
     gap: 6px;
+  }
+
+  /* Reduce animation intensity on mobile */
+  .login-form-section:hover {
+    transform: translateY(-2px);
+  }
+  
+  .google-login-btn:hover:not(:disabled),
+  .login-btn:hover:not(:disabled),
+  .demo-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY CONSIDERATIONS
+   ======================================== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .login-container::before {
+    animation: none;
+  }
+  
+  .login-form-section:hover,
+  .google-login-btn:hover:not(:disabled),
+  .login-btn:hover:not(:disabled),
+  .demo-btn:hover:not(:disabled) {
+    transform: none;
   }
 }

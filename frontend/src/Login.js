@@ -1,7 +1,8 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import Logo from "./components/Logo";
 import './Login.css';
 
 const Login = () => {
@@ -9,160 +10,142 @@ const Login = () => {
   const location = useLocation();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const { login, isLoading, isAuthenticated } = useAuth();
-  const [username, setUsername] = useState('');
+  
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState('entering');
 
-  // Redirect if already authenticated
+  const formRef = useRef(null);
+  const errorRef = useRef(null);
+  const submitButtonRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsFormVisible(true);
+      setAnimationPhase('visible');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated()) {
+      setAnimationPhase('exiting');
       const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      setTimeout(() => navigate(from, { replace: true }), 300);
     }
   }, [isAuthenticated, navigate, location.state]);
 
   const handleInputChange = (field, value) => {
-    if (field === 'username') setUsername(value);
+    if (field === 'identifier') setIdentifier(value);
     if (field === 'password') setPassword(value);
-    // Clear error when user starts typing
-    if (error) setError('');
+    if (error) {
+      setError('');
+      if (errorRef.current) errorRef.current.style.animation = 'fadeOut 0.3s ease-out';
+    }
+  };
+
+  const getButtonContent = (text) => isSubmitting ? (<><span className="loading-spinner"></span>{text}</>) : text;
+
+  const showError = (message) => {
+    setError(message);
+    if (formRef.current) {
+      formRef.current.style.animation = 'shake 0.5s ease-in-out';
+      setTimeout(() => formRef.current.style.animation = '', 500);
+    }
+  };
+
+  const showSuccessMessage = (message) => {
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
-    if (!username.trim() || !password) {
-      setError('Please enter both username/email and password');
+    if (!identifier.trim() || !password) {
+      showError('Please enter both identifier and password');
       return;
     }
 
     setIsSubmitting(true);
     setError('');
+    if (submitButtonRef.current) {
+      submitButtonRef.current.style.animation = 'buttonPress 0.2s ease';
+    }
 
     try {
-      const result = await login(username.trim(), password);
-      
+      const result = await login(identifier.trim(), password);
       if (result.success) {
-        // Navigate to the page they were trying to access, or dashboard
-        const from = location.state?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      // Simulate Google OAuth flow
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, create a Google user
-      const googleUser = {
-        firstName: 'Google',
-        lastName: 'User',
-        email: 'google.user@gmail.com',
-        username: 'googleuser',
-        loginMethod: 'google'
-      };
-
-      // Simulate successful Google login
-      const result = await login('demo@google.com', 'google_demo_password');
-      
-      if (!result.success) {
-        // If Google user doesn't exist, show success message anyway (in real app, would create account)
-        alert('Google login successful! In a real application, this would create your account automatically.');
-        const from = location.state?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
-      }
-    } catch (err) {
-      setError('Google login failed. Please try again or use email/password.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async (demoUsername, demoPassword) => {
-    setUsername(demoUsername);
-    setPassword(demoPassword);
-    setError('');
-    
-    // Small delay to show the form update
-    setTimeout(async () => {
-      setIsSubmitting(true);
-      try {
-        const result = await login(demoUsername, demoPassword);
-        if (result.success) {
+        showSuccessMessage('Login successful! Redirecting...');
+        setAnimationPhase('success');
+        setTimeout(() => {
           const from = location.state?.from?.pathname || '/dashboard';
           navigate(from, { replace: true });
-        } else {
-          setError(result.error);
-        }
-      } catch (err) {
-        setError('Demo login failed. Please try again.');
-      } finally {
-        setIsSubmitting(false);
+        }, 800);
+      } else {
+        showError(result.error);
       }
+    } catch (err) {
+      showError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setIsSubmitting(false);
+      if (submitButtonRef.current) submitButtonRef.current.style.animation = '';
+    }
+  };
+
+  const handleThemeToggle = () => {
+    document.body.style.transition = 'all 0.3s ease';
+    toggleDarkMode();
+    setTimeout(() => {
+      document.body.style.transition = '';
     }, 300);
   };
 
   return (
-    <div className="login-container">
+    <div className={`login-container ${animationPhase}`}>
       <header className="login-header">
-        <div className="logo">AT-AT</div>
+        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Logo />
+          <span style={{ fontWeight: 700, fontSize: 24, letterSpacing: 2, color: darkMode ? "#fff" : "#222", userSelect: "none" }}>
+            AT-AT
+          </span>
+        </div>
         <div className="user-info">
-          <button onClick={toggleDarkMode} className="theme-toggle-btn">
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          <button onClick={handleThemeToggle} className="theme-toggle-btn" aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
+            {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
           </button>
         </div>
       </header>
 
       <main className="login-main">
-        <section className="login-form-section">
+        <section className="login-form-section" ref={formRef}>
           <h1>Welcome Back</h1>
           <p className="login-subtitle">Sign in to your AT-AT account</p>
-          
-          <button 
-            onClick={handleGoogleLogin} 
-            className="google-login-btn"
-            disabled={isSubmitting}
-          >
-            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" />
-            Continue with Google
-          </button>
-          
-          <div className="or-separator">
-            <span>or</span>
-          </div>
-          
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label htmlFor="username">Username or Email:</label>
+          <div className="or-separator"><span>Login</span></div>
+
+          {showSuccess && <div className="success-message">✅ Login successful! Redirecting to dashboard...</div>}
+          {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
+
+          <form onSubmit={handleLogin} noValidate>
+            <div className={`form-group ${error && !identifier.trim() ? 'error' : ''}`}>
+              <label htmlFor="identifier">Username or Email:</label>
               <input
                 type="text"
-                id="username"
-                value={username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
+                id="identifier"
+                value={identifier}
+                onChange={(e) => handleInputChange('identifier', e.target.value)}
                 disabled={isSubmitting}
                 placeholder="Enter your username or email"
                 required
+                autoComplete="username"
               />
             </div>
-            <div className="form-group">
+            <div className={`form-group ${error && !password ? 'error' : ''}`}>
               <label htmlFor="password">Password:</label>
               <input
                 type="password"
@@ -172,37 +155,23 @@ const Login = () => {
                 disabled={isSubmitting}
                 placeholder="Enter your password"
                 required
+                autoComplete="current-password"
               />
             </div>
-            <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
+            <button
+              type="submit"
+              className="login-btn"
+              disabled={isSubmitting || isLoading}
+              ref={submitButtonRef}
+              aria-label={isSubmitting ? 'Signing in...' : 'Sign in'}
+            >
+              {getButtonContent(isSubmitting ? 'Signing In...' : 'Sign In')}
             </button>
           </form>
 
-          <div className="demo-section">
-            <h3>Quick Demo Login</h3>
-            <p>Try the application with these demo accounts:</p>
-            <div className="demo-buttons">
-              <button 
-                onClick={() => handleDemoLogin('johndoe', 'password123')}
-                className="demo-btn"
-                disabled={isSubmitting}
-              >
-                Login as John Doe
-              </button>
-              <button 
-                onClick={() => handleDemoLogin('janesmith', 'demo123')}
-                className="demo-btn"
-                disabled={isSubmitting}
-              >
-                Login as Jane Smith
-              </button>
-            </div>
-          </div>
-
           <div className="login-links">
-            <Link to="/signup" className="create-account-link">Create Account</Link>
-            <Link to="/forgot-password" className="forgot-password-link">Forgot Password?</Link>
+            <Link to="/signup" className="create-account-link" aria-label="Create new account">Create Account</Link>
+            <Link to="/forgot-password" className="forgot-password-link" aria-label="Reset forgotten password">Forgot Password?</Link>
           </div>
         </section>
       </main>
@@ -210,8 +179,8 @@ const Login = () => {
       <footer className="login-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
         <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
+          <a href="#" aria-label="Privacy Policy">Privacy Policy</a>
+          <a href="#" aria-label="Terms of Service">Terms of Service</a>
         </div>
       </footer>
     </div>

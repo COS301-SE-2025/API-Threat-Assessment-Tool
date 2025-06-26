@@ -1,9 +1,16 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { ThemeContext } from '../App';
-import { useAuth } from '../AuthContext';
+import React from 'react'; 
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'; 
+import { MemoryRouter } from 'react-router-dom'; 
+import { ThemeContext } from '../App'; 
+import { useAuth } from '../AuthContext'; 
 import Home from '../Home';
+
+// Mock IntersectionObserver for Jest environment
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
 jest.mock('../AuthContext', () => ({
   useAuth: jest.fn(),
@@ -86,7 +93,7 @@ describe('Home Component', () => {
       logout: logoutMock,
       getUserFullName: () => 'Jane Smith',
     });
-    window.confirm = jest.fn(() => true);
+    window.confirm = jest.fn(() => true); // Mock the confirmation dialog
     renderHome();
     fireEvent.click(screen.getByTitle(/Logout/i));
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');
@@ -100,7 +107,7 @@ describe('Home Component', () => {
       logout: logoutMock,
       getUserFullName: () => 'Jane Smith',
     });
-    window.confirm = jest.fn(() => false);
+    window.confirm = jest.fn(() => false); // Mock the cancellation of the confirmation
     renderHome();
     fireEvent.click(screen.getByTitle(/Logout/i));
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');

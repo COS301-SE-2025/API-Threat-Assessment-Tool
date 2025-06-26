@@ -1,0 +1,9 @@
+# Ignore all __pycache__ folders
+**/__pycache__/
+
+# Ignore all .pyc files
+*.pyc
+
+**/venv/
+
+combinedcode.py

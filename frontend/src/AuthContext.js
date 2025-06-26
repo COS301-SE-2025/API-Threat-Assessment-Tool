@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -11,197 +11,121 @@ export const useAuth = () => {
   return context;
 };
 
-// Default demo users for testing
-const DEFAULT_USERS = [
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    username: 'johndoe',
-    password: 'password123'
-  },
-  {
-    id: 2,
-    firstName: 'Jane',
-    lastName: 'Smith',
-    email: 'jane.smith@example.com',
-    username: 'janesmith',
-    password: 'demo123'
-  }
-];
-
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem('at_at_token') || '');
 
-  // Initialize users and check for existing session
   useEffect(() => {
-    // Initialize default users if not exists
-    const existingUsers = JSON.parse(localStorage.getItem('at_at_users') || '[]');
-    if (existingUsers.length === 0) {
-      localStorage.setItem('at_at_users', JSON.stringify(DEFAULT_USERS));
-    }
+    const fetchProfile = async () => {
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
-    // Check for existing session
-    const sessionUser = JSON.parse(localStorage.getItem('at_at_current_user') || 'null');
-    const sessionExpiry = localStorage.getItem('at_at_session_expiry');
-    
-    if (sessionUser && sessionExpiry && new Date().getTime() < parseInt(sessionExpiry)) {
-      setCurrentUser(sessionUser);
-    } else {
-      // Clear expired session
-      localStorage.removeItem('at_at_current_user');
-      localStorage.removeItem('at_at_session_expiry');
-    }
-    
-    setIsLoading(false);
-  }, []);
+      try {
+        const res = await axios.get('http://localhost:3001/api/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+          setCurrentUser(res.data.data.user);
+        } else {
+          logout();
+        }
+      } catch {
+        logout();
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Get all users from localStorage
-  const getUsers = () => {
-    return JSON.parse(localStorage.getItem('at_at_users') || '[]');
-  };
+    fetchProfile();
+  }, [token]);
 
-  // Save users to localStorage
-  const saveUsers = (users) => {
-    localStorage.setItem('at_at_users', JSON.stringify(users));
-  };
-
-  // Create session with 24-hour expiry
-  const createSession = (user) => {
-    const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000); // 24 hours
-    localStorage.setItem('at_at_current_user', JSON.stringify(user));
-    localStorage.setItem('at_at_session_expiry', expiryTime.toString());
-    setCurrentUser(user);
-  };
-
-  // Clear session
-  const clearSession = () => {
-    localStorage.removeItem('at_at_current_user');
-    localStorage.removeItem('at_at_session_expiry');
-    setCurrentUser(null);
-  };
-
-  // Login function
-  const login = async (username, password) => {
+  const login = async (identifier, password) => {
     setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const users = getUsers();
-    const user = users.find(u => 
-      (u.username === username || u.email === username) && u.password === password
-    );
-    
-    if (user) {
-      // Remove password from user object for security
-      const { password: _, ...userWithoutPassword } = user;
-      createSession(userWithoutPassword);
+    try {
+      const res = await axios.post('http://localhost:3001/api/auth/login', {
+        [identifier.includes('@') ? 'email' : 'username']: identifier,
+        password
+      });
+
+      const { token, user } = res.data.data;
+      localStorage.setItem('at_at_token', token);
+      setToken(token);
+      setCurrentUser(user);
+
+      return { success: true, user };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Login failed'
+      };
+    } finally {
       setIsLoading(false);
-      return { success: true, user: userWithoutPassword };
-    } else {
-      setIsLoading(false);
-      return { success: false, error: 'Invalid username/email or password' };
     }
   };
 
-  // Signup function
   const signup = async (userData) => {
     setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const users = getUsers();
-    
-    // Check if user already exists
-    const existingUser = users.find(u => 
-      u.email === userData.email || u.username === userData.username
-    );
-    
-    if (existingUser) {
-      setIsLoading(false);
-      if (existingUser.email === userData.email) {
-        return { success: false, error: 'Email address is already registered' };
+    try {
+      const res = await axios.post('http://localhost:3001/api/auth/signup', userData);
+      if (res.data.success) {
+        const loginRes = await login(userData.email, userData.password);
+        if (loginRes.success) {
+          return { success: true, user: loginRes.user };
+        } else {
+          return { success: false, error: 'Signup succeeded but auto-login failed.' };
+        }
       } else {
-        return { success: false, error: 'Username is already taken' };
+        return { success: false, error: res.data.message };
       }
-    }
-    
-    // Create new user
-    const newUser = {
-      id: users.length + 1,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      email: userData.email,
-      username: userData.username,
-      password: userData.password,
-      createdAt: new Date().toISOString()
-    };
-    
-    // Add to users array
-    const updatedUsers = [...users, newUser];
-    saveUsers(updatedUsers);
-    
-    setIsLoading(false);
-    return { success: true, message: 'Account created successfully!' };
-  };
-
-  // Logout function
-  const logout = () => {
-    clearSession();
-  };
-
-  // Update user profile
-  const updateProfile = async (updatedData) => {
-    if (!currentUser) return { success: false, error: 'No user logged in' };
-    
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const users = getUsers();
-    const userIndex = users.findIndex(u => u.id === currentUser.id);
-    
-    if (userIndex !== -1) {
-      // Update user data
-      const updatedUser = { 
-        ...users[userIndex], 
-        ...updatedData,
-        updatedAt: new Date().toISOString()
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Signup failed'
       };
-      
-      users[userIndex] = updatedUser;
-      saveUsers(users);
-      
-      // Update current session
-      const { password: _, ...userWithoutPassword } = updatedUser;
-      createSession(userWithoutPassword);
-      
+    } finally {
       setIsLoading(false);
-      return { success: true, user: userWithoutPassword };
     }
-    
-    setIsLoading(false);
-    return { success: false, error: 'User not found' };
   };
 
-  // Check if user is authenticated
-  const isAuthenticated = () => {
-    return currentUser !== null;
+  const logout = () => {
+    localStorage.removeItem('at_at_token');
+    setCurrentUser(null);
+    setToken('');
   };
 
-  // Get user's full name
+  const updateProfile = async (updatedData) => {
+    if (!token || !currentUser) return { success: false, error: 'Not authenticated' };
+
+    setIsLoading(true);
+    try {
+      const res = await axios.put('http://localhost:3001/api/user/update', updatedData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        setCurrentUser(res.data.data.user);
+        return { success: true, user: res.data.data.user };
+      } else {
+        return { success: false, error: res.data.message };
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Update failed'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isAuthenticated = () => !!token && !!currentUser;
+
   const getUserFullName = () => {
     if (!currentUser) return 'Guest';
     return `${currentUser.firstName} ${currentUser.lastName}`;
-  };
-
-  // Demo function to reset to default users (for testing)
-  const resetToDefaults = () => {
-    localStorage.setItem('at_at_users', JSON.stringify(DEFAULT_USERS));
-    clearSession();
   };
 
   const value = {
@@ -212,8 +136,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     isAuthenticated,
-    getUserFullName,
-    resetToDefaults
+    getUserFullName
   };
 
   return (

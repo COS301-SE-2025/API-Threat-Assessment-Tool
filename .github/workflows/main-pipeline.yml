@@ -74,7 +74,6 @@ jobs:
       - name: Install backend Python dependencies
         run: |
           python -m pip install --upgrade pip
-          ls
           pip install -r backend/requirements.txt
 
       - name: Run Backend Tests
@@ -84,6 +83,6 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t ATAT .
+        run: docker build -t atat .
 
 

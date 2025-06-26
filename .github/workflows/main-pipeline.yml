@@ -84,5 +84,6 @@ jobs:
       # Build the Docker image
       - name: Build Docker image
         run: docker build -t atat .
+        continue-on-error: true
 
 

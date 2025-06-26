@@ -3,7 +3,7 @@ name: Pipeline
 on:
   push:
     branches:
-      - none
+      - main
   workflow_dispatch:
 
 jobs:

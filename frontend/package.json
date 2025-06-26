@@ -20,11 +20,7 @@
     "start:client": "react-scripts start",
     "start:api": "cross-env-shell \"cd ../api && npm start\"",
     "build": "react-scripts build",
-<<<<<<< HEAD
     "test": "react-scripts test --coverage --watchAll --testPathIgnorePatterns=/Dashboard.test.js --testPathIgnorePatterns=/Home.test.js",
-=======
-    "test": "react-scripts test --watchAll=false --passWithNoTests",
->>>>>>> main
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

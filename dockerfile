@@ -7,8 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ .
 
-COPY ConnectionTest.py /app/backend/tests/ConnectionTest.py
-
 # ----------------------------------------
 
 FROM node:18 AS api
@@ -26,8 +24,6 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ .
-# Optional: build if it's a static SPA
-# RUN npm run build
 
 # ----------------------------------------
 
@@ -54,9 +50,11 @@ RUN cd frontend && npm install
 
 # Add script to launch everything
 COPY start.sh .
+RUN chmod +x start.sh
+
 
 # Expose ports
-EXPOSE 5252 8000 3000
+EXPOSE 9011 3001 3000
 
 # Start all apps
 CMD ["bash", "start.sh"]

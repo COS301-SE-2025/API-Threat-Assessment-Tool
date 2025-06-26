@@ -1,9 +1,16 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { ThemeContext } from '../App';
-import { useAuth } from '../AuthContext';
+import React from 'react'; 
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'; 
+import { MemoryRouter } from 'react-router-dom'; 
+import { ThemeContext } from '../App'; 
+import { useAuth } from '../AuthContext'; 
 import Home from '../Home';
+
+// Mock IntersectionObserver for Jest environment
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
 jest.mock('../AuthContext', () => ({
   useAuth: jest.fn(),
@@ -46,65 +53,65 @@ describe('Home Component', () => {
       </ThemeContext.Provider>
     );
 
-  // test('renders loading state when no current user', () => {
-  //   useAuth.mockReturnValue({
-  //     currentUser: null,
-  //     logout: logoutMock,
-  //     getUserFullName: () => null,
-  //   });
-  //   renderHome(null);
-  //   expect(screen.getByText(/Loading/i)).toBeInTheDocument();
-  // });
+  test('renders loading state when no current user', () => {
+    useAuth.mockReturnValue({
+      currentUser: null,
+      logout: logoutMock,
+      getUserFullName: () => null,
+    });
+    renderHome(null);
+    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+  });
 
-  // test('renders user greeting and nav links', () => {
-  //   useAuth.mockReturnValue({
-  //     currentUser: { firstName: 'Jane' },
-  //     logout: logoutMock,
-  //     getUserFullName: () => 'Jane Smith',
-  //   });
-  //   renderHome();
-  //   expect(screen.getByText(/Welcome back,/i)).toBeInTheDocument();
-  //   expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-  //   expect(screen.getByRole('link', { name: /Home/i })).toBeInTheDocument();
-  //   expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
-  // });
+  test('renders user greeting and nav links', () => {
+    useAuth.mockReturnValue({
+      currentUser: { firstName: 'Jane' },
+      logout: logoutMock,
+      getUserFullName: () => 'Jane Smith',
+    });
+    renderHome();
+    expect(screen.getByText(/Welcome back,/i)).toBeInTheDocument();
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Home/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
+  });
 
-  // test('calls toggleDarkMode when theme button clicked', () => {
-  //   useAuth.mockReturnValue({
-  //     currentUser: { firstName: 'Jane' },
-  //     logout: logoutMock,
-  //     getUserFullName: () => 'Jane Smith',
-  //   });
-  //   renderHome();
-  //   fireEvent.click(screen.getByTitle(/Toggle Theme/i));
-  //   expect(toggleDarkModeMock).toHaveBeenCalledTimes(1);
-  // });
+  test('calls toggleDarkMode when theme button clicked', () => {
+    useAuth.mockReturnValue({
+      currentUser: { firstName: 'Jane' },
+      logout: logoutMock,
+      getUserFullName: () => 'Jane Smith',
+    });
+    renderHome();
+    fireEvent.click(screen.getByTitle(/Toggle Theme/i));
+    expect(toggleDarkModeMock).toHaveBeenCalledTimes(1);
+  });
 
-  // test('calls logout and navigates on confirm logout', () => {
-  //   useAuth.mockReturnValue({
-  //     currentUser: { firstName: 'Jane' },
-  //     logout: logoutMock,
-  //     getUserFullName: () => 'Jane Smith',
-  //   });
-  //   window.confirm = jest.fn(() => true);
-  //   renderHome();
-  //   fireEvent.click(screen.getByTitle(/Logout/i));
-  //   expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');
-  //   expect(logoutMock).toHaveBeenCalledTimes(1);
-  //   expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true });
-  // });
+  test('calls logout and navigates on confirm logout', () => {
+    useAuth.mockReturnValue({
+      currentUser: { firstName: 'Jane' },
+      logout: logoutMock,
+      getUserFullName: () => 'Jane Smith',
+    });
+    window.confirm = jest.fn(() => true); // Mock the confirmation dialog
+    renderHome();
+    fireEvent.click(screen.getByTitle(/Logout/i));
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');
+    expect(logoutMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true });
+  });
 
-  // test('does not logout if confirmation cancelled', () => {
-  //   useAuth.mockReturnValue({
-  //     currentUser: { firstName: 'Jane' },
-  //     logout: logoutMock,
-  //     getUserFullName: () => 'Jane Smith',
-  //   });
-  //   window.confirm = jest.fn(() => false);
-  //   renderHome();
-  //   fireEvent.click(screen.getByTitle(/Logout/i));
-  //   expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');
-  //   expect(logoutMock).not.toHaveBeenCalled();
-  //   expect(navigateMock).not.toHaveBeenCalled();
-  // });
+  test('does not logout if confirmation cancelled', () => {
+    useAuth.mockReturnValue({
+      currentUser: { firstName: 'Jane' },
+      logout: logoutMock,
+      getUserFullName: () => 'Jane Smith',
+    });
+    window.confirm = jest.fn(() => false); // Mock the cancellation of the confirmation
+    renderHome();
+    fireEvent.click(screen.getByTitle(/Logout/i));
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to logout?');
+    expect(logoutMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
 });

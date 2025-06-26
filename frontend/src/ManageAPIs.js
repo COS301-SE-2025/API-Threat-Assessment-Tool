@@ -12,7 +12,8 @@ export {
   loadApisFromLocal,
   APIS_LOCAL_STORAGE_KEY,
   // UI
-  EndpointTagEditor
+  EndpointTagEditor,
+
 };
 
 export { ManageAPIs };

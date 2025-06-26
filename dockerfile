@@ -57,4 +57,4 @@ RUN chmod +x start.sh
 EXPOSE 9011 3001 3000
 
 # Start all apps
-CMD ["bash", "start.sh"]
+CMD ["bash", "setup.sh"]

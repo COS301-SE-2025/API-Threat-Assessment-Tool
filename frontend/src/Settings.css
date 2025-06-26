@@ -790,8 +790,8 @@ input:checked + .toggle-slider:before {
 
 /* Animation Classes */
 .animate-on-scroll {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: 0;
+  transform: translateY(30px);
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -821,6 +821,22 @@ input:checked + .toggle-slider:before {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+@keyframes tabSwitch {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Apply tabSwitch animation to active click */
+.settings-tab {
+  /* Existing styles */
+  transition: var(--transition);
+}
+
+.settings-tab:active {
+  animation: tabSwitch 0.2s ease-out;
 }
 
 /* Responsive Design */

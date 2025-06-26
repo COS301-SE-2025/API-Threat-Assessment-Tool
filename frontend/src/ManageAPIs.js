@@ -1,6 +1,297 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './ManageAPIs.css';
+export {
+  fetchAllTags,
+  fetchApiEndpoints,
+  addTagsToEndpoint,
+  removeTagsFromEndpoint,
+  replaceTagsOnEndpoint,
+  fetchEndpointDetails,
+  saveApisToLocal,
+  loadApisFromLocal,
+  APIS_LOCAL_STORAGE_KEY,
+  // UI
+  EndpointTagEditor,
+
+};
+
+export { ManageAPIs };
+
+
+async function fetchAllTags() {
+  const res = await fetch('/api/tags', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch tags');
+    return data.data.tags;
+}
+
+async function fetchApiEndpoints(api_id) {
+  const res = await fetch('/api/endpoints', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_id }),
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch endpoints');
+  return data.data;
+}
+
+async function addTagsToEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
+  return data.data;
+}
+async function fetchEndpointDetails({ endpoint_id, path, method }) {
+  const res = await fetch('/api/endpoints/details', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ endpoint_id, path, method }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch endpoint details");
+  return data.data;
+}
+
+
+
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "" }) {
+  const [tagInput, setTagInput] = React.useState('');
+  const [removeInput, setRemoveInput] = React.useState('');
+  const [replaceInput, setReplaceInput] = React.useState('');
+  const [adding, setAdding] = React.useState(false);
+  const [removing, setRemoving] = React.useState(false);
+  const [replacing, setReplacing] = React.useState(false);
+  const [message, setMessage] = React.useState('');
+
+
+
+  const handleAddTags = async () => {
+    const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter at least one tag.');
+      return;
+    }
+    setAdding(true);
+    setMessage('');
+    try {
+      await addTagsToEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags added!');
+      setTagInput('');
+      if (onTagsAdded) onTagsAdded(tags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemoveTags = async () => {
+    const tags = removeInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter at least one tag to remove.');
+      return;
+    }
+    setRemoving(true);
+    setMessage('');
+    try {
+      await removeTagsFromEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags removed!');
+      setRemoveInput('');
+      if (onTagsRemoved) onTagsRemoved(tags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const handleReplaceTags = async () => {
+    const tags = replaceInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      setMessage('Please enter tags to replace.');
+      return;
+    }
+    setReplacing(true);
+    setMessage('');
+    try {
+      await replaceTagsOnEndpoint({
+        path: endpoint.path || endpoint.url,
+        method: (endpoint.method || "GET").toUpperCase(),
+        tags,
+      });
+      setMessage('✅ Tags replaced!');
+      setReplaceInput('');
+      if (onTagsAdded) onTagsAdded(tags); // Or a dedicated onTagsReplaced callback
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setReplacing(false);
+    }
+  };
+
+  return (
+    
+    <div style={{ marginTop: 8 }}>
+      {tagsLoading ? (
+  <div style={{ fontSize: 13, color: "#888" }}>Loading tags...</div>
+) : tagsError ? (
+  <div style={{ fontSize: 13, color: "#e53e3e" }}>❌ {tagsError}</div>
+) : allTags && allTags.length > 0 ? (
+  <div style={{ marginBottom: 5, fontSize: 12, color: "#888", whiteSpace: 'pre-line' }}>
+    <strong>Available tags:</strong>{" "}
+    {allTags.map(tag => (
+      <span key={tag} style={{
+        display: 'inline-block', background: "#f3f4f6", color: "#6366f1",
+        borderRadius: 8, padding: "2px 8px", marginRight: 4, marginBottom: 2, fontWeight: 600
+      }}>{tag}</span>
+    ))}
+  </div>
+) : null}
+
+      {/* Add tags */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+        <input
+          type="text"
+          placeholder="Add tags (comma separated)"
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+          disabled={adding}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleAddTags}
+          disabled={adding}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#818cf8',
+            color: 'white',
+            fontWeight: 600,
+            cursor: adding ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {adding ? "Adding..." : "Add Tag"}
+        </button>
+      </div>
+      {/* Remove tags */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Remove tags (comma separated)"
+          value={removeInput}
+          onChange={e => setRemoveInput(e.target.value)}
+          disabled={removing}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleRemoveTags}
+          disabled={removing}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#f87171',
+            color: 'white',
+            fontWeight: 600,
+            cursor: removing ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {removing ? "Removing..." : "Remove Tag"}
+        </button>
+      </div>
+     
+
+      {/* Replace tags */}
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 6 }}>
+        <input
+          type="text"
+          placeholder="Replace all tags (comma separated)"
+          value={replaceInput}
+          onChange={e => setReplaceInput(e.target.value)}
+          disabled={replacing}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleReplaceTags}
+          disabled={replacing}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#34d399',
+            color: 'white',
+            fontWeight: 600,
+            cursor: replacing ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {replacing ? "Replacing..." : "Replace Tags"}
+        </button>
+      </div>
+      {message && <div style={{ fontSize: 13, marginTop: 3 }}>{message}</div>}
+    </div>
+  );
+}
+
+
+async function removeTagsFromEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove tags");
+  return data.data;
+}
+async function replaceTagsOnEndpoint({ path, method, tags }) {
+  const res = await fetch('/api/endpoints/tags/replace', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ path, method, tags }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to replace tags");
+  return data.data;
+}
+
+const APIS_LOCAL_STORAGE_KEY = 'apiList';
+
+function saveApisToLocal(apis) {
+  localStorage.setItem(APIS_LOCAL_STORAGE_KEY, JSON.stringify(apis));
+}
+
+function loadApisFromLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(APIS_LOCAL_STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
 
 // Safe imports with fallbacks
 let ThemeContext, useAuth, Logo;
@@ -36,6 +327,25 @@ try {
 
 const ManageAPIs = () => {
   // Safe hooks with error handling
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [selectedApi, setSelectedApi] = useState(null);
+const [selectedApiEndpoints, setSelectedApiEndpoints] = useState(null);
+const [selectedApiForEndpoints, setSelectedApiForEndpoints] = useState(null);
+const [endpointsLoading, setEndpointsLoading] = useState(false);
+const [endpointsError, setEndpointsError] = useState('');
+const [allTags, setAllTags] = useState([]);
+const [tagsLoading, setTagsLoading] = useState(false);
+const [tagsError, setTagsError] = useState('');
+const [endpointDetail, setEndpointDetail] = useState(null);
+const [detailModalOpen, setDetailModalOpen] = useState(false);
+const [detailLoading, setDetailLoading] = useState(false);
+const [detailError, setDetailError] = useState('');
+
+
+
+
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
   const location = useLocation?.() || { pathname: '/manage-apis' };
   
@@ -45,50 +355,69 @@ const ManageAPIs = () => {
   
   const authContext = useAuth() || { currentUser: null, logout: () => {}, getUserFullName: () => 'User' };
   const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
+  useEffect(() => {
+    const classTarget = document.body;
+    if (darkMode) {
+      classTarget.classList.add('dark-mode');
+    } else {
+      classTarget.classList.remove('dark-mode');
+    }
+    return () => {
+      classTarget.classList.remove('dark-mode');
+    };
+  }, [darkMode]);
 
   // State management with safe defaults
-  const [apis, setApis] = useState([
-    {
-      id: 1,
-      name: 'E-commerce API',
-      baseUrl: 'https://api.ecommerce.com/v1',
-      description: 'Main API for the e-commerce platform with user authentication and product management',
-      lastScanned: '2025-06-20',
-      status: 'Active',
-      scanCount: 12,
-      lastScanResult: 'Clean'
-    },
-    {
-      id: 2,
-      name: 'Payment Gateway API',
-      baseUrl: 'https://api.payments.com/v2',
-      description: 'Secure payment processing API with PCI compliance',
-      lastScanned: '2025-06-18',
-      status: 'Active',
-      scanCount: 8,
-      lastScanResult: 'Issues Found'
-    },
-    {
-      id: 3,
-      name: 'User Management Service',
-      baseUrl: 'https://api.users.internal/v1',
-      description: 'Internal user authentication and profile management service',
-      lastScanned: '2025-06-15',
-      status: 'Inactive',
-      scanCount: 5,
-      lastScanResult: 'Pending'
-    },
-    {
-      id: 4,
-      name: 'Analytics API',
-      baseUrl: 'https://api.analytics.com/v3',
-      description: 'Data analytics and reporting API for business intelligence',
-      lastScanned: '2025-06-22',
-      status: 'Active',
-      scanCount: 15,
-      lastScanResult: 'Clean'
-    }
-  ]);
+const fallbackApis = [
+  {
+    id: 1,
+    name: 'E-commerce API',
+    baseUrl: 'https://api.ecommerce.com/v1',
+    description: 'Main API for the e-commerce platform with user authentication and product management',
+    lastScanned: '2025-06-20',
+    status: 'Active',
+    scanCount: 12,
+    lastScanResult: 'Clean'
+  },
+  {
+    id: 2,
+    name: 'Payment Gateway API',
+    baseUrl: 'https://api.payments.com/v2',
+    description: 'Secure payment processing API with PCI compliance',
+    lastScanned: '2025-06-18',
+    status: 'Active',
+    scanCount: 8,
+    lastScanResult: 'Issues Found'
+  },
+  {
+    id: 3,
+    name: 'User Management Service',
+    baseUrl: 'https://api.users.internal/v1',
+    description: 'Internal user authentication and profile management service',
+    lastScanned: '2025-06-15',
+    status: 'Inactive',
+    scanCount: 5,
+    lastScanResult: 'Pending'
+  },
+  {
+    id: 4,
+    name: 'Analytics API',
+    baseUrl: 'https://api.analytics.com/v3',
+    description: 'Data analytics and reporting API for business intelligence',
+    lastScanned: '2025-06-22',
+    status: 'Active',
+    scanCount: 15,
+    lastScanResult: 'Clean'
+  }
+];
+const [apis, setApis] = useState(() => {
+  const local = loadApisFromLocal();
+  return local.length > 0 ? local : fallbackApis;
+});
+useEffect(() => {
+  saveApisToLocal(apis);
+}, [apis]);
+
 
   const [isVisible, setIsVisible] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,7 +483,60 @@ const ManageAPIs = () => {
     } catch (error) {
       console.warn('Error setting up intersection observer:', error);
     }
+    
   }, []);
+  useEffect(() => {
+  setTagsLoading(true);
+  setTagsError('');
+  fetchAllTags()
+    .then(tags => setAllTags(Array.isArray(tags) ? tags : []))
+    .catch(e => setTagsError(e.message || "Failed to fetch tags"))
+    .finally(() => setTagsLoading(false));
+}, []);
+const handleViewDetails = async (endpoint) => {
+  setDetailLoading(true);
+  setDetailError('');
+  try {
+    const details = await fetchEndpointDetails({
+      endpoint_id: endpoint.id,
+      path: endpoint.path,
+      method: endpoint.method
+    });
+    setEndpointDetail(details);
+    setDetailModalOpen(true);
+  } catch (e) {
+    setDetailError(e.message);
+  }
+  setDetailLoading(false);
+};
+
+  // Safe View Endpoint handler
+ const handleViewEndpoints = async (api) => {
+    setEndpointsLoading(true);
+    setEndpointsError('');
+    setSelectedApiForEndpoints(api);
+    try {
+      const id = api.api_id || api.id;
+      const endpointsData = await fetchApiEndpoints(id);
+      let endpoints = endpointsData;
+      if (endpoints && typeof endpoints === 'object' && Array.isArray(endpoints.endpoints)) {
+        endpoints = endpoints.endpoints;
+      } else if (!Array.isArray(endpoints)) {
+        endpoints = [];
+      }
+      setSelectedApiEndpoints(endpoints);
+    } catch (err) {
+      setEndpointsError(err.message || "Failed to load endpoints");
+      setSelectedApiEndpoints([]);
+    }
+    setEndpointsLoading(false);
+  };
+  const closeEndpointsModal = () => {
+    setSelectedApiEndpoints(null);
+    setSelectedApiForEndpoints(null);
+    setEndpointsError('');
+  };
+
 
   // Safe logout handler
   const handleLogout = useCallback(() => {
@@ -258,6 +640,7 @@ const ManageAPIs = () => {
     }
   }, []);
 
+ 
   const handleScanApi = useCallback((api) => {
     try {
       if (!api) return;
@@ -289,7 +672,55 @@ const ManageAPIs = () => {
       setError('Error updating field. Please try again.');
     }
   }, []);
+  // ----------- IMPORT API MODAL (BACKEND) -----------
+  const handleImportAPISubmit = async (e) => {
+    e.preventDefault();
+    setImportLoading(true);
+    setImportError("");
+    const fileInput = document.getElementById("import-api-file");
+    const file = fileInput.files[0];
+    if (!file) {
+      setImportError("Please select a file.");
+      setImportLoading(false);
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
 
+    try {
+      const res = await fetch("/api/import", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message || "Import failed");
+
+      // Add to API list (extract name from filename for now)
+      const { filename, api_id } = result.data;
+      setApis((prevApis) => [
+        ...prevApis,
+        {
+          id: Math.max(...prevApis.map(a => a.id), 0) + 1,
+          name: filename.replace(/\.[^/.]+$/, ''),
+          baseUrl: "",
+          description: `Imported from ${filename}. Edit details as needed.`,
+          status: "Active",
+          lastScanned: "Never",
+          scanCount: 0,
+          lastScanResult: "Pending",
+          api_id: api_id,
+          filename: filename,
+        }
+      ]);
+      showMessage(`✅ Imported API "${filename}" successfully!`, "success");
+      setIsImportModalOpen(false);
+    } catch (err) {
+      setImportError(err.message || "Unexpected error.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
   // Safe API save handler
   const handleSaveApi = useCallback(async () => {
     try {
@@ -422,31 +853,46 @@ const ManageAPIs = () => {
             return;
           }
 
-          // Validate required fields
-          if (!apiData.name || !apiData.baseUrl) {
-            showMessage('File must contain "name" and "baseUrl" fields.', 'error');
-            return;
-          }
+// Recognize OpenAPI/Swagger
+const isOpenAPI = apiData.openapi || apiData.swagger;
+let name, baseUrl, description;
 
-          const newApi = {
-            id: Math.max(...apis.map(a => a.id), 0) + 1,
-            name: apiData.name,
-            baseUrl: apiData.baseUrl,
-            description: apiData.description || '',
-            status: apiData.status || 'Active',
-            lastScanned: 'Never',
-            scanCount: 0,
-            lastScanResult: 'Pending'
-          };
-          
-          setApis(prevApis => [...prevApis, newApi]);
-          showMessage(`✅ API "${newApi.name}" imported successfully!`, 'success');
-          setIsModalOpen(false);
-          
-          // Reset file input
-          if (e.target) {
-            e.target.value = '';
-          }
+if (isOpenAPI) {
+  name = apiData.info?.title || 'Imported OpenAPI';
+  baseUrl = apiData.servers?.[0]?.url || '';
+  description = apiData.info?.description || '';
+  if (!baseUrl) {
+    showMessage('No servers.url found in OpenAPI file.', 'error');
+    return;
+  }
+} else {
+  // Fallback: legacy simple format
+  name = apiData.name;
+  baseUrl = apiData.baseUrl;
+  description = apiData.description || '';
+  if (!name || !baseUrl) {
+    showMessage('File must contain "name" and "baseUrl" fields.', 'error');
+    return;
+  }
+}
+
+const newApi = {
+  id: Math.max(...apis.map(a => a.id), 0) + 1,
+  name,
+  baseUrl,
+  description,
+  status: apiData.status || 'Active',
+  lastScanned: 'Never',
+  scanCount: 0,
+  lastScanResult: 'Pending'
+};
+
+setApis(prevApis => [...prevApis, newApi]);
+showMessage(`✅ API "${name}" imported successfully!`, 'success');
+setIsModalOpen(false);
+
+if (e.target) e.target.value = '';
+
         } catch (error) {
           console.error('Error processing file:', error);
           showMessage('Error processing file: ' + error.message, 'error');
@@ -576,7 +1022,7 @@ const ManageAPIs = () => {
         </div>
       </header>
 
-      <main className="manage-apis-main">
+          <main className="manage-apis-main">
         {/* Hero Section */}
         <section className="manage-apis-hero">
           <div className="hero-content">
@@ -596,13 +1042,24 @@ const ManageAPIs = () => {
               Centrally manage your API endpoints, configure security scans, and monitor your API ecosystem.
             </p>
             <div className="hero-actions">
-              <button onClick={handleAddApi} className="add-api-btn">
-                🚀 Add New API
+              <button onClick={handleAddApi} className="add-api-btn">🚀 Add New API</button>
+              <button
+                onClick={() => { setIsImportModalOpen(true); setImportError(""); }}
+                className="import-api-btn"
+                style={{
+                  marginLeft: 16,
+                  background: "#a78bfa",
+                  color: "#222",
+                  borderRadius: 7,
+                  fontWeight: 700,
+                  padding: "9px 24px"
+                }}
+              >
+                ⬆️ Import API Spec
               </button>
             </div>
-          </div>
+          </div> 
         </section>
-
         {/* API Statistics */}
         <section 
           id="api-stats" 
@@ -695,6 +1152,15 @@ const ManageAPIs = () => {
                         >
                           🗑️ Delete
                         </button>
+                        <button
+                          onClick={() => handleViewEndpoints(api)}
+                          className="action-btn endpoints"
+                          title="View Endpoints"
+                          style={{ background: "#6366f1", color: "#fff" }}
+                        >
+                          📂 Endpoints
+                        </button>
+
                       </div>
                     </div>
                   ))}
@@ -861,6 +1327,160 @@ const ManageAPIs = () => {
           </div>
         </div>
       )}
+{isImportModalOpen && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsImportModalOpen(false)}>
+    <div className="modal-content" style={{ minWidth: 380 }}>
+      <div className="modal-header">
+        <h2>⬆️ Import API Spec</h2>
+        <button onClick={() => setIsImportModalOpen(false)} className="close-btn">×</button>
+      </div>
+      <form
+        className="modal-form"
+        style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 10 }}
+        onSubmit={handleImportAPISubmit}
+      >
+        <label style={{ fontWeight: 600 }}>
+          <span>Choose .json, .yaml, or .yml file:</span>
+          <input
+            id="import-api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            style={{
+              marginTop: 8,
+              padding: "7px",
+              background: "#23232b",
+              color: "#fff",
+              borderRadius: 7,
+              fontWeight: 600,
+            }}
+            disabled={importLoading}
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={importLoading}
+          style={{
+            background: "#6366f1",
+            color: "#fff",
+            borderRadius: 7,
+            fontWeight: 700,
+            padding: "12px 0",
+            fontSize: 16,
+            marginTop: 10,
+            cursor: importLoading ? "not-allowed" : "pointer"
+          }}
+        >
+          {importLoading ? "Uploading..." : "Import & Add API"}
+        </button>
+        {importError && (
+          <div style={{
+            background: "#ef444420",
+            color: "#f87171",
+            borderRadius: 8,
+            marginTop: 10,
+            padding: "8px 12px",
+            fontWeight: 600
+          }}>
+            ❌ {importError}
+          </div>
+        )}
+      </form>
+      <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
+        Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
+        After import, you can edit API details.
+      </div>
+    </div>
+  </div>
+)}
+
+
+{selectedApiEndpoints !== null && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeEndpointsModal()}>
+    <div className="modal-content" style={{ minWidth: 420, maxHeight: 540, overflow: 'auto' }}>
+      <div className="modal-header">
+        <h2>📂 Endpoints for "{selectedApiForEndpoints?.name || ''}"</h2>
+        <button onClick={closeEndpointsModal} className="close-btn">×</button>
+      </div>
+      <div style={{ padding: 16 }}>
+        {endpointsLoading ? (
+          <div>Loading endpoints...</div>
+        ) : endpointsError ? (
+          <div style={{ color: '#e53e3e' }}>❌ {endpointsError}</div>
+        ) : !Array.isArray(selectedApiEndpoints) ? (
+          <div>No endpoints found.</div>
+        ) : selectedApiEndpoints.length === 0 ? (
+          <div>No endpoints found.</div>
+        ) : (
+<ul className="endpoint-list">
+  {selectedApiEndpoints.map((ep, idx) => (
+    <li key={idx} className="endpoint-card">
+      <div className="endpoint-method-path">
+        <span className={`endpoint-method ${ep.method || "DEFAULT"}`}>
+          {(ep.method || "GET").toUpperCase()}
+        </span>
+        <span className="endpoint-path">{ep.path || ep.url || '(no path)'}</span>
+      </div>
+      {ep.summary || ep.description ? (
+        <div className="endpoint-summary">{ep.summary || ep.description}</div>
+      ) : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <EndpointTagEditor 
+          endpoint={ep}
+          allTags={allTags}
+          tagsLoading={tagsLoading}
+          tagsError={tagsError}
+        />
+        <button
+          onClick={() => handleViewDetails(ep)}
+          className="action-btn details"
+          style={{
+            marginLeft: 4,
+            background: "#a78bfa",
+            color: "#222",
+            borderRadius: 6,
+            padding: "4px 10px",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer"
+          }}
+        >
+          📖 View Details
+        </button>
+      </div>
+    </li>
+  ))}
+</ul>
+
+
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
+{detailModalOpen && (
+  <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDetailModalOpen(false)}>
+    <div className="modal-content" style={{ minWidth: 340, maxWidth: 540, maxHeight: 540, overflow: 'auto' }}>
+      <div className="modal-header">
+        <h2>📖 Endpoint Details</h2>
+        <button onClick={() => setDetailModalOpen(false)} className="close-btn">×</button>
+      </div>
+      <div style={{ padding: 18 }}>
+        {detailLoading ? (
+          <div>Loading...</div>
+        ) : detailError ? (
+          <div style={{ color: '#e53e3e' }}>❌ {detailError}</div>
+        ) : endpointDetail ? (
+          <pre style={{ fontSize: 13, background: "#23232b", color: "#fff", padding: 12, borderRadius: 8, whiteSpace: 'pre-wrap' }}>
+            {JSON.stringify(endpointDetail, null, 2)}
+          </pre>
+        ) : (
+          <div>No detail available.</div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       <footer className="manage-apis-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>

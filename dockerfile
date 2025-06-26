@@ -53,7 +53,7 @@ COPY start.sh .
 RUN chmod +x start.sh
 
 
-# Expose ports
+# Expose ports backend api frontend
 EXPOSE 9011 3001 3000
 
 # Start all apps

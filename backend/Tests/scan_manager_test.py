@@ -1,5 +1,5 @@
 import unittest
-from your_module import ScanManager
+from core.scan_manager import ScanManager
 
 class TestScanManager(unittest.TestCase):
     def test_init(self):

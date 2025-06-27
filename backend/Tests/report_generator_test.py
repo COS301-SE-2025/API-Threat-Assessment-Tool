@@ -1,5 +1,5 @@
 import unittest
-from your_module import ReportGenerator
+from core.report_generator import ReportGenerator
 
 class TestReportGenerator(unittest.TestCase):
     def test_init(self):

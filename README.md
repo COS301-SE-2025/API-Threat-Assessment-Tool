@@ -31,7 +31,12 @@ Track our development progress, sprint planning, and task management through our
 ---
 ## 🎬 Demo Video
 
-[Watch our full demo on YouTube](https://youtu.be/V0At4vOyM9w)  
+🌟 **See AT-AT in Action!**  
+Curious how our API Threat Assessment Tool works?  
+Watch our official demo video for a guided walkthrough of all the key features, and powerful security scanning capabilities.
+
+[![Watch the Full Demo on YouTube](https://img.youtube.com/vi/V0At4vOyM9w/hqdefault.jpg)](https://youtu.be/V0At4vOyM9w)
+
 ---
 
 ## 🛠️ Technology Stack

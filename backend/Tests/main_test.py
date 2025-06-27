@@ -1,7 +1,7 @@
 
 import unittest
 from unittest.mock import patch, Mock
-from your_module import handle_request, import_file, get_all_apis, create_scan
+from main import handle_request, import_file, get_all_apis, create_scan
 
 class TestHandleRequest(unittest.TestCase):
     def test_handle_request_unknown_command(self):

@@ -59,7 +59,7 @@ With the growing reliance on APIs in digital systems, there is a critical need t
     - R1.1: Upload OpenAPI/Swagger files
     - R1.2: Upload Postman Collections
     - R1.3: Provide URL to fetch the API Specification remotely
-
+    - R1.4: Validate file structure before storing
 ### Heuristic API Discovery
 - R1: The system must support specification-less scanning
     - R1.1: Based on a target API domain
@@ -101,6 +101,21 @@ With the growing reliance on APIs in digital systems, there is a critical need t
     - R1.4: Include a security score metric for the API
     - R1.5: Detailed summary for high-level overview
 
+### Endpoint Management
+- R1: The system must allow users to manage endpoints from imported API specifications
+    - R1.1: List all available endpoints
+    - R1.2: Retrieve details of a specific endpoint
+        - R1.2.1: Return path, method, tags, and security metadata
+    - R1.3: (todo) Return endpoint list scoped by API ID
+
+### Endpoint Tagging
+- R1: The system must allow tagging of API endpoints
+    - R1.1: Add tags to a given endpoint
+        - R1.1.1: Tags should be user-defined or selected from a predefined list
+        - R1.1.2: Tags such as "admin only", "sensitive", "deprecated" should be available
+    - R1.2: Remove specific tags from an endpoint
+    - R1.3: Replace all tags for an endpoint
+    - R1.4: Retrieve a list of all known tags in the system
 
 ## User Stories/Characteristics
 ### A New User’s Characteristics
@@ -142,6 +157,8 @@ As a Developer I would like to:
 
 - View a vulnerability report that highlights issues and suggests fixes
 
+- Add tags to endpoints to indicate sensitivity or access level
+
 - Export the report in PDF so I can use it/look at it later
 
 - Save the scan session so I can review or share results later
@@ -163,6 +180,10 @@ As a Security Analyst I would like to:
 
 - View a visual dashboard of historical scans and trends to monitor system health over time
 
+- Label endpoints using tags such as ‘admin only’ or ‘public’ to improve API classification
+
+- Track endpoint metadata to assess security risk based on exposure and tags
+
 ### A Penetration Tester’s Characteristics
 A pentester actively simulates attacks against APIs to discover exploitable flaws.
 
@@ -180,8 +201,8 @@ As a Penetration Tester I would like to:
 
 ## Domain Model
 ###### Right click on image and press on open imnage in new tab if you want to read it more clearly/in larger scale
-![Domain Model](/images/domain-model.png)
-## Use case Diagram
+![Domain Model](/images/domain-model.jpg)
+## Use case Diagrams
 
 ### Authentication
 ![Authentication](/images/Authentication.jpg)
@@ -195,6 +216,8 @@ As a Penetration Tester I would like to:
 ![Reports](/images/ReportGeneration.jpg) 
 ### Account Management System
 ![AccountManagement](/images/Account-Management-System.jpg)
+### Endpoint Management
+![EndpointManagement](/images/Endpoint-Management-System.jpg)
 ## Architectural Constraints
 ### Deployment
 
@@ -419,50 +442,127 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 
 
 
-
-## Service contracts
+## Service Contracts
+The service contracts are implemented unless stated otherwise.
 ### User Authentication Service
 | Element| Description|
 |-|-|
-| **Purpose**| Handles secure user registration, login, and token-based session handling|
-| **Input**| JSON with `email`, `password` or third-party OAuth token (Google/GitHub)|
-| **Output**| JWT access token or error message|
-| **Endpoint**| `POST /api/auth/login` and `POST /api/auth/register`|
+| **Purpose**| Handles secure user registration, login, and token-based session handling |
+| **Input**| JSON with `email`, `password`, `username`, `firstName`, `lastName` |
+| **Output**| User object and session or error message |
+| **Endpoint**| `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/profile` |
+
 ### API Specification Import Service
 | Element| Description|
 |-|-|
-| **Purpose**| Allows users to upload API specs in OpenAPI, Swagger, or Postman formats |
-| **Input**| File upload via `multipart/form-data` |
-| **Output**| Parsed API structure or error message |
-| **Endpoint**| `POST /api/spec/upload`|
-### Report Generation Service
+| **Purpose**| Allows users to upload OpenAPI specifications for analysis |
+| **Input**| File upload via `multipart/form-data` or raw JSON |
+| **Output**| API ID reference or error |
+| **Endpoint**| `POST /api/import` |
+
+### Vulnerability Scanning Service
 | Element| Description|
 |-|-|
-| **Purpose**| Generates a formatted report of scan results |
-| **Input**| Path param: `scan_id`, Query: `?format=pdf/json/html` |
-| **Output**| Report download or inline display |
-| **Endpoint**| `GET /api/report/{scan_id}`|
-### User Account Management Service
+| **Purpose**| Executes a scan on an imported API specification |
+| **Input**| JSON with `api_id` |
+| **Output**| Scan ID and scan initiation confirmation |
+| **Endpoint**| `POST /scan` |
+
+### Scan Status Service
 | Element| Description|
 |-|-|
-| **Purpose**| Enables user profile editing and account deletion|
-| **Input**| JSON with updated user fields |
+| **Purpose**| Retrieve the current status of a scan job |
+| **Input**| Path parameter: `scanId` |
+| **Output**| JSON with scan status and timestamps |
+| **Endpoint**| `GET /status/:scanId` |
+
+### Scan Results Service
+| Element| Description|
+|-|-|
+| **Purpose**| Fetch the results of a completed scan |
+| **Input**| Path parameter: `scanId` |
+| **Output**| Scan report in JSON format |
+| **Endpoint**| `GET /results/:scanId` |
+
+### Endpoint Tagging Service
+| Element| Description|
+|-|-|
+| **Purpose**| Add, remove, or replace tags on detected API endpoints |
+| **Input**| JSON with `endpoint_id` and `tags[]` |
 | **Output**| Success/failure confirmation |
-| **Endpoint**| `PATCH /api/user/me`, `DELETE /api/user/me`|
-### Heuristic API Discovery Service
+| **Endpoint**| `POST /api/endpoints/tags/add`, `POST /api/endpoints/tags/remove`, `POST /api/endpoints/tags/replace` |
+
+### Endpoint Listing Service
 | Element| Description|
 |-|-|
-| **Purpose**| Automatically discovers undocumented endpoints via heuristics |
-| **Input**| JSON with API base URL |
-| **Output**| List of discovered endpoints and metadata |
-| **Endpoint**| `POST /api/spec/heuristic-scan`|
-### Vulnerability Scanning Servic
+| **Purpose**| Retrieve a list of endpoints for a given API |
+| **Input**| JSON with `api_id` |
+| **Output**| Array of endpoint objects |
+| **Endpoint**| `POST /api/endpoints` |
+
+### Endpoint Detail Service
 | Element| Description|
 |-|-|
-| **Purpose**| Executes selected test profile on an imported or discovered API |
-| **Input**| JSON with `api_id`, `scan_profile_id` |
-| **Output**| Scan ID and queued scan status |
-| **Endpoint**| `POST /api/scan/start`|
+| **Purpose**| Get full metadata for a specific endpoint |
+| **Input**| JSON with `endpoint_id` |
+| **Output**| Endpoint details |
+| **Endpoint**| `POST /api/endpoints/details` |
+
+### Tag Listing Service
+| Element| Description|
+|-|-|
+| **Purpose**| List all unique tags used in the system |
+| **Input**| None |
+| **Output**| Array of strings (tags) |
+| **Endpoint**| `GET /api/tags` |
+
+### Admin User Listing Service
+| Element| Description|
+|-|-|
+| **Purpose**| Return a list of all users (for admins or debugging) |
+| **Input**| None |
+| **Output**| Array of user objects |
+| **Endpoint**| `GET /users` |
+
+### General Health Check Service
+| Element| Description|
+|-|-|
+| **Purpose**| Root route to verify system is running |
+| **Input**| None |
+| **Output**| Service status confirmation |
+| **Endpoint**| `GET /` |
+
+### Report Generation Service *(todo)*
+| Element| Description|
+|-|-|
+| **Purpose**| Generates a downloadable report for a scan |
+| **Input**| Path param: `scan_id`, optional query: `format=pdf/json/html` |
+| **Output**| Formatted report content |
+| **Endpoint**| `GET /api/report/{scan_id}` |
+
+### API Specification Listing Service *(todo)*
+| Element| Description|
+|-|-|
+| **Purpose**| List uploaded specs for a user |
+| **Input**| None |
+| **Output**| List of specs |
+| **Endpoint**| `GET /api/spec/list` |
+
+### API Specification Deletion Service *(todo)*
+| Element| Description|
+|-|-|
+| **Purpose**| Delete an uploaded spec from storage |
+| **Input**| Path parameter: `id` |
+| **Output**| Confirmation or error |
+| **Endpoint**| `DELETE /api/spec/:id` |
+
+### API Specification Validation Service *(todo)*
+| Element| Description|
+|-|-|
+| **Purpose**| Validate format and structure of a given spec |
+| **Input**| Uploaded file |
+| **Output**| Format validity status |
+| **Endpoint**| `POST /api/spec/validate` |
 ## Technology Requirements
 
 #### Mono Repository Management
@@ -497,7 +597,7 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 **Advantage:** Ensures consistent environments across development, testing, and production, making it easy to deploy and scale microservices securely and efficiently.
 
 #### Database
-**Tool:** PostgreSQL
+**Tool:** PostgreSQL - Supabase
 
 **Advantage:** Offers strong ACID compliance and advanced querying capabilities, suitable for storing structured vulnerability data, scan logs, user credentials, and role-based access settings.
 
@@ -512,7 +612,7 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 **Advantage:** Supports secure, standardized login mechanisms with token-based sessions, enabling flexible integration with external identity providers.
 
 #### Security Testing Tools
-**Tool:** SQLMap, Burp Suite (optional), OWASP ZAP
+**Tool:** SQLMap, Burp Suite (optional), OWASP ZAP, Supabase
 
 **Advantage:** Automates discovery of injection vulnerabilities, misconfigurations, and broken authentication flows as part of the scan engine.
 
@@ -543,6 +643,7 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 **Advantage:** Enables collaborative UX/UI design and iteration before development, ensuring clear structure and stakeholder feedback.
 
 
-## Testing Policy Document
-- [Go To Testing Policy Document](../testingpolicy)
 ## Appendix
+
+Old Domain model as it was at demo 1
+![Domain Model](/images/domain-model.png)

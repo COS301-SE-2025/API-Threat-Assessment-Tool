@@ -1,5 +1,5 @@
 import unittest
-from your_module import ResultManager
+from core.result_manager import ResultManager
 
 class TestResultManager(unittest.TestCase):
     def test_init(self):

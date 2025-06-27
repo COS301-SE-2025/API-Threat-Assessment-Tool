@@ -28,6 +28,11 @@ Comprehensive Software Requirements Specification detailing functional and non-f
 Track our development progress, sprint planning, and task management through our organized project board.
 
 ---
+---
+## 🎬 Demo Video
+
+[Watch our full demo on YouTube](https://youtu.be/V0At4vOyM9w)  
+---
 
 ## 🛠️ Technology Stack
 

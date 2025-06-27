@@ -43,7 +43,7 @@ Watch our official demo video for a guided walkthrough of all the key features, 
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Python (FastAPI) |
+| **Backend** | Python |
 | **Frontend** | React.js |
 | **Database** | PostgreSQL |
 | **Containerization** | Docker & Kubernetes |

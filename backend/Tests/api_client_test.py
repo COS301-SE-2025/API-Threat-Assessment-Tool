@@ -1,5 +1,5 @@
 import unittest
-from your_module import APIClient, Endpoint
+from core.api_client import APIClient, Endpoint
 
 class TestAPIClient(unittest.TestCase):
     def test_init(self):

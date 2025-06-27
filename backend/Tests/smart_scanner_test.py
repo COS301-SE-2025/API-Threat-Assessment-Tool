@@ -1,3 +1,6 @@
+from backend.core.api_client import APIClient
+
+
 def test_smart_scanner_api_type_detection(self):
     # Test that the scanner correctly identifies the type of API
     api = APIClient("https://example.com/api", "REST")

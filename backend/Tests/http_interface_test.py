@@ -1,5 +1,5 @@
 import unittest
-from your_module import HTTPInterface
+from core.http_interface import HTTPInterface
 
 class TestHTTPInterface(unittest.TestCase):
     def test_init(self):

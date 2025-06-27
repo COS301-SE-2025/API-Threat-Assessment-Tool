@@ -1,5 +1,5 @@
 import unittest
-from your_module import Endpoint
+from core.endpoint import Endpoint
 
 class TestEndpoint(unittest.TestCase):
     def test_init(self):

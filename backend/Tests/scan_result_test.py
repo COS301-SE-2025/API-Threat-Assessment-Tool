@@ -1,5 +1,5 @@
 import unittest
-from your_module import ScanResult, Endpoint
+from core.scan_result import ScanResult, Endpoint
 from datetime import datetime
 
 class TestScanResult(unittest.TestCase):

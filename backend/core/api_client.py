@@ -6,13 +6,16 @@
 class APIClient:
     def __init__(self, title, base_url, version):
         self.title = title
-        self.base_url = base_url
+        self.base_url = base_url 
         self.version = version
         self.endpoints = []
 
 
     def add_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
+
+    def get_url(self):
+        return self.base_url
 
     def remove_endpoint():
         print("do something")

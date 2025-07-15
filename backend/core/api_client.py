@@ -32,5 +32,3 @@ class APIClient:
     #might remove this later
     def classify_endpoint():
         print("do something")
-
-        

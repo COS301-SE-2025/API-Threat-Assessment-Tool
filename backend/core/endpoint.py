@@ -12,6 +12,7 @@ class Endpoint:
         self.responses = responses
         self.tags = tags or []
         self.description = description
+        self.flags = []
 
         #id
         unique_str = f"{method}:{path}"
@@ -32,3 +33,10 @@ class Endpoint:
 
     def get_tags(self):
         return self.tags
+
+    def add_flag(self, flag):
+        if flag and flag not in self.flags:
+            self.flags.append(flag)
+
+    def get_flag(self):
+        return self.flags

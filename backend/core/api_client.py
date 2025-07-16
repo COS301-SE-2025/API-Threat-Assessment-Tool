@@ -34,6 +34,9 @@ class APIClient:
     def get_auth_header(self, token):
         return self.authorization.value.format(token)
 
+    def get_auth_header(self):
+        return self.authorization.value.format(self.auth_token)
+
     def add_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
 

@@ -13,14 +13,12 @@ class Endpoint:
         self.tags = tags or []
         self.description = description
         self.flags = []
+        self.authorization = False
 
         #id
         unique_str = f"{method}:{path}"
         self.id = hashlib.md5(unique_str.encode()).hexdigest()
-
-
     
-    #getters and setters for each variable
     def set_value(self):
         print("do something")
 
@@ -38,5 +36,14 @@ class Endpoint:
         if flag and flag not in self.flags:
             self.flags.append(flag)
 
-    def get_flag(self):
+    def get_flags(self):
         return self.flags
+
+    def enable_auth(self):
+        self.authorization = True
+
+    def disable_auth(self):
+        self.authorization = False
+
+    def check_auth(self):
+        return self.authorization

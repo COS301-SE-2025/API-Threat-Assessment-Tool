@@ -8,15 +8,12 @@ from enum import Enum
 class Authorization(Enum):
     NONE = "No Authorization Detected."
     SESSION_COOKIE = "Cookie: session={}"
-    JWT = "Authorization: Bearer {jwt}"
-    OAUTH = "Authorization: Bearer {token}"
-    BASIC = "Authorization: Basic {base64(username:password)}"
-    API_AUTH = "Authorization: Token {key}"
-    API_KEY = "{ApiHeaderName}: {key}"
+    JWT = "Authorization: Bearer {}"
+    OAUTH = "Authorization: Bearer {}"
+    BASIC = "Authorization: Basic {}" # base64(username:password)
+    API_AUTH = "Authorization: Token {}"
+    API_KEY = "{ApiHeaderName}: {}"
     CUSTOM = "Custom Authorization Scheme"
-
-    def get_auth_header(self, token):
-        return auth_enum.value.format(value)
     
 
 class APIClient:
@@ -26,6 +23,16 @@ class APIClient:
         self.version = version
         self.endpoints = []
         self.authorization = ""
+        self.auth_token = ""
+
+    def set_auth_token(self, token):
+        self.auth_token = token
+
+    def clear_auth_token(self, token):
+        self.auth_token = ""
+
+    def get_auth_header(self, token):
+        return self.authorization.value.format(token)
 
     def add_endpoint(self, endpoint):
         self.endpoints.append(endpoint)

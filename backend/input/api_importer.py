@@ -57,6 +57,7 @@ class APIImporter:
                 request_body = method_info.get("requestBody", {})
                 responses = method_info.get("responses", {})
                 tags = method_info.get("tags", [])
+                operation_security = method_info.get("security", "")
 
                 endpoint = Endpoint(
                     path = path,
@@ -67,6 +68,11 @@ class APIImporter:
                     responses = responses,
                     tags = tags,
                 )
+
+                if operation_security is None:
+                    endpoint.disable_auth()
+                else:
+                    endpoint.enable_auth()
 
                 api_client.add_endpoint(endpoint)
 

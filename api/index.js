@@ -297,7 +297,11 @@ app.get('/', (req, res) => {
       addTags: 'POST /api/endpoints/tags/add',
       removeTags: 'POST /api/endpoints/tags/remove',
       replaceTags: 'POST /api/endpoints/tags/replace',
-      listTags: 'GET /api/tags'
+      listTags: 'GET /api/tags',
+      addFlags: 'POST /api/endpoints/tags/add',
+      removeFlags: 'POST /api/endpoints/tags/remove',
+      replaceFlags: 'POST /api/endpoints/tags/replace',
+      listFlags: 'GET /api/tags'
     }
   });
 });
@@ -708,6 +712,27 @@ app.get('/api/tags', async (req, res) => {
     sendError(res, 'List tags failed', err.message, 500);
   }
 });
+
+// Add endpoint Flags
+app.post('/api/endpoints/flags/add', async (req, res) => {
+ 
+});
+
+// Remove endpoint Flags
+app.post('/api/endpoints/Flags/remove', async (req, res) => {
+  
+});
+
+// Replace endpoint Flags
+app.post('/api/endpoints/Flags/replace', async (req, res) => {
+ 
+});
+
+// List all Flags
+app.get('/api/Flags', async (req, res) => {
+  
+});
+
 
 // Get endpoint details
 app.post('/api/endpoints/details', async (req, res) => {

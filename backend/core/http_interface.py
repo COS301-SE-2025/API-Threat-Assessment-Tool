@@ -25,6 +25,12 @@ class HTTPInterface:
     def add_header(self, key, value):
         self.headers[key] = value
 
+    def add_header(self, header):
+        header_split = header.split(':')
+        header_key = header_split[0].strip()
+        header_value = header_split[1].strip()
+        self.headers[header_key] = header_value
+
     def remove_header(self, key):
         self.headers.pop(key, None)
 

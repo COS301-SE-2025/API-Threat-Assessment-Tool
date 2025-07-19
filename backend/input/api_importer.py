@@ -69,7 +69,7 @@ class APIImporter:
                     tags = tags,
                 )
 
-                if operation_security is None:
+                if operation_security == "":
                     endpoint.disable_auth()
                 else:
                     endpoint.enable_auth()

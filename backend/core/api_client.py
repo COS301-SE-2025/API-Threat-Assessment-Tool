@@ -19,7 +19,7 @@ class Authorization(Enum):
 class APIClient:
     def __init__(self, title, base_url, version):
         self.title = title
-        self.base_url = base_url 
+        self.base_url = base_url
         self.version = version
         self.endpoints = []
         self.authorization = ""
@@ -31,8 +31,11 @@ class APIClient:
     def clear_auth_token(self, token):
         self.auth_token = ""
 
-    def get_auth_header(self, token):
+    def get_auth_header_with_token(self, token):
         return self.authorization.value.format(token)
+
+    def get_auth_header(self):
+        return self.authorization.value.format(self.auth_token)
 
     def add_endpoint(self, endpoint):
         self.endpoints.append(endpoint)

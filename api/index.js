@@ -753,7 +753,7 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
 });
 
 // Remove endpoint Flags
-app.post('/api/endpoints/Flags/remove', async (req, res) => {
+app.post('/api/endpoints/flags/remove', async (req, res) => {
 try {
     const { endpoint_id, path, method, flags } = req.body;
     
@@ -792,7 +792,7 @@ try {
 });
 
 // Replace endpoint Flags
-app.post('/api/endpoints/Flags/replace', async (req, res) => {
+app.post('/api/endpoints/flags/replace', async (req, res) => {
   try {
     const { endpoint_id, path, method, flags } = req.body;
     
@@ -831,7 +831,7 @@ app.post('/api/endpoints/Flags/replace', async (req, res) => {
 });
 
 // List all Flags
-app.get('/api/Flags', async (req, res) => {
+app.get('/api/flags', async (req, res) => {
  try {
     // Send request to engine
     const engineRequest = {

@@ -297,7 +297,11 @@ app.get('/', (req, res) => {
       addTags: 'POST /api/endpoints/tags/add',
       removeTags: 'POST /api/endpoints/tags/remove',
       replaceTags: 'POST /api/endpoints/tags/replace',
-      listTags: 'GET /api/tags'
+      listTags: 'GET /api/tags',
+      addFlags: 'POST /api/endpoints/tags/add',
+      removeFlags: 'POST /api/endpoints/tags/remove',
+      replaceFlags: 'POST /api/endpoints/tags/replace',
+      listFlags: 'GET /api/tags'
     }
   });
 });
@@ -708,6 +712,149 @@ app.get('/api/tags', async (req, res) => {
     sendError(res, 'List tags failed', err.message, 500);
   }
 });
+
+// Add endpoint Flags
+app.post('/api/endpoints/flags/add', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, flags } = req.body;
+    
+    if (!flags || !Array.isArray(flags)) {
+      return sendError(res, 'Missing flags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.flags.add",
+      data: {
+        path: path,
+        method: method,
+        flags: flags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags added successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to add flags';
+      sendError(res, 'Add flags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Add flags error:', err.message);
+    sendError(res, 'Add flags failed', err.message, 500);
+  }
+});
+
+// Remove endpoint Flags
+app.post('/api/endpoints/Flags/remove', async (req, res) => {
+try {
+    const { endpoint_id, path, method, flags } = req.body;
+    
+    if (!flags || !Array.isArray(flags)) {
+      return sendError(res, 'Missing flags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.flags.remove",
+      data: {
+        path: path,
+        method: method,
+        flags: flags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags removed successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to remove flags';
+      sendError(res, 'Remove flags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Remove flags error:', err.message);
+    sendError(res, 'Remove flags failed', err.message, 500);
+  }
+});
+
+// Replace endpoint Flags
+app.post('/api/endpoints/Flags/replace', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, flags } = req.body;
+    
+    if (!Array.isArray(flags)) {
+      return sendError(res, 'Missing flags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    // Send request to engine with parameters Python expects
+    const engineRequest = {
+      command: "endpoints.flags.replace",
+      data: {
+        path: path,
+        method: method,
+        flags: flags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags replaced successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to replace flags';
+      sendError(res, 'Replace flags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Replace flags error:', err.message);
+    sendError(res, 'Replace flags failed', err.message, 500);
+  }
+});
+
+// List all Flags
+app.get('/api/Flags', async (req, res) => {
+ try {
+    // Send request to engine
+    const engineRequest = {
+      command: "flags.list",
+      data: {}
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    // Check engine response
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve flags';
+      sendError(res, 'Tags retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('List flags error:', err.message);
+    sendError(res, 'List flags failed', err.message, 500);
+  }
+});
+
 
 // Get endpoint details
 app.post('/api/endpoints/details', async (req, res) => {

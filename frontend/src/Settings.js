@@ -165,8 +165,8 @@ const Settings = () => {
   const settingsTabs = [
     { id: 'profile', name: 'Profile', icon: '👤', description: 'Personal information and account details' },
     { id: 'notifications', name: 'Notifications', icon: '🔔', description: 'Manage your notification preferences' },
-    { id: 'security', name: 'Security', icon: '🔒', description: 'Security settings and authentication' },
-    { id: 'preferences', name: 'Preferences', icon: '⚙️', description: 'Application preferences and defaults' },
+    // { id: 'security', name: 'Security', icon: '🔒', description: 'Security settings and authentication' },
+    // { id: 'preferences', name: 'Preferences', icon: '⚙️', description: 'Application preferences and defaults' },
   ];
 
   if (!currentUser) {

@@ -71,7 +71,8 @@ Secrets
 UserManager
     - Class that deals with user interactions and creation
 
-
+# Scan Profiles:
+Owasp
 
 
 # Class interaction

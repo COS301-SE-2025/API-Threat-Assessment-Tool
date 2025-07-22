@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
+import YAML from 'js-yaml';
 import Logo from './components/Logo';
 import './ManageAPIs.css';
 export {
@@ -800,88 +801,96 @@ const handleViewDetails = async (endpoint) => {
     }
   }, []);
 
-  const handleFileUpload = useCallback((e) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) {
-        showMessage('No file selected.', 'error');
-        return;
-      }
-
-      if (!file.name.toLowerCase().endsWith('.json')) {
-        showMessage('Please upload a JSON file.', 'error');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const content = event.target.result;
-          let apiData;
-          
-          try {
-            apiData = JSON.parse(content);
-          } catch (jsonError) {
-            showMessage('Invalid JSON file format.', 'error');
-            return;
-          }
-
-// Recognize OpenAPI/Swagger
-const isOpenAPI = apiData.openapi || apiData.swagger;
-let name, baseUrl, description;
-
-if (isOpenAPI) {
-  name = apiData.info?.title || 'Imported OpenAPI';
-  baseUrl = apiData.servers?.[0]?.url || '';
-  description = apiData.info?.description || '';
-  if (!baseUrl) {
-    showMessage('No servers.url found in OpenAPI file.', 'error');
-    return;
-  }
-} else {
-  // Fallback: legacy simple format
-  name = apiData.name;
-  baseUrl = apiData.baseUrl;
-  description = apiData.description || '';
-  if (!name || !baseUrl) {
-    showMessage('File must contain "name" and "baseUrl" fields.', 'error');
-    return;
-  }
-}
-
-const newApi = {
-  id: Math.max(...apis.map(a => a.id), 0) + 1,
-  name,
-  baseUrl,
-  description,
-  status: apiData.status || 'Active',
-  lastScanned: 'Never',
-  scanCount: 0,
-  lastScanResult: 'Pending'
-};
-
-setApis(prevApis => [...prevApis, newApi]);
-showMessage(`✅ API "${name}" imported successfully!`, 'success');
-setIsModalOpen(false);
-
-if (e.target) e.target.value = '';
-
-        } catch (error) {
-          console.error('Error processing file:', error);
-          showMessage('Error processing file: ' + error.message, 'error');
-        }
-      };
-      
-      reader.onerror = () => {
-        showMessage('Error reading file.', 'error');
-      };
-      
-      reader.readAsText(file);
-    } catch (error) {
-      console.error('Error in file upload handler:', error);
-      showMessage('Error uploading file. Please try again.', 'error');
+const handleFileUpload = useCallback((e) => {
+  try {
+    const file = e.target.files?.[0];
+    if (!file) {
+      showMessage('No file selected.', 'error');
+      return;
     }
-  }, [apis, showMessage]);
+
+    if (!file.name.toLowerCase().endsWith('.json') && !file.name.toLowerCase().endsWith('.yaml') && !file.name.toLowerCase().endsWith('.yml')) {
+      showMessage('Please upload a JSON or YAML file.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      let apiData;
+
+      // Handling JSON file
+      if (file.name.toLowerCase().endsWith('.json')) {
+        try {
+          apiData = JSON.parse(content);
+        } catch (jsonError) {
+          showMessage('Invalid JSON file format.', 'error');
+          return;
+        }
+      }
+      
+      // Handling YAML file
+      else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+        try {
+          apiData = YAML.parse(content);
+        } catch (yamlError) {
+          showMessage('Invalid YAML file format.', 'error');
+          return;
+        }
+      }
+
+      // Recognize OpenAPI/Swagger
+      const isOpenAPI = apiData.openapi || apiData.swagger;
+      let name, baseUrl, description;
+
+      if (isOpenAPI) {
+        name = apiData.info?.title || 'Imported OpenAPI';
+        baseUrl = apiData.servers?.[0]?.url || '';
+        description = apiData.info?.description || '';
+        if (!baseUrl) {
+          showMessage('No servers.url found in OpenAPI file.', 'error');
+          return;
+        }
+      } else {
+        // Fallback: legacy simple format
+        name = apiData.name;
+        baseUrl = apiData.baseUrl;
+        description = apiData.description || '';
+        if (!name || !baseUrl) {
+          showMessage('File must contain "name" and "baseUrl" fields.', 'error');
+          return;
+        }
+      }
+
+      const newApi = {
+        id: Math.max(...apis.map(a => a.id), 0) + 1,
+        name,
+        baseUrl,
+        description,
+        status: apiData.status || 'Active',
+        lastScanned: 'Never',
+        scanCount: 0,
+        lastScanResult: 'Pending'
+      };
+
+      setApis(prevApis => [...prevApis, newApi]);
+      showMessage(`✅ API "${name}" imported successfully!`, 'success');
+      setIsModalOpen(false);
+
+      // Reset file input
+      if (e.target) e.target.value = '';
+    };
+
+    reader.onerror = () => {
+      showMessage('Error reading file.', 'error');
+    };
+
+    reader.readAsText(file);
+  } catch (error) {
+    console.error('Error in file upload handler:', error);
+    showMessage('Error uploading file. Please try again.', 'error');
+  }
+}, [apis, showMessage]);
 
   // Loading state
   if (!safeCurrentUser && currentUser === null) {

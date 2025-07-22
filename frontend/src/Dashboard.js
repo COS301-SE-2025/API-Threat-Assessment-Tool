@@ -507,6 +507,7 @@ const Dashboard = () => {
         >
           <h2>⚡ Quick Actions</h2>
           <div className="actions-grid">
+    
             <Link to="/manage-apis" className="action-card">
               <div className="action-icon">🔧</div>
               <div className="action-content">
@@ -539,6 +540,8 @@ const Dashboard = () => {
                 <span className="action-arrow">→</span>
               </div>
             </Link>
+
+
           </div>
         </section>
       </main>

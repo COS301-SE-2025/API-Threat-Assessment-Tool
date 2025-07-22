@@ -1,0 +1,4807 @@
+openapi: 3.0.3
+info:
+  title: osu!web
+  description: ''
+  version: 1.0.0
+servers:
+  -
+    url: 'https://osu.ppy.sh'
+tags:
+  -
+    name: 'Beatmap Packs'
+    description: ''
+  -
+    name: Beatmaps
+    description: ''
+  -
+    name: 'Beatmapset Discussions'
+    description: ''
+  -
+    name: Beatmapsets
+    description: ''
+  -
+    name: Changelog
+    description: ''
+  -
+    name: Chat
+    description: ''
+  -
+    name: Comments
+    description: ''
+  -
+    name: Events
+    description: ''
+  -
+    name: Forum
+    description: ''
+  -
+    name: Home
+    description: ''
+  -
+    name: Matches
+    description: ''
+  -
+    name: Multiplayer
+    description: ''
+  -
+    name: News
+    description: ''
+  -
+    name: Notification
+    description: ''
+  -
+    name: 'OAuth Tokens'
+    description: ''
+  -
+    name: Ranking
+    description: ''
+  -
+    name: Scores
+    description: ''
+  -
+    name: Undocumented
+    description: ''
+  -
+    name: Users
+    description: ''
+  -
+    name: Wiki
+    description: ''
+components:
+  securitySchemes:
+    default:
+      type: http
+      scheme: bearer
+      description: null
+security:
+  -
+    default: []
+paths:
+  /api/v2/beatmaps/packs:
+    get:
+      summary: 'Get Beatmap Packs'
+      operationId: getBeatmapPacks
+      description: "Returns a list of beatmap packs.\n\n---\n\n### Response format\n\nField         | Type\n------------- | -----------------------------\nbeatmap_packs | [BeatmapPack](#beatmappack)[]"
+      parameters:
+        -
+          in: query
+          name: type
+          description: '[BeatmapPackType](#beatmappacktype) of the beatmap packs to be returned. Defaults to `standard`.'
+          example: voluptas
+          required: false
+          schema:
+            type: string
+            description: '[BeatmapPackType](#beatmappacktype) of the beatmap packs to be returned. Defaults to `standard`.'
+            example: voluptas
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - 'Beatmap Packs'
+      security: []
+  '/api/v2/beatmaps/packs/{pack}':
+    get:
+      summary: 'Get Beatmap Pack'
+      operationId: getBeatmapPack
+      description: "Gets the beatmap pack for the specified beatmap pack tag.\n\n---\n\n### Response format\n\nReturns [BeatmapPack](#beatmappack) object.\nThe following attributes are always included as well:\n\nAttribute            |\n-------------------- |\nbeatmapsets          |\nuser_completion_data |"
+      parameters:
+        -
+          in: query
+          name: legacy_only
+          description: 'Whether or not to consider lazer scores for user completion data. Defaults to 0.'
+          example: 0
+          required: false
+          schema:
+            type: integer
+            description: 'Whether or not to consider lazer scores for user completion data. Defaults to 0.'
+            example: 0
+            nullable: false
+      responses: {  }
+      tags:
+        - 'Beatmap Packs'
+      security: []
+    parameters:
+      -
+        in: path
+        name: pack
+        description: 'The tag of the beatmap pack to be returned.'
+        example: ullam
+        required: true
+        schema:
+          type: string
+  /api/v2/beatmaps/lookup:
+    get:
+      summary: 'Lookup Beatmap'
+      operationId: lookupBeatmap
+      description: "Returns beatmap.\n\n---\n\n### Response format\n\nSee [Get Beatmap](#get-beatmap)"
+      parameters:
+        -
+          in: query
+          name: checksum
+          description: 'A beatmap checksum.'
+          example: mollitia
+          required: false
+          schema:
+            type: string
+            description: 'A beatmap checksum.'
+            example: mollitia
+            nullable: false
+        -
+          in: query
+          name: filename
+          description: 'A filename to lookup.'
+          example: voluptatem
+          required: false
+          schema:
+            type: string
+            description: 'A filename to lookup.'
+            example: voluptatem
+            nullable: false
+        -
+          in: query
+          name: id
+          description: 'A beatmap ID to lookup.'
+          example: placeat
+          required: false
+          schema:
+            type: string
+            description: 'A beatmap ID to lookup.'
+            example: placeat
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'See Beatmap object section'
+      tags:
+        - Beatmaps
+      security: []
+  '/api/v2/beatmaps/{beatmap}/scores/users/{user}':
+    get:
+      summary: 'Get a User Beatmap score'
+      operationId: getAUserBeatmapScore
+      description: "Return a [User](#user)'s score on a Beatmap\n\n---\n\n### Response Format\n\nReturns [BeatmapUserScore](#beatmapuserscore)\n\nThe position returned depends on the requested mode and mods."
+      parameters:
+        -
+          in: query
+          name: legacy_only
+          description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+          example: 0
+          required: false
+          schema:
+            type: integer
+            description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+            example: 0
+            nullable: false
+        -
+          in: query
+          name: mode
+          description: 'The [Ruleset](#ruleset) to get scores for.'
+          example: consectetur
+          required: false
+          schema:
+            type: string
+            description: 'The [Ruleset](#ruleset) to get scores for.'
+            example: consectetur
+            nullable: false
+        -
+          in: query
+          name: mods
+          description: 'An array of matching Mods, or none // TODO.'
+          example: sit
+          required: false
+          schema:
+            type: string
+            description: 'An array of matching Mods, or none // TODO.'
+            example: sit
+            nullable: false
+      responses: {  }
+      tags:
+        - Beatmaps
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'Id of the [Beatmap](#beatmap).'
+        example: 7
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: user
+        description: 'Id of the [User](#user).'
+        example: 9
+        required: true
+        schema:
+          type: integer
+  '/api/v2/beatmaps/{beatmap}/scores/users/{user}/all':
+    get:
+      summary: 'Get a User Beatmap scores'
+      operationId: getAUserBeatmapScores
+      description: "Return a [User](#user)'s scores on a Beatmap\n\n---\n\n### Response Format\n\nField  | Type\n------ | ----\nscores | [Score](#score)[]"
+      parameters:
+        -
+          in: query
+          name: legacy_only
+          description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+          example: 0
+          required: false
+          schema:
+            type: integer
+            description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+            example: 0
+            nullable: false
+        -
+          in: query
+          name: mode
+          description: '(deprecated) The [Ruleset](#ruleset) to get scores for. Defaults to beatmap ruleset.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '(deprecated) The [Ruleset](#ruleset) to get scores for. Defaults to beatmap ruleset.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: ruleset
+          description: 'The [Ruleset](#ruleset) to get scores for. Defaults to beatmap ruleset.'
+          example: osu
+          required: false
+          schema:
+            type: string
+            description: 'The [Ruleset](#ruleset) to get scores for. Defaults to beatmap ruleset.'
+            example: osu
+            nullable: false
+      responses: {  }
+      tags:
+        - Beatmaps
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'Id of the [Beatmap](#beatmap).'
+        example: 14
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: user
+        description: 'Id of the [User](#user).'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v2/beatmaps/{beatmap}/scores':
+    get:
+      summary: 'Get Beatmap scores'
+      operationId: getBeatmapScores
+      description: "Returns the top scores for a beatmap. Depending on user preferences, this may only show legacy scores.\n\n---\n\n### Response Format\n\nReturns [BeatmapScores](#beatmapscores). `Score` object inside includes `user` and the included `user` includes `country` and `cover`."
+      parameters:
+        -
+          in: query
+          name: legacy_only
+          description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+          example: 0
+          required: false
+          schema:
+            type: integer
+            description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+            example: 0
+            nullable: false
+        -
+          in: query
+          name: mode
+          description: 'The [Ruleset](#ruleset) to get scores for.'
+          example: laborum
+          required: false
+          schema:
+            type: string
+            description: 'The [Ruleset](#ruleset) to get scores for.'
+            example: laborum
+            nullable: false
+        -
+          in: query
+          name: mods
+          description: 'An array of matching Mods, or none // TODO.'
+          example: sit
+          required: false
+          schema:
+            type: string
+            description: 'An array of matching Mods, or none // TODO.'
+            example: sit
+            nullable: false
+        -
+          in: query
+          name: type
+          description: 'Beatmap score ranking type // TODO.'
+          example: odio
+          required: false
+          schema:
+            type: string
+            description: 'Beatmap score ranking type // TODO.'
+            example: odio
+            nullable: false
+      responses: {  }
+      tags:
+        - Beatmaps
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'Id of the [Beatmap](#beatmap).'
+        example: 9
+        required: true
+        schema:
+          type: integer
+  '/api/v2/beatmaps/{beatmap}/solo-scores':
+    get:
+      summary: 'Get Beatmap scores (non-legacy)'
+      operationId: getBeatmapScoresnonLegacy
+      description: "Returns the top scores for a beatmap.\n\nThis endpoint is deprecated. Use [Get Beatmap scores](#get-beatmap-scores) with appropriate api version header instead.\n\n---\n\n### Response Format\n\nReturns [BeatmapScores](#beatmapscores). `Score` object inside includes `user` and the included `user` includes `country` and `cover`."
+      parameters:
+        -
+          in: query
+          name: mode
+          description: 'The [Ruleset](#ruleset) to get scores for.'
+          example: cumque
+          required: false
+          schema:
+            type: string
+            description: 'The [Ruleset](#ruleset) to get scores for.'
+            example: cumque
+            nullable: false
+        -
+          in: query
+          name: mods
+          description: 'An array of matching Mods, or none // TODO.'
+          example: vero
+          required: false
+          schema:
+            type: string
+            description: 'An array of matching Mods, or none // TODO.'
+            example: vero
+            nullable: false
+        -
+          in: query
+          name: type
+          description: 'Beatmap score ranking type // TODO.'
+          example: odio
+          required: false
+          schema:
+            type: string
+            description: 'Beatmap score ranking type // TODO.'
+            example: odio
+            nullable: false
+      responses: {  }
+      tags:
+        - Beatmaps
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'Id of the [Beatmap](#beatmap).'
+        example: 14
+        required: true
+        schema:
+          type: integer
+  /api/v2/beatmaps:
+    get:
+      summary: 'Get Beatmaps'
+      operationId: getBeatmaps
+      description: "Returns a list of beatmaps.\n\n---\n\n### Response format\n\nField    | Type                                  | Description\n-------- | ------------------------------------- | -----------\nbeatmaps | [BeatmapExtended](#beatmapextended)[] | Includes `beatmapset` (with `ratings`), `failtimes`, `max_combo`, and `owners`."
+      parameters:
+        -
+          in: query
+          name: 'ids[]'
+          description: 'Beatmap IDs to be returned. Specify once for each beatmap ID requested. Up to 50 beatmaps can be requested at once.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Beatmap IDs to be returned. Specify once for each beatmap ID requested. Up to 50 beatmaps can be requested at once.'
+            example: 1
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"beatmaps\": [\n    {\n      \"id\": 1,\n      // Other Beatmap attributes...\n    }\n  ]\n}"
+      tags:
+        - Beatmaps
+      security: []
+  '/api/v2/beatmaps/{beatmap}':
+    get:
+      summary: 'Get Beatmap'
+      operationId: getBeatmap
+      description: "Gets beatmap data for the specified beatmap ID.\n\n---\n\n### Response format\n\nReturns [BeatmapExtended](#beatmapextended) object.\nFollowing attributes are included in the response object when applicable,\n\nAttribute  | Notes\n---------- | -----\nbeatmapset | Includes ratings property.\nfailtimes  | |\nmax_combo  | |"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'See Beatmap object section.'
+      tags:
+        - Beatmaps
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'The ID of the beatmap.'
+        example: 20
+        required: true
+        schema:
+          type: integer
+  '/api/v2/beatmaps/{beatmap}/attributes':
+    post:
+      summary: 'Get Beatmap Attributes'
+      operationId: getBeatmapAttributes
+      description: "Returns difficulty attributes of beatmap with specific mode and mods combination.\n\n---\n\n### Response format\n\nField      | Type\n---------- | ----\nAttributes | [DifficultyAttributes](#beatmapdifficultyattributes)"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"attributes\": {\n      \"max_combo\": 100,\n      ...\n  }\n}"
+      tags:
+        - Beatmaps
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mods:
+                  type: array
+                  description: 'Mod combination. Can be either a bitset of mods, array of mod acronyms, or array of mods. Defaults to no mods.'
+                  example: 1
+                  items:
+                    type: 'integer|string[]|Mod'
+                ruleset:
+                  type: Ruleset
+                  description: "Ruleset of the difficulty attributes. Only valid if it's the beatmap ruleset or the beatmap can be converted to the specified ruleset. Defaults to ruleset of the specified beatmap."
+                  example: osu
+                  nullable: false
+                ruleset_id:
+                  type: integer
+                  description: 'The same as `ruleset` but in integer form.'
+                  example: null
+                  nullable: false
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'Beatmap id.'
+        example: 2
+        required: true
+        schema:
+          type: integer
+  /api/v2/beatmapsets/discussions/posts:
+    get:
+      summary: 'Get Beatmapset Discussion Posts'
+      operationId: getBeatmapsetDiscussionPosts
+      description: "Returns the posts of beatmapset discussions.\n\n---\n\n### Response Format\n\n<aside class=\"warning\">\n  The response of this endpoint is likely to change soon!\n</aside>\n\nField         | Type                                                    | Description\n------------- | ------------------------------------------------------- | -----------\nbeatmapsets   | [Beatmapset](#beatmapset)                               | |\ncursor_string | [CursorString](#cursorstring)                           | |\nposts         | [BeatmapsetDiscussionPost](#beatmapsetdiscussionpost)[] | |\nusers         | [User](#user)                                           | |"
+      parameters:
+        -
+          in: query
+          name: beatmapset_discussion_id
+          description: '`id` of the [BeatmapsetDiscussion](#beatmapsetdiscussion).'
+          example: cumque
+          required: false
+          schema:
+            type: string
+            description: '`id` of the [BeatmapsetDiscussion](#beatmapsetdiscussion).'
+            example: cumque
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 2
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 2
+            nullable: false
+        -
+          in: query
+          name: page
+          description: 'Search result page.'
+          example: 7
+          required: false
+          schema:
+            type: integer
+            description: 'Search result page.'
+            example: 7
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+          example: sed
+          required: false
+          schema:
+            type: string
+            description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+            example: sed
+            nullable: false
+        -
+          in: query
+          name: 'types[]'
+          description: '`first`, `reply`, `system` are the valid values. Defaults to `reply`.'
+          example: fugiat
+          required: false
+          schema:
+            type: string
+            description: '`first`, `reply`, `system` are the valid values. Defaults to `reply`.'
+            example: fugiat
+            nullable: false
+        -
+          in: query
+          name: user
+          description: 'The `id` of the [User](#user).'
+          example: quisquam
+          required: false
+          schema:
+            type: string
+            description: 'The `id` of the [User](#user).'
+            example: quisquam
+            nullable: false
+        -
+          in: query
+          name: with_deleted
+          description: 'This param has no effect as api calls do not currently receive group permissions.'
+          example: blanditiis
+          required: false
+          schema:
+            type: string
+            description: 'This param has no effect as api calls do not currently receive group permissions.'
+            example: blanditiis
+            nullable: false
+      responses: {  }
+      tags:
+        - 'Beatmapset Discussions'
+      security: []
+  /api/v2/beatmapsets/discussions/votes:
+    get:
+      summary: 'Get Beatmapset Discussion Votes'
+      operationId: getBeatmapsetDiscussionVotes
+      description: "Returns the votes given to beatmapset discussions.\n\n---\n\n### Response Format\n\n<aside class=\"warning\">\n  The response of this endpoint is likely to change soon!\n</aside>\n\nField         | Type                                                    | Description\n------------- | ------------------------------------------------------- | -----------\ncursor_string | [CursorString](#cursorstring)                           | |\ndiscussions   | [BeatmapsetDiscussion](#beatmapsetdiscussion)           | |\nusers         | [User](#user)                                           | |\nvotes         | [BeatmapsetDiscussionVote](#beatmapsetdiscussionvote)[] | |"
+      parameters:
+        -
+          in: query
+          name: beatmapset_discussion_id
+          description: '`id` of the [BeatmapsetDiscussion](#beatmapsetdiscussion).'
+          example: ut
+          required: false
+          schema:
+            type: string
+            description: '`id` of the [BeatmapsetDiscussion](#beatmapsetdiscussion).'
+            example: ut
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 13
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 13
+            nullable: false
+        -
+          in: query
+          name: page
+          description: 'Search result page.'
+          example: 17
+          required: false
+          schema:
+            type: integer
+            description: 'Search result page.'
+            example: 17
+            nullable: false
+        -
+          in: query
+          name: receiver
+          description: 'The `id` of the [User](#user) receiving the votes.'
+          example: et
+          required: false
+          schema:
+            type: string
+            description: 'The `id` of the [User](#user) receiving the votes.'
+            example: et
+            nullable: false
+        -
+          in: query
+          name: score
+          description: '`1` for up vote, `-1` for down vote.'
+          example: fugit
+          required: false
+          schema:
+            type: string
+            description: '`1` for up vote, `-1` for down vote.'
+            example: fugit
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+          example: perferendis
+          required: false
+          schema:
+            type: string
+            description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+            example: perferendis
+            nullable: false
+        -
+          in: query
+          name: user
+          description: 'The `id` of the [User](#user) giving the votes.'
+          example: architecto
+          required: false
+          schema:
+            type: string
+            description: 'The `id` of the [User](#user) giving the votes.'
+            example: architecto
+            nullable: false
+        -
+          in: query
+          name: with_deleted
+          description: 'This param has no effect as api calls do not currently receive group permissions.'
+          example: ipsam
+          required: false
+          schema:
+            type: string
+            description: 'This param has no effect as api calls do not currently receive group permissions.'
+            example: ipsam
+            nullable: false
+      responses: {  }
+      tags:
+        - 'Beatmapset Discussions'
+      security: []
+  /api/v2/beatmapsets/discussions:
+    get:
+      summary: 'Get Beatmapset Discussions'
+      operationId: getBeatmapsetDiscussions
+      description: "Returns a list of beatmapset discussions.\n\n---\n\n### Response Format\n\n<aside class=\"warning\">\n  The response of this endpoint is likely to change soon!\n</aside>\n\nField                     | Type                                            | Description\n------------------------- | ----------------------------------------------- | -----------\nbeatmaps                  | [BeatmapExtended](#beatmapextended)[]           | List of beatmaps associated with the discussions returned.\ncursor_string             | [CursorString](#cursorstring)                   | |\ndiscussions               | [BeatmapsetDiscussion](#beatmapsetdiscussion)[] | List of discussions according to `sort` order.\nincluded_discussions      | [BeatmapsetDiscussion](#beatmapsetdiscussion)[] | Additional discussions related to `discussions`.\nreviews_config.max_blocks | integer                                         | Maximum number of blocks allowed in a review.\nusers                     | [User](#user)[]                                 | List of users associated with the discussions returned."
+      parameters:
+        -
+          in: query
+          name: beatmap_id
+          description: '`id` of the [Beatmap](#beatmap).'
+          example: et
+          required: false
+          schema:
+            type: string
+            description: '`id` of the [Beatmap](#beatmap).'
+            example: et
+            nullable: false
+        -
+          in: query
+          name: beatmapset_id
+          description: '`id` of the [Beatmapset](#beatmapset).'
+          example: consequatur
+          required: false
+          schema:
+            type: string
+            description: '`id` of the [Beatmapset](#beatmapset).'
+            example: consequatur
+            nullable: false
+        -
+          in: query
+          name: beatmapset_status
+          description: 'One of `all`, `ranked`, `qualified`, `disqualified`, `never_qualified`. Defaults to `all`. TODO: better descriptions.'
+          example: ut
+          required: false
+          schema:
+            type: string
+            description: 'One of `all`, `ranked`, `qualified`, `disqualified`, `never_qualified`. Defaults to `all`. TODO: better descriptions.'
+            example: ut
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 8
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 8
+            nullable: false
+        -
+          in: query
+          name: 'message_types[]'
+          description: '`suggestion`, `problem`, `mapper_note`, `praise`, `hype`, `review`. Blank defaults to all types. TODO: better descriptions.'
+          example: quos
+          required: false
+          schema:
+            type: string
+            description: '`suggestion`, `problem`, `mapper_note`, `praise`, `hype`, `review`. Blank defaults to all types. TODO: better descriptions.'
+            example: quos
+            nullable: false
+        -
+          in: query
+          name: only_unresolved
+          description: '`true` to show only unresolved issues; `false`, otherwise. Defaults to `false`.'
+          example: facilis
+          required: false
+          schema:
+            type: string
+            description: '`true` to show only unresolved issues; `false`, otherwise. Defaults to `false`.'
+            example: facilis
+            nullable: false
+        -
+          in: query
+          name: page
+          description: 'Search result page.'
+          example: 14
+          required: false
+          schema:
+            type: integer
+            description: 'Search result page.'
+            example: 14
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+          example: et
+          required: false
+          schema:
+            type: string
+            description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+            example: et
+            nullable: false
+        -
+          in: query
+          name: user
+          description: 'The `id` of the [User](#user).'
+          example: et
+          required: false
+          schema:
+            type: string
+            description: 'The `id` of the [User](#user).'
+            example: et
+            nullable: false
+        -
+          in: query
+          name: with_deleted
+          description: 'This param has no effect as api calls do not currently receive group permissions.'
+          example: molestiae
+          required: false
+          schema:
+            type: string
+            description: 'This param has no effect as api calls do not currently receive group permissions.'
+            example: molestiae
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - 'Beatmapset Discussions'
+      security: []
+  /api/v2/beatmapsets/search:
+    get:
+      summary: 'Search Beatmapset'
+      operationId: searchBeatmapset
+      description: 'TODO: documentation'
+      parameters:
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - Beatmapsets
+      security: []
+  /api/v2/beatmapsets/lookup:
+    get:
+      summary: ''
+      operationId: getApiV2BeatmapsetsLookup
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Beatmapsets
+      security: []
+  '/api/v2/beatmapsets/{beatmapset}':
+    get:
+      summary: ''
+      operationId: getApiV2BeatmapsetsBeatmapset
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Beatmapsets
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmapset
+        description: 'The beatmapset.'
+        example: magnam
+        required: true
+        schema:
+          type: string
+  '/api/v2/beatmapsets/{beatmapset}/download':
+    get:
+      summary: ''
+      operationId: getApiV2BeatmapsetsBeatmapsetDownload
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Beatmapsets
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmapset
+        description: 'The beatmapset.'
+        example: veniam
+        required: true
+        schema:
+          type: string
+  '/api/v2/changelog/{stream}/{build}':
+    get:
+      summary: 'Get Changelog Build'
+      operationId: getChangelogBuild
+      description: "Returns details of the specified build.\n\n---\n\n### Response Format\n\nA [Build](#build) with `changelog_entries`, `changelog_entries.github_user`, and `versions` included."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  id: 5778
+                  version: '20210520.2'
+                  display_version: '20210520.2'
+                  users: 22093
+                  created_at: '2021-05-20T14:28:04+00:00'
+                  update_stream:
+                    id: 5
+                    name: stable40
+                    display_name: Stable
+                    is_featured: true
+                  changelog_entries:
+                    -
+                      id: null
+                      repository: null
+                      github_pull_request_id: null
+                      github_url: null
+                      url: 'https://osu.ppy.sh/home/news/2021-05-20-spring-fanart-contest-results'
+                      type: fix
+                      category: Misc
+                      title: 'Spring is here!'
+                      message_html: "<div class='changelog-md'><p class=\"changelog-md__paragraph\">New seasonal backgrounds ahoy! Amazing work by the artists.</p>\n</div>"
+                      major: true
+                      created_at: '2021-05-20T10:56:49+00:00'
+                      github_user:
+                        display_name: peppy
+                        github_url: null
+                        github_username: null
+                        id: null
+                        osu_username: peppy
+                        user_id: 2
+                        user_url: 'https://osu.ppy.sh/users/2'
+                  versions:
+                    previous:
+                      id: 5774
+                      version: '20210519.3'
+                      display_version: '20210519.3'
+                      users: 10
+                      created_at: '2021-05-19T11:51:48+00:00'
+                      update_stream:
+                        id: 5
+                        name: stable40
+                        display_name: Stable
+                        is_featured: true
+                properties:
+                  id:
+                    type: integer
+                    example: 5778
+                  version:
+                    type: string
+                    example: '20210520.2'
+                  display_version:
+                    type: string
+                    example: '20210520.2'
+                  users:
+                    type: integer
+                    example: 22093
+                  created_at:
+                    type: string
+                    example: '2021-05-20T14:28:04+00:00'
+                  update_stream:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 5
+                      name:
+                        type: string
+                        example: stable40
+                      display_name:
+                        type: string
+                        example: Stable
+                      is_featured:
+                        type: boolean
+                        example: true
+                  changelog_entries:
+                    type: array
+                    example:
+                      -
+                        id: null
+                        repository: null
+                        github_pull_request_id: null
+                        github_url: null
+                        url: 'https://osu.ppy.sh/home/news/2021-05-20-spring-fanart-contest-results'
+                        type: fix
+                        category: Misc
+                        title: 'Spring is here!'
+                        message_html: "<div class='changelog-md'><p class=\"changelog-md__paragraph\">New seasonal backgrounds ahoy! Amazing work by the artists.</p>\n</div>"
+                        major: true
+                        created_at: '2021-05-20T10:56:49+00:00'
+                        github_user:
+                          display_name: peppy
+                          github_url: null
+                          github_username: null
+                          id: null
+                          osu_username: peppy
+                          user_id: 2
+                          user_url: 'https://osu.ppy.sh/users/2'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: null
+                        repository:
+                          type: string
+                          example: null
+                        github_pull_request_id:
+                          type: string
+                          example: null
+                        github_url:
+                          type: string
+                          example: null
+                        url:
+                          type: string
+                          example: 'https://osu.ppy.sh/home/news/2021-05-20-spring-fanart-contest-results'
+                        type:
+                          type: string
+                          example: fix
+                        category:
+                          type: string
+                          example: Misc
+                        title:
+                          type: string
+                          example: 'Spring is here!'
+                        message_html:
+                          type: string
+                          example: "<div class='changelog-md'><p class=\"changelog-md__paragraph\">New seasonal backgrounds ahoy! Amazing work by the artists.</p>\n</div>"
+                        major:
+                          type: boolean
+                          example: true
+                        created_at:
+                          type: string
+                          example: '2021-05-20T10:56:49+00:00'
+                        github_user:
+                          type: object
+                          properties:
+                            display_name:
+                              type: string
+                              example: peppy
+                            github_url:
+                              type: string
+                              example: null
+                            github_username:
+                              type: string
+                              example: null
+                            id:
+                              type: string
+                              example: null
+                            osu_username:
+                              type: string
+                              example: peppy
+                            user_id:
+                              type: integer
+                              example: 2
+                            user_url:
+                              type: string
+                              example: 'https://osu.ppy.sh/users/2'
+                  versions:
+                    type: object
+                    properties:
+                      previous:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 5774
+                          version:
+                            type: string
+                            example: '20210519.3'
+                          display_version:
+                            type: string
+                            example: '20210519.3'
+                          users:
+                            type: integer
+                            example: 10
+                          created_at:
+                            type: string
+                            example: '2021-05-19T11:51:48+00:00'
+                          update_stream:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 5
+                              name:
+                                type: string
+                                example: stable40
+                              display_name:
+                                type: string
+                                example: Stable
+                              is_featured:
+                                type: boolean
+                                example: true
+      tags:
+        - Changelog
+      security: []
+    parameters:
+      -
+        in: path
+        name: stream
+        description: 'Update stream name.'
+        example: stable40
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: build
+        description: 'Build version.'
+        example: '20210520.2'
+        required: true
+        schema:
+          type: string
+  /api/v2/changelog:
+    get:
+      summary: 'Get Changelog Listing'
+      operationId: getChangelogListing
+      description: "Returns a listing of update streams, builds, and changelog entries.\n\n---\n\n### Response Format\n\nField         | Type                            | Notes\n--------------|---------------------------------|------\nbuilds        | [Build](#build)[]               | Includes `changelog_entries`, `changelog_entries.github_user`, and changelog entry message in requested formats.\nsearch.from   | string?                         | `from` input.\nsearch.limit  | integer                         | Always `21`.\nsearch.max_id | integer?                        | `max_id` input.\nsearch.stream | string?                         | `stream` input.\nsearch.to     | string?                         | `to` input.\nstreams       | [UpdateStream](#updatestream)[] | Always contains all available streams. Includes `latest_build` and `user_count`."
+      parameters:
+        -
+          in: query
+          name: from
+          description: 'Minimum build version.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Minimum build version.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: max_id
+          description: 'Maximum build ID.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum build ID.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: stream
+          description: 'Stream name to return builds from.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Stream name to return builds from.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: to
+          description: 'Maximum build version.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Maximum build version.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: 'message_formats[]'
+          description: '`html`, `markdown`. Default to both.'
+          example: vitae
+          required: false
+          schema:
+            type: string
+            description: '`html`, `markdown`. Default to both.'
+            example: vitae
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"streams\": [\n    {\n      \"id\": 5,\n      \"name\": \"stable40\",\n      \"display_name\": \"Stable\",\n      \"is_featured\": true,\n      \"latest_build\": {\n        \"id\": 5778,\n        \"version\": \"20210520.2\",\n        \"display_version\": \"20210520.2\",\n        \"users\": 23683,\n        \"created_at\": \"2021-05-20T14:28:04+00:00\",\n        \"update_stream\": {\n          \"id\": 5,\n          \"name\": \"stable40\",\n          \"display_name\": \"Stable\",\n          \"is_featured\": true\n        }\n      },\n      \"user_count\": 23965\n    },\n    // ...\n  ],\n  \"builds\": [\n    {\n      \"id\": 5823,\n      \"version\": \"2021.619.1\",\n      \"display_version\": \"2021.619.1\",\n      \"users\": 0,\n      \"created_at\": \"2021-06-19T08:30:45+00:00\",\n      \"update_stream\": {\n        \"id\": 7,\n        \"name\": \"lazer\",\n        \"display_name\": \"Lazer\",\n        \"is_featured\": false\n      },\n      \"changelog_entries\": [\n        {\n          \"id\": 12925,\n          \"repository\": \"ppy/osu\",\n          \"github_pull_request_id\": 13572,\n          \"github_url\": \"https://github.com/ppy/osu/pull/13572\",\n          \"url\": null,\n          \"type\": \"fix\",\n          \"category\": \"Reliability\",\n          \"title\": \"Fix game crashes due to attempting localisation load for unsupported locales\",\n          \"message_html\": null,\n          \"major\": true,\n          \"created_at\": \"2021-06-19T08:09:39+00:00\",\n          \"github_user\": {\n            \"display_name\": \"bdach\",\n            \"github_url\": \"https://github.com/bdach\",\n            \"github_username\": \"bdach\",\n            \"id\": 218,\n            \"osu_username\": null,\n            \"user_id\": null,\n            \"user_url\": null\n          }\n        }\n      ]\n    },\n    // ...\n  ],\n  \"search\": {\n    \"stream\": null,\n    \"from\": null,\n    \"to\": null,\n    \"max_id\": null,\n    \"limit\": 21\n  }\n}"
+      tags:
+        - Changelog
+      security: []
+  '/api/v2/changelog/{changelog}':
+    get:
+      summary: 'Lookup Changelog Build'
+      operationId: lookupChangelogBuild
+      description: "Returns details of the specified build.\n\n---\n\n### Response Format\n\nSee [Get Changelog Build](#get-changelog-build)."
+      parameters:
+        -
+          in: query
+          name: key
+          description: 'Unset to query by build version or stream name, or `id` to query by build ID.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Unset to query by build version or stream name, or `id` to query by build ID.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: 'message_formats[]'
+          description: '`html`, `markdown`. Default to both.'
+          example: enim
+          required: false
+          schema:
+            type: string
+            description: '`html`, `markdown`. Default to both.'
+            example: enim
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'See "Get Changelog Build" response.'
+      tags:
+        - Changelog
+      security: []
+    parameters:
+      -
+        in: path
+        name: changelog
+        description: 'Build version, update stream name, or build ID.'
+        example: '20210520.2'
+        required: true
+        schema:
+          type: string
+  /api/v2/chat/ack:
+    post:
+      summary: 'Chat Keepalive'
+      operationId: chatKeepalive
+      description: "Request periodically to reset chat activity timeout. Also returns an updated list of recent silences.\n\nSee [Public channels and activity timeout](#public-channels-and-activity-timeout)\n\n---\n\n### Response Format\n\nField            | Type\n---------------- | -----------------\nsilences         | [UserSilence](#usersilence)[]"
+      parameters:
+        -
+          in: query
+          name: history_since
+          description: "[UserSilence](#usersilence)s after the specified id to return.\nThis field is preferred and takes precedence over `since`."
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: "[UserSilence](#usersilence)s after the specified id to return.\nThis field is preferred and takes precedence over `since`."
+            example: 1
+            nullable: false
+        -
+          in: query
+          name: since
+          description: '[UserSilence](#usersilence)s after the specified [ChatMessage.message_id](#chatmessage) to return.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: '[UserSilence](#usersilence)s after the specified [ChatMessage.message_id](#chatmessage) to return.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - Chat
+      security: []
+  /api/v2/chat/new:
+    post:
+      summary: 'Create New PM'
+      operationId: createNewPM
+      description: "This endpoint allows you to create a new PM channel.\n\n---\n\n### Response Format\n\nField            | Type\n---------------- | -----------------\nchannel          | The new [ChatChannel](#chatchannel)\nmessage          | the sent [ChatMessage](#chatmessage)\nnew_channel_id   | Deprecated; `channel_id` of newly created [ChatChannel](#chatchannel)\n\n<aside class=\"notice\">\n  This endpoint will only allow the creation of PMs initially, group chat support will come later.\n</aside>"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"channel\": {\n    \"channel_id\": 1234,\n    \"description\": \"\",\n    \"icon\": \"https://a.ppy.sh/102?1500537068\"\n    \"message_length_limit\": 450,\n    \"moderated\": false,\n    \"name\": \"peppy\",\n    \"type\": \"PM\",\n    \"uuid\": null,\n    \"last_message_id\": 9150005005,\n    \"users\": [\n      101,\n      102\n    ]\n  },\n  \"message\": {\n    \"channel_id\": 1234,\n    \"content\": \"i can haz featured artist plz?\",\n    \"is_action\": false,\n    \"message_id\": 9150005005,\n    \"sender_id\": 102,\n    \"timestamp\": \"2024-12-23T01:23:45+00:00\",\n    \"type\": \"plain\",\n    \"uuid\": \"some-uuid-string\",\n    \"sender\": {\n      \"avatar_url\": \"https://a.ppy.sh/102?1500537068\",\n      \"country_code\": \"AU\",\n      \"default_group\": \"default\",\n      \"id\": 102,\n      \"is_active\": true,\n      \"is_bot\": false,\n      \"is_deleted\": false,\n      \"is_online\": true,\n      \"is_supporter\": true\n      \"last_visit\": \"2024-12-23T01:23:45+00:00\",\n      \"pm_friends_only\": false,\n      \"profile_colour\": \"#333333\",\n      \"username\": \"nekodex\",\n    }\n  },\n  \"new_channel_id\": 1234,\n}"
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_id:
+                  type: integer
+                  description: '`user_id` of user to start PM with'
+                  example: 11
+                  nullable: false
+                message:
+                  type: string
+                  description: 'message to send'
+                  example: delectus
+                  nullable: false
+                is_action:
+                  type: boolean
+                  description: 'whether the message is an action'
+                  example: true
+                  nullable: false
+                uuid:
+                  type: string
+                  description: 'client-side message identifier which will be sent back in response and websocket json.'
+                  example: some-uuid-string
+                  nullable: false
+              required:
+                - target_id
+                - message
+                - is_action
+      security: []
+  /api/v2/chat/updates:
+    get:
+      summary: 'Get Updates'
+      operationId: getUpdates
+      description: "Returns the list of channels the current User is in along with an updated list of [UserSilence](#usersilence)s.\n\n---\n\n### Response Format\n\nField            | Type\n---------------- | -----------------\nmessages         | This field is not used and will be removed.\npresence         | [ChatChannel](#chatchannel)[]?\nsilences         | [UserSilence](#usersilence)[]?"
+      parameters:
+        -
+          in: query
+          name: history_since
+          description: "[UserSilence](#usersilence)s after the specified id to return.\nThis field is preferred and takes precedence over `since`."
+          example: 13
+          required: false
+          schema:
+            type: integer
+            description: "[UserSilence](#usersilence)s after the specified id to return.\nThis field is preferred and takes precedence over `since`."
+            example: 13
+            nullable: false
+        -
+          in: query
+          name: includes
+          description: 'List of fields from `presence`, `silences` to include in the response. Returns all if not specified.'
+          example: null
+          required: false
+          schema:
+            type: array
+            description: 'List of fields from `presence`, `silences` to include in the response. Returns all if not specified.'
+            example: null
+            items:
+              type: string
+        -
+          in: query
+          name: since
+          description: '[UserSilence](#usersilence)s after the specified [ChatMessage.message_id](#chatmessage) to return.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: '[UserSilence](#usersilence)s after the specified [ChatMessage.message_id](#chatmessage) to return.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  presence:
+                    -
+                      channel_id: 5
+                      current_user_attributes:
+                        can_message: true
+                        can_message_error: null
+                        last_read_id: 9150005005
+                      name: '#osu'
+                      description: 'The official osu! channel (english only).'
+                      type: public
+                      last_read_id: 9150005005
+                      last_message_id: 9150005005
+                    -
+                      channel_id: 12345
+                      current_user_attributes:
+                        can_message: true
+                        can_message_error: null
+                        last_read_id: 9150001235
+                      type: PM
+                      name: peppy
+                      icon: 'https://a.ppy.sh/2?1519081077.png'
+                      users:
+                        - 2
+                        - 102
+                      last_read_id: 9150001235
+                      last_message_id: 9150001234
+                  silences:
+                    -
+                      id: 1
+                      user_id: 2
+                properties:
+                  presence:
+                    type: array
+                    example:
+                      -
+                        channel_id: 5
+                        current_user_attributes:
+                          can_message: true
+                          can_message_error: null
+                          last_read_id: 9150005005
+                        name: '#osu'
+                        description: 'The official osu! channel (english only).'
+                        type: public
+                        last_read_id: 9150005005
+                        last_message_id: 9150005005
+                      -
+                        channel_id: 12345
+                        current_user_attributes:
+                          can_message: true
+                          can_message_error: null
+                          last_read_id: 9150001235
+                        type: PM
+                        name: peppy
+                        icon: 'https://a.ppy.sh/2?1519081077.png'
+                        users:
+                          - 2
+                          - 102
+                        last_read_id: 9150001235
+                        last_message_id: 9150001234
+                    items:
+                      type: object
+                      properties:
+                        channel_id:
+                          type: integer
+                          example: 5
+                        current_user_attributes:
+                          type: object
+                          properties:
+                            can_message:
+                              type: boolean
+                              example: true
+                            can_message_error:
+                              type: string
+                              example: null
+                            last_read_id:
+                              type: integer
+                              example: 9150005005
+                        name:
+                          type: string
+                          example: '#osu'
+                        description:
+                          type: string
+                          example: 'The official osu! channel (english only).'
+                        type:
+                          type: string
+                          example: public
+                        last_read_id:
+                          type: integer
+                          example: 9150005005
+                        last_message_id:
+                          type: integer
+                          example: 9150005005
+                  silences:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        user_id: 2
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        user_id:
+                          type: integer
+                          example: 2
+      tags:
+        - Chat
+      security: []
+  '/api/v2/chat/channels/{channel}/messages':
+    get:
+      summary: 'Get Channel Messages'
+      operationId: getChannelMessages
+      description: "This endpoint returns the chat messages for a specific channel.\n\n---\n\n### Response Format\n\nReturns an array of [ChatMessage](#chatmessage)"
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'number of messages to return (max of 50)'
+          example: 11
+          required: false
+          schema:
+            type: integer
+            description: 'number of messages to return (max of 50)'
+            example: 11
+            nullable: false
+        -
+          in: query
+          name: since
+          description: 'messages after the specified message id will be returned'
+          example: 5
+          required: false
+          schema:
+            type: integer
+            description: 'messages after the specified message id will be returned'
+            example: 5
+            nullable: false
+        -
+          in: query
+          name: until
+          description: 'messages up to but not including the specified message id will be returned'
+          example: 6
+          required: false
+          schema:
+            type: integer
+            description: 'messages up to but not including the specified message id will be returned'
+            example: 6
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    message_id: 9150005004
+                    sender_id: 2
+                    channel_id: 5
+                    timestamp: '2018-07-06T06:33:34+00:00'
+                    content: 'i am a lazerface'
+                    is_action: 0
+                    sender:
+                      id: 2
+                      username: peppy
+                      profile_colour: '#3366FF'
+                      avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                      country_code: AU
+                      is_active: true
+                      is_bot: false
+                      is_online: true
+                      is_supporter: true
+                  -
+                    message_id: 9150005005
+                    sender_id: 102
+                    channel_id: 5
+                    timestamp: '2018-07-06T06:33:42+00:00'
+                    content: 'uh ok then'
+                    is_action: 0
+                    sender:
+                      id: 102
+                      username: nekodex
+                      profile_colour: '#333333'
+                      avatar_url: 'https://a.ppy.sh/102?1500537068'
+                      country_code: AU
+                      is_active: true
+                      is_bot: false
+                      is_online: true
+                      is_supporter: true
+      tags:
+        - Chat
+      security: []
+    post:
+      summary: 'Send Message to Channel'
+      operationId: sendMessageToChannel
+      description: "This endpoint returns the chat messages for a specific channel.\n\n---\n\n### Response Format\n\nThe sent [ChatMessage](#chatmessage)\n\n<aside class=\"notice\">\n  When sending a message, the <code>last_read_id</code> for the <a href='#chatchannel'>ChatChannel</a> is also updated to mark the new message as read.\n</aside>"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message_id: 9150005004
+                  sender_id: 2
+                  channel_id: 5
+                  timestamp: '2018-07-06T06:33:34+00:00'
+                  content: 'i am a lazerface'
+                  is_action: 0
+                  sender:
+                    id: 2
+                    username: peppy
+                    profile_colour: '#3366FF'
+                    avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                    country_code: AU
+                    is_active: true
+                    is_bot: false
+                    is_online: true
+                    is_supporter: true
+                properties:
+                  message_id:
+                    type: integer
+                    example: 9150005004
+                  sender_id:
+                    type: integer
+                    example: 2
+                  channel_id:
+                    type: integer
+                    example: 5
+                  timestamp:
+                    type: string
+                    example: '2018-07-06T06:33:34+00:00'
+                  content:
+                    type: string
+                    example: 'i am a lazerface'
+                  is_action:
+                    type: integer
+                    example: 0
+                  sender:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      username:
+                        type: string
+                        example: peppy
+                      profile_colour:
+                        type: string
+                        example: '#3366FF'
+                      avatar_url:
+                        type: string
+                        example: 'https://a.ppy.sh/2?1519081077.png'
+                      country_code:
+                        type: string
+                        example: AU
+                      is_active:
+                        type: boolean
+                        example: true
+                      is_bot:
+                        type: boolean
+                        example: false
+                      is_online:
+                        type: boolean
+                        example: true
+                      is_supporter:
+                        type: boolean
+                        example: true
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: 'message to send'
+                  example: nisi
+                  nullable: false
+                is_action:
+                  type: boolean
+                  description: 'whether the message is an action'
+                  example: false
+                  nullable: false
+              required:
+                - message
+                - is_action
+      security: []
+    parameters:
+      -
+        in: path
+        name: channel
+        description: 'The ID of the channel to retrieve messages for'
+        example: 12
+        required: true
+        schema:
+          type: integer
+  '/api/v2/chat/channels/{channel}/users/{user}':
+    put:
+      summary: 'Join Channel'
+      operationId: joinChannel
+      description: "This endpoint allows you to join a public or multiplayer channel.\n\n---\n\n### Response Format\n\nReturns the joined [ChatChannel](#chatchannel)."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"channel_id\": 5,\n  \"current_user_attributes\": {\n    \"can_message\": true,\n    \"can_message_error\": null\n  },\n  \"description\": \"The official osu! channel (english only).\",\n  \"icon\": \"https://a.ppy.sh/2?1519081077.png\",\n  \"last_message_id\": 1029,\n  \"moderated\": false,\n  \"name\": \"#osu\",\n  \"type\": \"public\"\n  \"users\": []\n}"
+      tags:
+        - Chat
+      security: []
+    delete:
+      summary: 'Leave Channel'
+      operationId: leaveChannel
+      description: "This endpoint allows you to leave a public channel.\n\n---\n\n### Response Format\n\n_empty response_\n\n<aside class=\"notice\">\n  This endpoint will only allow the leaving of public channels initially.\n</aside>"
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - Chat
+      security: []
+    parameters:
+      -
+        in: path
+        name: channel
+        description: 'The channel.'
+        example: aliquid
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: user
+        description: 'The user.'
+        example: ab
+        required: true
+        schema:
+          type: string
+  '/api/v2/chat/channels/{channel}/mark-as-read/{message}':
+    put:
+      summary: 'Mark Channel as Read'
+      operationId: markChannelAsRead
+      description: "This endpoint marks the channel as having being read up to the given `message_id`.\n\n---\n\n### Response Format\n\n_empty response_\n\n<aside class=\"notice\">\n  Note that the read marker cannot be moved backwards - i.e. if a channel has been marked as read up to <code>message_id = 12</code>, you cannot then set it backwards to <code>message_id = 10</code>. It will be rejected.\n</aside>"
+      parameters:
+        -
+          in: query
+          name: channel_id
+          description: 'The `channel_id` of the channel to mark as read'
+          example: cumque
+          required: true
+          schema:
+            type: string
+            description: 'The `channel_id` of the channel to mark as read'
+            example: cumque
+            nullable: false
+        -
+          in: query
+          name: message_id
+          description: 'The `message_id` of the message to mark as read up to'
+          example: consequuntur
+          required: true
+          schema:
+            type: string
+            description: 'The `message_id` of the message to mark as read up to'
+            example: consequuntur
+            nullable: false
+      responses:
+        204:
+          description: ''
+      tags:
+        - Chat
+      security: []
+    parameters:
+      -
+        in: path
+        name: channel
+        description: 'The channel.'
+        example: maxime
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: message
+        description: ''
+        example: aut
+        required: true
+        schema:
+          type: string
+  /api/v2/chat/channels:
+    get:
+      summary: 'Get Channel List'
+      operationId: getChannelList
+      description: "This endpoint returns a list of all joinable public channels.\n\n---\n\n### Response Format\n\nReturns an array of [ChatChannel](#chatchannel)"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    channel_id: 5
+                    description: 'The official osu! channel (english only).'
+                    icon: 'https://a.ppy.sh/2?1519081077.png'
+                    moderated: false
+                    name: '#osu'
+                    type: public
+      tags:
+        - Chat
+      security: []
+    post:
+      summary: 'Create Channel'
+      operationId: createChannel
+      description: "Creates a new PM or announcement channel.\nRejoins the PM channel if it already exists.\n\n---\n\n### Response Format\n\nReturns [ChatChannel](#chatchannel) with `recent_messages` attribute; `recent_messages` is deprecated and should not be used."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  channel_id: 1
+                  description: 'best channel'
+                  icon: 'https://a.ppy.sh/2?1519081077.png'
+                  moderated: false
+                  name: '#pm_1-2'
+                  type: PM
+                  recent_messages:
+                    -
+                      message_id: 1
+                      sender_id: 1
+                      channel_id: 1
+                      timestamp: '2020-01-01T00:00:00+00:00'
+                      content: 'Happy new year'
+                      is_action: false
+                      sender:
+                        id: 2
+                        username: peppy
+                        profile_colour: '#3366FF'
+                        avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                        country_code: AU
+                        is_active: true
+                        is_bot: false
+                        is_online: true
+                        is_supporter: true
+                properties:
+                  channel_id:
+                    type: integer
+                    example: 1
+                  description:
+                    type: string
+                    example: 'best channel'
+                  icon:
+                    type: string
+                    example: 'https://a.ppy.sh/2?1519081077.png'
+                  moderated:
+                    type: boolean
+                    example: false
+                  name:
+                    type: string
+                    example: '#pm_1-2'
+                  type:
+                    type: string
+                    example: PM
+                  recent_messages:
+                    type: array
+                    example:
+                      -
+                        message_id: 1
+                        sender_id: 1
+                        channel_id: 1
+                        timestamp: '2020-01-01T00:00:00+00:00'
+                        content: 'Happy new year'
+                        is_action: false
+                        sender:
+                          id: 2
+                          username: peppy
+                          profile_colour: '#3366FF'
+                          avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                          country_code: AU
+                          is_active: true
+                          is_bot: false
+                          is_online: true
+                          is_supporter: true
+                    items:
+                      type: object
+                      properties:
+                        message_id:
+                          type: integer
+                          example: 1
+                        sender_id:
+                          type: integer
+                          example: 1
+                        channel_id:
+                          type: integer
+                          example: 1
+                        timestamp:
+                          type: string
+                          example: '2020-01-01T00:00:00+00:00'
+                        content:
+                          type: string
+                          example: 'Happy new year'
+                        is_action:
+                          type: boolean
+                          example: false
+                        sender:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                            username:
+                              type: string
+                              example: peppy
+                            profile_colour:
+                              type: string
+                              example: '#3366FF'
+                            avatar_url:
+                              type: string
+                              example: 'https://a.ppy.sh/2?1519081077.png'
+                            country_code:
+                              type: string
+                              example: AU
+                            is_active:
+                              type: boolean
+                              example: true
+                            is_bot:
+                              type: boolean
+                              example: false
+                            is_online:
+                              type: boolean
+                              example: true
+                            is_supporter:
+                              type: boolean
+                              example: true
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel:
+                  type: object
+                  description: 'channel details; required if `type` is `ANNOUNCE`.'
+                  example: null
+                  nullable: false
+                  properties:
+                    name:
+                      type: string
+                      description: 'the channel name; required if `type` is `ANNOUNCE`.'
+                      example: null
+                      nullable: false
+                    description:
+                      type: string
+                      description: 'the channel description; required if `type` is `ANNOUNCE`.'
+                      example: null
+                      nullable: false
+                message:
+                  type: string
+                  description: 'message to send with the announcement; required if `type` is `ANNOUNCE`.'
+                  example: null
+                  nullable: false
+                target_id:
+                  type: integer
+                  description: 'target user id; required if `type` is `PM`; ignored, otherwise.'
+                  example: 2
+                  nullable: false
+                target_ids:
+                  type: array
+                  description: 'target user ids; required if `type` is `ANNOUNCE`; ignored, otherwise.'
+                  example: null
+                  items:
+                    type: integer
+                type:
+                  type: string
+                  description: 'channel type (currently only supports `PM` and `ANNOUNCE`)'
+                  example: PM
+                  nullable: false
+              required:
+                - type
+      security: []
+  '/api/v2/chat/channels/{channel}':
+    get:
+      summary: 'Get Channel'
+      operationId: getChannel
+      description: "Gets details of a chat channel.\n\n---\n\n### Response Format\n\nField   | Type                        | Description\n------- | --------------------------- | -----------\nchannel | [ChatChannel](#chatchannel) | |\nusers   | [User](#user)               | Users are only visible for PM channels."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  channel:
+                    channel_id: 1337
+                    current_user_attributes:
+                      can_message: true
+                      can_message_error: null
+                    name: 'test channel'
+                    description: wheeeee
+                    icon: /images/layout/avatar-guest@2x.png
+                    type: PM
+                    last_message_id: 9150005005
+                    moderated: false
+                    users:
+                      - 2
+                      - 102
+                  users:
+                    -
+                      id: 2
+                      username: peppy
+                      profile_colour: '#3366FF'
+                      avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                      country_code: AU
+                      is_active: true
+                      is_bot: false
+                      is_deleted: false
+                      is_online: true
+                      is_supporter: true
+                    -
+                      id: 102
+                      username: lambchop
+                      profile_colour: '#3366FF'
+                      icon: /images/layout/avatar-guest@2x.png
+                      country_code: NZ
+                      is_active: true
+                      is_bot: false
+                      is_deleted: false
+                      is_online: false
+                      is_supporter: false
+                properties:
+                  channel:
+                    type: object
+                    properties:
+                      channel_id:
+                        type: integer
+                        example: 1337
+                      current_user_attributes:
+                        type: object
+                        properties:
+                          can_message:
+                            type: boolean
+                            example: true
+                          can_message_error:
+                            type: string
+                            example: null
+                      name:
+                        type: string
+                        example: 'test channel'
+                      description:
+                        type: string
+                        example: wheeeee
+                      icon:
+                        type: string
+                        example: /images/layout/avatar-guest@2x.png
+                      type:
+                        type: string
+                        example: PM
+                      last_message_id:
+                        type: integer
+                        example: 9150005005
+                      moderated:
+                        type: boolean
+                        example: false
+                      users:
+                        type: array
+                        example:
+                          - 2
+                          - 102
+                        items:
+                          type: integer
+                  users:
+                    type: array
+                    example:
+                      -
+                        id: 2
+                        username: peppy
+                        profile_colour: '#3366FF'
+                        avatar_url: 'https://a.ppy.sh/2?1519081077.png'
+                        country_code: AU
+                        is_active: true
+                        is_bot: false
+                        is_deleted: false
+                        is_online: true
+                        is_supporter: true
+                      -
+                        id: 102
+                        username: lambchop
+                        profile_colour: '#3366FF'
+                        icon: /images/layout/avatar-guest@2x.png
+                        country_code: NZ
+                        is_active: true
+                        is_bot: false
+                        is_deleted: false
+                        is_online: false
+                        is_supporter: false
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 2
+                        username:
+                          type: string
+                          example: peppy
+                        profile_colour:
+                          type: string
+                          example: '#3366FF'
+                        avatar_url:
+                          type: string
+                          example: 'https://a.ppy.sh/2?1519081077.png'
+                        country_code:
+                          type: string
+                          example: AU
+                        is_active:
+                          type: boolean
+                          example: true
+                        is_bot:
+                          type: boolean
+                          example: false
+                        is_deleted:
+                          type: boolean
+                          example: false
+                        is_online:
+                          type: boolean
+                          example: true
+                        is_supporter:
+                          type: boolean
+                          example: true
+      tags:
+        - Chat
+      security: []
+    parameters:
+      -
+        in: path
+        name: channel
+        description: 'The channel.'
+        example: et
+        required: true
+        schema:
+          type: string
+  /api/v2/comments:
+    get:
+      summary: 'Get Comments'
+      operationId: getComments
+      description: "Returns a list comments and their replies up to 2 levels deep.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle).\n\n`pinned_comments` is only included when `commentable_type` and `commentable_id` are specified."
+      parameters:
+        -
+          in: query
+          name: after
+          description: 'Return comments which come after the specified comment id as per sort option.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Return comments which come after the specified comment id as per sort option.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: commentable_type
+          description: 'The type of resource to get comments for.'
+          example: beatmapset
+          required: false
+          schema:
+            type: string
+            description: 'The type of resource to get comments for.'
+            example: beatmapset
+            nullable: false
+        -
+          in: query
+          name: commentable_id
+          description: 'The id of the resource to get comments for.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'The id of the resource to get comments for.'
+            example: '1'
+            nullable: false
+        -
+          in: query
+          name: cursor
+          description: "Pagination option. See [CommentSort](#commentsort) for detail. The format follows [Cursor](#cursor) except it's not currently included in the response."
+          example: null
+          required: false
+          schema:
+            type: string
+            description: "Pagination option. See [CommentSort](#commentsort) for detail. The format follows [Cursor](#cursor) except it's not currently included in the response."
+            example: null
+            nullable: false
+        -
+          in: query
+          name: parent_id
+          description: 'Limit to comments which are reply to the specified id. Specify 0 to get top level comments.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'Limit to comments which are reply to the specified id. Specify 0 to get top level comments.'
+            example: '1'
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: 'Sort option as defined in [CommentSort](#commentsort). Defaults to `new` for guests and user-specified default when authenticated.'
+          example: new
+          required: false
+          schema:
+            type: string
+            description: 'Sort option as defined in [CommentSort](#commentsort). Defaults to `new` for guests and user-specified default when authenticated.'
+            example: new
+            nullable: false
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    post:
+      summary: 'Post a new comment'
+      operationId: postANewComment
+      description: "Posts a new comment to a comment thread.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters:
+        -
+          in: query
+          name: comment.commentable_id
+          description: 'Resource ID the comment thread is attached to'
+          example: labore
+          required: false
+          schema:
+            type: string
+            description: 'Resource ID the comment thread is attached to'
+            example: labore
+            nullable: false
+        -
+          in: query
+          name: comment.commentable_type
+          description: 'Resource type the comment thread is attached to'
+          example: esse
+          required: false
+          schema:
+            type: string
+            description: 'Resource type the comment thread is attached to'
+            example: esse
+            nullable: false
+        -
+          in: query
+          name: comment.message
+          description: 'Text of the comment'
+          example: alias
+          required: false
+          schema:
+            type: string
+            description: 'Text of the comment'
+            example: alias
+            nullable: false
+        -
+          in: query
+          name: comment.parent_id
+          description: 'The id of the comment to reply to, null if not a reply'
+          example: dolores
+          required: false
+          schema:
+            type: string
+            description: 'The id of the comment to reply to, null if not a reply'
+            example: dolores
+            nullable: false
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+  '/api/v2/comments/{comment}':
+    get:
+      summary: 'Get a Comment'
+      operationId: getAComment
+      description: "Gets a comment and its replies up to 2 levels deep.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters: []
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    put:
+      summary: 'Edit Comment'
+      operationId: editComment
+      description: "Edit an existing comment.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters:
+        -
+          in: query
+          name: comment.message
+          description: 'New text of the comment'
+          example: culpa
+          required: false
+          schema:
+            type: string
+            description: 'New text of the comment'
+            example: culpa
+            nullable: false
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    delete:
+      summary: 'Delete Comment'
+      operationId: deleteComment
+      description: "Deletes the specified comment.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters: []
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    parameters:
+      -
+        in: path
+        name: comment
+        description: 'The comment.'
+        example: nulla
+        required: true
+        schema:
+          type: string
+  '/api/v2/comments/{comment}/vote':
+    post:
+      summary: 'Add Comment vote'
+      operationId: addCommentVote
+      description: "Upvotes a comment.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters: []
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    delete:
+      summary: 'Remove Comment vote'
+      operationId: removeCommentVote
+      description: "Un-upvotes a comment.\n\n---\n\n### Response Format\n\nReturns [CommentBundle](#commentbundle)"
+      parameters: []
+      responses: {  }
+      tags:
+        - Comments
+      security: []
+    parameters:
+      -
+        in: path
+        name: comment
+        description: 'The comment.'
+        example: enim
+        required: true
+        schema:
+          type: string
+  /api/v2/events:
+    get:
+      summary: 'Get Events'
+      operationId: getEvents
+      description: "Returns a collection of [Event](#event)s in order of creation time.\n\n---\n\n### Response Format\n\nField         | Type\n------------- | ----\ncursor_string | [CursorString](#cursorstring)\nevents        | [Event](#event)[]"
+      parameters:
+        -
+          in: query
+          name: sort
+          description: 'Sorting option. Valid values are `id_desc` (default) and `id_asc`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Sorting option. Valid values are `id_desc` (default) and `id_asc`.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  events: [\n    {\n      created_at: \"2022-12-08T02:02:51+00:00\",\n      id: 57,\n      type: \"achievement\",\n      achievement: { ... },\n      user: { ... }\n    },\n    ...\n  ],\n  cursor_string: \"eyJldmVudF9pZCI6OH0\"\n}"
+      tags:
+        - Events
+      security: []
+  '/api/v2/forums/topics/{topic}/reply':
+    post:
+      summary: 'Reply Topic'
+      operationId: replyTopic
+      description: "Create a post replying to the specified topic.\n\n---\n\n### Response Format\n\n[ForumPost](#forum-post) with `body` included."
+      parameters: []
+      responses: {  }
+      tags:
+        - Forum
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: 'Content of the reply post.'
+                  example: hello
+                  nullable: false
+              required:
+                - body
+      security: []
+    parameters:
+      -
+        in: path
+        name: topic
+        description: 'Id of the topic to be replied to.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/v2/forums/topics:
+    get:
+      summary: 'Get Topic Listing'
+      operationId: getTopicListing
+      description: "Get a sorted list of topics, optionally from a specific forum\n\n---\n\n### Response Format\n\nField         | Type                          | Notes\n------------- | ----------------------------- | -----\ntopics        | [ForumTopic](#forum-topic)[]  | |\ncursor_string | [CursorString](#cursorstring) | |"
+      parameters:
+        -
+          in: query
+          name: forum_id
+          description: 'Id of a specific forum to get topics from.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Id of a specific forum to get topics from.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: "Topic sorting option. Valid values are `new` (default) and `old`. Both sort by the topic's last post time."
+          example: null
+          required: false
+          schema:
+            type: string
+            description: "Topic sorting option. Valid values are `new` (default) and `old`. Both sort by the topic's last post time."
+            example: null
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of topics to be returned (50 at most and by default).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of topics to be returned (50 at most and by default).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  topics:
+                    -
+                      id: 1
+                      ...: ...
+                    -
+                      id: 2
+                      ...: ...
+                  cursor_string: eyJoZWxsbyI6IndvcmxkIn0
+                properties:
+                  topics:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        ...: ...
+                      -
+                        id: 2
+                        ...: ...
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        ...:
+                          type: string
+                          example: ...
+                  cursor_string:
+                    type: string
+                    example: eyJoZWxsbyI6IndvcmxkIn0
+      tags:
+        - Forum
+      security: []
+    post:
+      summary: 'Create Topic'
+      operationId: createTopic
+      description: "Create a new topic.\n\n---\n\n### Response Format\n\nField  | Type                       | Includes\n------ | -------------------------- | --------\ntopic  | [ForumTopic](#forum-topic) | |\npost   | [ForumPost](#forum-post)   | body"
+      parameters: []
+      responses: {  }
+      tags:
+        - Forum
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: 'Content of the topic.'
+                  example: hello
+                  nullable: false
+                forum_id:
+                  type: integer
+                  description: 'Forum to create the topic in.'
+                  example: 1
+                  nullable: false
+                title:
+                  type: string
+                  description: 'Title of the topic.'
+                  example: untitled
+                  nullable: false
+                with_poll:
+                  type: boolean
+                  description: 'Enable this to also create poll in the topic (default: false).'
+                  example: true
+                  nullable: false
+                'forum_topic_poll[hide_results]':
+                  type: boolean
+                  description: 'Enable this to hide result until voting period ends (default: false).'
+                  example: null
+                  nullable: false
+                'forum_topic_poll[length_days]':
+                  type: integer
+                  description: 'Number of days for voting period. 0 means the voting will never ends (default: 0). This parameter is required if `hide_results` option is enabled.'
+                  example: null
+                  nullable: false
+                'forum_topic_poll[max_options]':
+                  type: integer
+                  description: 'Maximum number of votes each user can cast (default: 1).'
+                  example: null
+                  nullable: false
+                'forum_topic_poll[options]':
+                  type: string
+                  description: 'Newline-separated list of voting options. BBCode is supported.'
+                  example: 'item A...'
+                  nullable: false
+                'forum_topic_poll[title]':
+                  type: string
+                  description: 'Title of the poll.'
+                  example: 'my poll'
+                  nullable: false
+                'forum_topic_poll[vote_change]':
+                  type: boolean
+                  description: 'Enable this to allow user to change their votes (default: false).'
+                  example: null
+                  nullable: false
+              required:
+                - body
+                - forum_id
+                - title
+                - 'forum_topic_poll[options]'
+                - 'forum_topic_poll[title]'
+      security: []
+  '/api/v2/forums/topics/{topic}':
+    get:
+      summary: 'Get Topic and Posts'
+      operationId: getTopicAndPosts
+      description: "Get topic and its posts.\n\n---\n\n### Response Format\n\nField         | Type                          | Notes\n------------- | ----------------------------- | -----\ncursor_string | [CursorString](#cursorstring) | |\nposts         | [ForumPost](#forum-post)[]    | Includes `body`.\nsearch        |                               | Parameters used for current request excluding cursor.\ntopic         | [ForumTopic](#forum-topic)    | |"
+      parameters:
+        -
+          in: query
+          name: sort
+          description: 'Post sorting option. Valid values are `id_asc` (default) and `id_desc`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Post sorting option. Valid values are `id_asc` (default) and `id_desc`.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of posts to be returned (20 default, 50 at most).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of posts to be returned (20 default, 50 at most).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: start
+          description: 'First post id to be returned with `sort` set to `id_asc`. This parameter is ignored if `cursor_string` is specified.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'First post id to be returned with `sort` set to `id_asc`. This parameter is ignored if `cursor_string` is specified.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: end
+          description: 'First post id to be returned with `sort` set to `id_desc`. This parameter is ignored if `cursor_string` is specified.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'First post id to be returned with `sort` set to `id_desc`. This parameter is ignored if `cursor_string` is specified.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  topic:
+                    id: 1
+                    ...: ...
+                  posts:
+                    -
+                      id: 1
+                      ...: ...
+                    -
+                      id: 2
+                      ...: ...
+                  cursor_string: eyJoZWxsbyI6IndvcmxkIn0
+                  sort: id_asc
+                properties:
+                  topic:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      ...:
+                        type: string
+                        example: ...
+                  posts:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        ...: ...
+                      -
+                        id: 2
+                        ...: ...
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        ...:
+                          type: string
+                          example: ...
+                  cursor_string:
+                    type: string
+                    example: eyJoZWxsbyI6IndvcmxkIn0
+                  sort:
+                    type: string
+                    example: id_asc
+      tags:
+        - Forum
+      security: []
+    put:
+      summary: 'Edit Topic'
+      operationId: editTopic
+      description: "Edit topic. Only title can be edited through this endpoint.\n\n---\n\n### Response Format\n\nThe edited [ForumTopic](#forum-topic)."
+      parameters: []
+      responses: {  }
+      tags:
+        - Forum
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'forum_topic[topic_title]':
+                  type: string
+                  description: 'New topic title.'
+                  example: titled
+                  nullable: false
+      security: []
+    parameters:
+      -
+        in: path
+        name: topic
+        description: 'Id of the topic.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/v2/forums/posts/{post}':
+    put:
+      summary: 'Edit Post'
+      operationId: editPost
+      description: "Edit specified forum post.\n\n---\n\n### Response Format\n\n[ForumPost](#forum-post) with `body` included."
+      parameters: []
+      responses: {  }
+      tags:
+        - Forum
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: 'New post content in BBCode format.'
+                  example: hello
+                  nullable: false
+              required:
+                - body
+      security: []
+    parameters:
+      -
+        in: path
+        name: post
+        description: 'Id of the post.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/v2/forums:
+    get:
+      summary: 'Get Forum Listing'
+      operationId: getForumListing
+      description: "Get top-level forums and their subforums (max 2 deep).\n\n---\n\n### Response Format\n\nField       | Type                         |\n----------- | ---------------------------- |\nforums      | [Forum](#forum-object)[]     |"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  forums:
+                    -
+                      forum_id: 1
+                      ...: ...
+                    -
+                      forum_id: 2
+                      ...: ...
+                properties:
+                  forums:
+                    type: array
+                    example:
+                      -
+                        forum_id: 1
+                        ...: ...
+                      -
+                        forum_id: 2
+                        ...: ...
+                    items:
+                      type: object
+                      properties:
+                        forum_id:
+                          type: integer
+                          example: 1
+                        ...:
+                          type: string
+                          example: ...
+      tags:
+        - Forum
+      security: []
+  '/api/v2/forums/{forum}':
+    get:
+      summary: 'Get Forum and Topics'
+      operationId: getForumAndTopics
+      description: "Get a forum by id, its pinned topics, recent topics, and its subforums.\n\n---\n\n### Response Format\n\nField         | Type                         |\n------------- | ---------------------------- |\nforum         | [Forum](#forum-object)       |\ntopics        | [ForumTopic](#forum-topic)[] |\npinned_topics | [ForumTopic](#forum-topic)[] |"
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"forum\": { \"id\": 1, \"...\": \"...\" },\n  \"topics\": [\n    { \"id\": 1, \"...\": \"...\" },\n    { \"id\": 2, \"...\": \"...\" },\n  ],\n  \"pinned_topics\": [\n    { \"id\": 1, \"...\": \"...\" },\n    { \"id\": 2, \"...\": \"...\" },\n  ]\n}"
+      tags:
+        - Forum
+      security: []
+    parameters:
+      -
+        in: path
+        name: forum
+        description: 'Id of the forum.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/v2/search:
+    get:
+      summary: Search
+      operationId: search
+      description: "Searches users and wiki pages.\n\n---\n\n### Response Format\n\nField     | Type                       | Description\n--------- | -------------------------- | -----------\nuser      | SearchResult&lt;User>?     | For `all` or `user` mode. Only first 100 results are accessible\nwiki_page | SearchResult&lt;WikiPage>? | For `all` or `wiki_page` mode\n\n#### SearchResult&lt;T>\n\nField | Type    | Description\n----- | ------- | -----------\ndata  | T[]     | |\ntotal | integer | |"
+      parameters:
+        -
+          in: query
+          name: mode
+          description: 'Either `all`, `user`, or `wiki_page`. Default is `all`.'
+          example: all
+          required: false
+          schema:
+            type: string
+            description: 'Either `all`, `user`, or `wiki_page`. Default is `all`.'
+            example: all
+            nullable: false
+        -
+          in: query
+          name: query
+          description: 'Search keyword.'
+          example: hello
+          required: false
+          schema:
+            type: string
+            description: 'Search keyword.'
+            example: hello
+            nullable: false
+        -
+          in: query
+          name: page
+          description: 'Search result page. Ignored for mode `all`.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Search result page. Ignored for mode `all`.'
+            example: 1
+            nullable: false
+      responses: {  }
+      tags:
+        - Home
+      security: []
+  /api/v2/matches:
+    get:
+      summary: 'Get Matches Listing'
+      operationId: getMatchesListing
+      description: "Returns a list of matches.\n\n---\n\n### Response Format\n\nField         | Type                          | Notes\n------------- | ----------------------------- | -----\ncursor        | [Cursor](#cursor)             | |\ncursor_string | [CursorString](#cursorstring) | |\nmatches       | [Match](#match)[]             | |\nparams.limit  | integer                       | |\nparams.sort   | string                        | |"
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of matches (50 default, 1 minimum, 50 maximum).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of matches (50 default, 1 minimum, 50 maximum).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '`id_desc` for newest first; `id_asc` for oldest first. Defaults to `id_desc`.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n    \"matches\": [\n        {\n            \"id\": 114428685,\n            \"start_time\": \"2024-06-25T00:55:30+00:00\",\n            \"end_time\": null,\n            \"name\": \"peppy's game\"\n        },\n        // ...\n    ],\n    \"params\": {\n        \"limit\": 50,\n        \"sort\": \"id_desc\"\n    },\n    \"cursor\": {\n        \"match_id\": 114428685\n    },\n    \"cursor_string\": \"eyJtYXRjaF9pZCI6MTE0NDI4Njg1fQ\"\n}"
+      tags:
+        - Matches
+      security: []
+  '/api/v2/matches/{match}':
+    get:
+      summary: 'Get Match'
+      operationId: getMatch
+      description: "Returns details of the specified match.\n\n---\n\n### Response Format\n\nField           | Type                        | Notes\n--------------- | --------------------------- | -----\nmatch           | [Match](#match)             | |\nevents          | [MatchEvent](#matchevent)[] | |\nusers           | [User](#user)[]             | Includes `country`.\nfirst_event_id  | integer                     | ID of the first [MatchEvent](#matchevent) in the match.\nlatest_event_id | integer                     | ID of the lastest [MatchEvent](#matchevent) in the match."
+      parameters:
+        -
+          in: query
+          name: before
+          description: 'Filter for match events before the specified [MatchEvent.id](#matchevent).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Filter for match events before the specified [MatchEvent.id](#matchevent).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: after
+          description: 'Filter for match events after the specified [MatchEvent.id](#matchevent).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Filter for match events after the specified [MatchEvent.id](#matchevent).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of match events (100 default, 1 minimum, 101 maximum).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of match events (100 default, 1 minimum, 101 maximum).'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n    \"match\": {\n        \"id\": 16155689,\n        \"start_time\": \"2015-05-16T09:44:51+00:00\",\n        \"end_time\": \"2015-05-16T10:55:08+00:00\",\n        \"name\": \"CWC 2015: (Australia) vs (Poland)\"\n    },\n    \"events\": [\n        {\n            \"id\": 484385927,\n            \"detail\": {\n                \"type\": \"match-created\"\n            },\n            \"timestamp\": \"2015-05-16T09:44:51+00:00\",\n            \"user_id\": null\n        },\n        // ...\n    ],\n    \"users\": [],\n    \"first_event_id\": 484385927,\n    \"latest_event_id\": 484410607,\n    \"current_game_id\": null\n}"
+      tags:
+        - Matches
+      security: []
+    parameters:
+      -
+        in: path
+        name: match
+        description: 'Match ID.'
+        example: null
+        required: true
+        schema:
+          type: integer
+  '/api/v2/rooms/{room}/playlist/{playlist}/scores/users/{user}':
+    get:
+      summary: 'Get User High Score'
+      operationId: getUserHighScore
+      description: "Returns detail of highest score of specified user and the surrounding scores.\n\n---\n\n### Response Format\n\nReturns [Score](#score) object."
+      parameters: []
+      responses: {  }
+      tags:
+        - Multiplayer
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'Id of the room.'
+        example: 14
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: playlist
+        description: 'Id of the playlist item.'
+        example: 7
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: user
+        description: 'User id.'
+        example: 7
+        required: true
+        schema:
+          type: integer
+  '/api/v2/rooms/{room}/playlist/{playlist}/scores':
+    get:
+      summary: 'Get Scores'
+      operationId: getScores
+      description: "Returns a list of scores for specified playlist item.\n\n---\n\n### Response Format\n\nReturns [MultiplayerScores](#multiplayerscores) object."
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Number of scores to be returned.'
+          example: 18
+          required: false
+          schema:
+            type: integer
+            description: 'Number of scores to be returned.'
+            example: 18
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: '[MultiplayerScoresSort](#multiplayerscoressort) parameter.'
+          example: rerum
+          required: false
+          schema:
+            type: string
+            description: '[MultiplayerScoresSort](#multiplayerscoressort) parameter.'
+            example: rerum
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - Multiplayer
+      security: []
+    post:
+      summary: ''
+      operationId: postApiV2RoomsRoomPlaylistPlaylistScores
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'Id of the room.'
+        example: 11
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: playlist
+        description: 'Id of the playlist item.'
+        example: 13
+        required: true
+        schema:
+          type: integer
+  '/api/v2/rooms/{room}/playlist/{playlist}/scores/{score}':
+    get:
+      summary: 'Get a Score'
+      operationId: getAScore
+      description: "Returns detail of specified score and the surrounding scores.\n\n---\n\n### Response Format\n\nReturns [Score](#score) object."
+      parameters: []
+      responses: {  }
+      tags:
+        - Multiplayer
+      security: []
+    put:
+      summary: ''
+      operationId: putApiV2RoomsRoomPlaylistPlaylistScoresScore
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'Id of the room.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: playlist
+        description: 'Id of the playlist item.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: score
+        description: 'Id of the score.'
+        example: 2
+        required: true
+        schema:
+          type: integer
+  /api/v2/rooms:
+    get:
+      summary: 'Get Multiplayer Rooms'
+      operationId: getMultiplayerRooms
+      description: 'Returns a list of multiplayer rooms.'
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: mode
+          description: 'Filter mode; `active` (default), `all`, `ended`, `participated`, `owned`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Filter mode; `active` (default), `all`, `ended`, `participated`, `owned`.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: season_id
+          description: 'Season ID to return Rooms from.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Season ID to return Rooms from.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: sort
+          description: 'Sort order; `ended`, `created`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Sort order; `ended`, `created`.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: type_group
+          description: '`playlists` (default) or `realtime`.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '`playlists` (default) or `realtime`.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - Multiplayer
+      security: []
+    post:
+      summary: ''
+      operationId: postApiV2Rooms
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  /api/v2/news:
+    get:
+      summary: 'Get News Listing'
+      operationId: getNewsListing
+      description: "Returns a list of news posts and related metadata.\n\n---\n\n### Response Format\n\nField                     | Type                          | Notes\n------------------------- | ----------------------------- | -----\ncursor_string             | [CursorString](#cursorstring) | |\nnews_posts                | [NewsPost](#newspost)[]       | Includes `preview`.\nnews_sidebar.current_year | integer                       | Year of the first post's publish time, or current year if no posts returned.\nnews_sidebar.news_posts   | [NewsPost](#newspost)[]       | All posts published during `current_year`.\nnews_sidebar.years        | integer[]                     | All years during which posts have been published.\nsearch.limit              | integer                       | Clamped limit input.\nsearch.sort               | string                        | Always `published_desc`.\n\n<aside class=\"notice\">\n  <a href=\"#newspost\">NewsPost</a> collections queried by year will also include posts published in November and December of the previous year if the current date is the same year and before April.\n</aside>"
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of posts (12 default, 1 minimum, 21 maximum).'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of posts (12 default, 1 minimum, 21 maximum).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: year
+          description: 'Year to return posts from.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Year to return posts from.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: '[CursorString](#cursorstring) for pagination.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[CursorString](#cursorstring) for pagination.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"news_posts\": [\n    {\n      \"id\": 964,\n      \"author\": \"RockRoller\",\n      \"edit_url\": \"https://github.com/ppy/osu-wiki/tree/master/news/2021-05-27-skinning-contest-results.md\",\n      \"first_image\": \"https://i.ppy.sh/d431ff921955d5c8792dc9bae40ac082d4e53131/68747470733a2f2f6f73752e7070792e73682f77696b692f696d616765732f7368617265642f6e6577732f323032312d30352d32372d736b696e6e696e672d636f6e746573742d726573756c74732f736b696e6e696e675f636f6e746573745f62616e6e65722e6a7067\",\n      \"published_at\": \"2021-05-27T12:00:00+00:00\",\n      \"updated_at\": \"2021-05-28T17:11:35+00:00\",\n      \"slug\": \"2021-05-27-skinning-contest-results\",\n      \"title\": \"Skinning Contest: Results Out\",\n      \"preview\": \"The ship full of skins is now back with your votes. Check out the results for our first-ever official skinning contest right here!\"\n    },\n    // ...\n  ],\n  \"news_sidebar\": {\n    \"current_year\": 2021,\n    \"news_posts\": [\n      {\n        \"id\": 964,\n        \"author\": \"RockRoller\",\n        \"edit_url\": \"https://github.com/ppy/osu-wiki/tree/master/news/2021-05-27-skinning-contest-results.md\",\n        \"first_image\": \"https://i.ppy.sh/d431ff921955d5c8792dc9bae40ac082d4e53131/68747470733a2f2f6f73752e7070792e73682f77696b692f696d616765732f7368617265642f6e6577732f323032312d30352d32372d736b696e6e696e672d636f6e746573742d726573756c74732f736b696e6e696e675f636f6e746573745f62616e6e65722e6a7067\",\n        \"published_at\": \"2021-05-27T12:00:00+00:00\",\n        \"updated_at\": \"2021-05-28T17:11:35+00:00\",\n        \"slug\": \"2021-05-27-skinning-contest-results\",\n        \"title\": \"Skinning Contest: Results Out\"\n      },\n      // ...\n    ],\n    \"years\": [2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013]\n  },\n  \"search\": {\n    \"limit\": 12,\n    \"sort\": \"published_desc\"\n  },\n  \"cursor_string\": \"WyJodHRwczpcL1wvd3d3LnlvdXR1YmUuY29tXC93YXRjaD92PWRRdzR3OVdnWGNRIl0\"\n}"
+      tags:
+        - News
+      security: []
+  '/api/v2/news/{news}':
+    get:
+      summary: 'Get News Post'
+      operationId: getNewsPost
+      description: "Returns details of the specified news post.\n\n---\n\n### Response Format\n\nReturns a [NewsPost](#newspost) with `content` and `navigation` included."
+      parameters:
+        -
+          in: query
+          name: key
+          description: 'Unset to query by slug, or `id` to query by ID.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Unset to query by slug, or `id` to query by ID.'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  id: 943
+                  author: pishifat
+                  edit_url: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-27-results-a-labour-of-love.md'
+                  first_image: 'https://i.ppy.sh/65c9c2eb2f8d9bc6008b95aba7d0ef45e1414c1e/68747470733a2f2f6f73752e7070792e73682f77696b692f696d616765732f7368617265642f6e6577732f323032302d31312d33302d612d6c61626f75722d6f662d6c6f76652f616c6f6c5f636f7665722e6a7067'
+                  published_at: '2021-04-27T20:00:00+00:00'
+                  updated_at: '2021-04-27T20:25:57+00:00'
+                  slug: 2021-04-27-results-a-labour-of-love
+                  title: 'Results - A Labour of Love'
+                  content: "<div class='osu-md osu-md--news'>...</div>"
+                  navigation:
+                    newer:
+                      id: 944
+                      author: pishifat
+                      edit_url: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-28-new-featured-artist-emilles-moonlight-serenade.md'
+                      first_image: 'https://i.ppy.sh/7e22cc5f4755c21574d999d8ce3a2f40a3268e84/68747470733a2f2f6173736574732e7070792e73682f617274697374732f3136302f6865616465722e6a7067'
+                      published_at: '2021-04-28T08:00:00+00:00'
+                      updated_at: '2021-04-28T09:51:28+00:00'
+                      slug: 2021-04-28-new-featured-artist-emilles-moonlight-serenade
+                      title: "New Featured Artist: Emille's Moonlight Serenade"
+                    older:
+                      id: 942
+                      author: pishifat
+                      edit_url: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-24-new-featured-artist-grynpyret.md'
+                      first_image: 'https://i.ppy.sh/acdce813b71371b95e8240f9249c916285fdc5a0/68747470733a2f2f6173736574732e7070792e73682f617274697374732f3135392f6865616465722e6a7067'
+                      published_at: '2021-04-24T08:00:00+00:00'
+                      updated_at: '2021-04-24T10:23:59+00:00'
+                      slug: 2021-04-24-new-featured-artist-grynpyret
+                      title: 'New Featured Artist: Grynpyret'
+                properties:
+                  id:
+                    type: integer
+                    example: 943
+                  author:
+                    type: string
+                    example: pishifat
+                  edit_url:
+                    type: string
+                    example: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-27-results-a-labour-of-love.md'
+                  first_image:
+                    type: string
+                    example: 'https://i.ppy.sh/65c9c2eb2f8d9bc6008b95aba7d0ef45e1414c1e/68747470733a2f2f6f73752e7070792e73682f77696b692f696d616765732f7368617265642f6e6577732f323032302d31312d33302d612d6c61626f75722d6f662d6c6f76652f616c6f6c5f636f7665722e6a7067'
+                  published_at:
+                    type: string
+                    example: '2021-04-27T20:00:00+00:00'
+                  updated_at:
+                    type: string
+                    example: '2021-04-27T20:25:57+00:00'
+                  slug:
+                    type: string
+                    example: 2021-04-27-results-a-labour-of-love
+                  title:
+                    type: string
+                    example: 'Results - A Labour of Love'
+                  content:
+                    type: string
+                    example: "<div class='osu-md osu-md--news'>...</div>"
+                  navigation:
+                    type: object
+                    properties:
+                      newer:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 944
+                          author:
+                            type: string
+                            example: pishifat
+                          edit_url:
+                            type: string
+                            example: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-28-new-featured-artist-emilles-moonlight-serenade.md'
+                          first_image:
+                            type: string
+                            example: 'https://i.ppy.sh/7e22cc5f4755c21574d999d8ce3a2f40a3268e84/68747470733a2f2f6173736574732e7070792e73682f617274697374732f3136302f6865616465722e6a7067'
+                          published_at:
+                            type: string
+                            example: '2021-04-28T08:00:00+00:00'
+                          updated_at:
+                            type: string
+                            example: '2021-04-28T09:51:28+00:00'
+                          slug:
+                            type: string
+                            example: 2021-04-28-new-featured-artist-emilles-moonlight-serenade
+                          title:
+                            type: string
+                            example: "New Featured Artist: Emille's Moonlight Serenade"
+                      older:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 942
+                          author:
+                            type: string
+                            example: pishifat
+                          edit_url:
+                            type: string
+                            example: 'https://github.com/ppy/osu-wiki/tree/master/news/2021-04-24-new-featured-artist-grynpyret.md'
+                          first_image:
+                            type: string
+                            example: 'https://i.ppy.sh/acdce813b71371b95e8240f9249c916285fdc5a0/68747470733a2f2f6173736574732e7070792e73682f617274697374732f3135392f6865616465722e6a7067'
+                          published_at:
+                            type: string
+                            example: '2021-04-24T08:00:00+00:00'
+                          updated_at:
+                            type: string
+                            example: '2021-04-24T10:23:59+00:00'
+                          slug:
+                            type: string
+                            example: 2021-04-24-new-featured-artist-grynpyret
+                          title:
+                            type: string
+                            example: 'New Featured Artist: Grynpyret'
+      tags:
+        - News
+      security: []
+    parameters:
+      -
+        in: path
+        name: news
+        description: 'News post slug or ID.'
+        example: 2021-04-27-results-a-labour-of-love
+        required: true
+        schema:
+          type: string
+  /api/v2/notifications:
+    get:
+      summary: 'Get Notifications'
+      operationId: getNotifications
+      description: "This endpoint returns a list of the user's unread notifications. Sorted descending by `id` with limit of 50.\n\n---\n\n### Response Format\n\nReturns an object containing [Notification](#notification) and other related attributes.\n\nField                 | Type\n--------------------- | ---------------------------------------------------\nhas_more              | boolean whether or not there are more notifications\nnotifications         | array of [Notification](#notification)\nunread_count          | total unread notifications\nnotification_endpoint | url to connect to websocket server"
+      parameters:
+        -
+          in: query
+          name: max_id
+          description: 'Maximum `id` fetched. Can be used to load earlier notifications. Defaults to no limit (fetch latest notifications)'
+          example: ut
+          required: false
+          schema:
+            type: string
+            description: 'Maximum `id` fetched. Can be used to load earlier notifications. Defaults to no limit (fetch latest notifications)'
+            example: ut
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  has_more: true
+                  notifications:
+                    -
+                      id: 1
+                      name: forum_topic_reply
+                      created_at: '2019-04-24T07:12:43+00:00'
+                      object_type: forum_topic
+                      object_id: 1
+                      source_user_id: 1
+                      is_read: false
+                      details:
+                        title: 'A topic'
+                        post_id: 2
+                        username: User
+                        cover_url: 'https://...'
+                  unread_count: 100
+                  notification_endpoint: 'wss://notify.ppy.sh'
+                properties:
+                  has_more:
+                    type: boolean
+                    example: true
+                  notifications:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        name: forum_topic_reply
+                        created_at: '2019-04-24T07:12:43+00:00'
+                        object_type: forum_topic
+                        object_id: 1
+                        source_user_id: 1
+                        is_read: false
+                        details:
+                          title: 'A topic'
+                          post_id: 2
+                          username: User
+                          cover_url: 'https://...'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        name:
+                          type: string
+                          example: forum_topic_reply
+                        created_at:
+                          type: string
+                          example: '2019-04-24T07:12:43+00:00'
+                        object_type:
+                          type: string
+                          example: forum_topic
+                        object_id:
+                          type: integer
+                          example: 1
+                        source_user_id:
+                          type: integer
+                          example: 1
+                        is_read:
+                          type: boolean
+                          example: false
+                        details:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                              example: 'A topic'
+                            post_id:
+                              type: integer
+                              example: 2
+                            username:
+                              type: string
+                              example: User
+                            cover_url:
+                              type: string
+                              example: 'https://...'
+                  unread_count:
+                    type: integer
+                    example: 100
+                  notification_endpoint:
+                    type: string
+                    example: 'wss://notify.ppy.sh'
+      tags:
+        - Notification
+      security: []
+  /api/v2/notifications/mark-read:
+    post:
+      summary: 'Mark Notifications as Read'
+      operationId: markNotificationsAsRead
+      description: "This endpoint allows you to mark notifications read.\n\n---\n\n### Response Format\n\n_empty response_"
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - Notification
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identities:
+                  type: object
+                  description: ''
+                  example:
+                    category: beatmapset_state
+                  nullable: false
+                  properties:
+                    category:
+                      type: string
+                      description: 'Notification category.'
+                      example: beatmapset_state
+                      nullable: false
+                    object_id:
+                      type: string
+                      description: 'Id of the object triggered the notification.'
+                      example: '1'
+                      nullable: false
+                    object_type:
+                      type: string
+                      description: 'Type of the object triggered the notification.'
+                      example: beatmapset
+                      nullable: false
+                notifications:
+                  type: object
+                  description: ''
+                  example:
+                    category: beatmapset_state
+                  nullable: false
+                  properties:
+                    category:
+                      type: string
+                      description: 'Notification category.'
+                      example: beatmapset_state
+                      nullable: false
+                    id:
+                      type: integer
+                      description: 'Id of notifications to be marked as read.'
+                      example: 1
+                      nullable: false
+                    object_id:
+                      type: string
+                      description: 'Id of the object triggered the notification.'
+                      example: '1'
+                      nullable: false
+                    object_type:
+                      type: string
+                      description: 'Type of the object triggered the notification.'
+                      example: beatmapset
+                      nullable: false
+      security: []
+  /api/v2/oauth/tokens/current:
+    delete:
+      summary: 'Revoke current token'
+      operationId: revokeCurrentToken
+      description: 'Revokes currently authenticated token.'
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - 'OAuth Tokens'
+      security: []
+  /api/v2/rankings/kudosu:
+    get:
+      summary: 'Get Kudosu Ranking'
+      operationId: getKudosuRanking
+      description: "Gets the kudosu ranking.\n\n---\n\n### Response format\n\nField   | Type            | Description\n------- | --------------- | -----------\nranking | [User](#user)[] | Includes `kudosu`."
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Ranking page.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Ranking page.'
+            example: 1
+            nullable: false
+      responses: {  }
+      tags:
+        - Ranking
+      security: []
+  '/api/v2/rankings/{mode}/{type}':
+    get:
+      summary: 'Get Ranking'
+      operationId: getRanking
+      description: "Gets the current ranking for the specified type and game mode.\n\n---\n\n### Response Format\n\nReturns [Rankings](#rankings)"
+      parameters:
+        -
+          in: query
+          name: country
+          description: 'Filter ranking by country code. Only available for `type` of `global`.'
+          example: JP
+          required: false
+          schema:
+            type: string
+            description: 'Filter ranking by country code. Only available for `type` of `global`.'
+            example: JP
+            nullable: false
+        -
+          in: query
+          name: cursor
+          description: '[Cursor](#cursor).'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: '[Cursor](#cursor).'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: filter
+          description: 'Either `all` (default) or `friends`.'
+          example: all
+          required: false
+          schema:
+            type: string
+            description: 'Either `all` (default) or `friends`.'
+            example: all
+            nullable: false
+        -
+          in: query
+          name: spotlight
+          description: 'The id of the spotlight if `type` is `charts`. Ranking for latest spotlight will be returned if not specified.'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'The id of the spotlight if `type` is `charts`. Ranking for latest spotlight will be returned if not specified.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: variant
+          description: "Filter ranking to specified mode variant. For `ruleset` of `mania`, it's either `4k` or `7k`. Only available for `type` of `global`."
+          example: 4k
+          required: false
+          schema:
+            type: string
+            description: "Filter ranking to specified mode variant. For `ruleset` of `mania`, it's either `4k` or `7k`. Only available for `type` of `global`."
+            example: 4k
+            nullable: false
+      responses: {  }
+      tags:
+        - Ranking
+      security: []
+    parameters:
+      -
+        in: path
+        name: mode
+        description: ''
+        example: molestias
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: type
+        description: '[RankingType](#rankingtype).'
+        example: global
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: ruleset
+        description: '[Ruleset](#ruleset).'
+        example: mania
+        required: true
+        schema:
+          type: string
+  /api/v2/spotlights:
+    get:
+      summary: 'Get Spotlights'
+      operationId: getSpotlights
+      description: "Gets the list of spotlights.\n\n---\n\n### Response Format\n\nReturns [Spotlights](#spotlights)"
+      parameters: []
+      responses: {  }
+      tags:
+        - Ranking
+      security: []
+  /api/v2/scores:
+    get:
+      summary: 'Get Scores'
+      operationId: getScores
+      description: "Returns all passed scores. Up to 1000 scores will be returned in order of oldest to latest.\nMost recent scores will be returned if `cursor_string` parameter is not specified.\n\nObtaining new scores that arrived after the last request can be done by passing `cursor_string`\nparameter from the previous request.\n\n---\n\n### Response Format\n\nField         | Type                          | Notes\n------------- | ----------------------------- | -----\nscores        | [Score](#score)[]             | |\ncursor_string | [CursorString](#cursorstring) | Same value as the request will be returned if there's no new scores"
+      parameters:
+        -
+          in: query
+          name: ruleset
+          description: 'The [Ruleset](#ruleset) to get scores for.'
+          example: et
+          required: false
+          schema:
+            type: string
+            description: 'The [Ruleset](#ruleset) to get scores for.'
+            example: et
+            nullable: false
+        -
+          in: query
+          name: cursor_string
+          description: 'Next set of scores'
+          example: omnis
+          required: false
+          schema:
+            type: string
+            description: 'Next set of scores'
+            example: omnis
+            nullable: false
+      responses: {  }
+      tags:
+        - Scores
+      security: []
+  '/api/v2/score-pins/{score}/reorder':
+    post:
+      summary: 'Reorder Pinned Score'
+      operationId: reorderPinnedScore
+      description: "Changes pinned position of a score on the user's profile.\n\n---\n\n### Response Format\n\n_empty response_"
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - Scores
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                after_score_id:
+                  type: integer
+                  description: 'The id of the [Score](#score) to move the score after. At least one of `after_score_id` or `before_score_id` is required.'
+                  example: 19
+                  nullable: false
+                before_score_id:
+                  type: integer
+                  description: 'The id of the [Score](#score) to move the score before.'
+                  example: null
+                  nullable: false
+      security: []
+    parameters:
+      -
+        in: path
+        name: score
+        description: 'The id of the [Score](#score) to move.'
+        example: 3
+        required: true
+        schema:
+          type: integer
+  '/api/v2/score-pins/{score}':
+    delete:
+      summary: 'Unpin Score'
+      operationId: unpinScore
+      description: "Unpins a score from the user's profile.\n\n---\n\n### Response Format\n\n_empty response_"
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - Scores
+      security: []
+    put:
+      summary: 'Pin Score'
+      operationId: pinScore
+      description: "Pins a score to the user's profile.\n\n---\n\n### Response Format\n\n_empty response_"
+      parameters: []
+      responses:
+        204:
+          description: ''
+      tags:
+        - Scores
+      security: []
+    parameters:
+      -
+        in: path
+        name: score
+        description: 'The id of the [Score](#score) to unpin.'
+        example: 6
+        required: true
+        schema:
+          type: integer
+  /api/v2/session/verify:
+    post:
+      summary: ''
+      operationId: postApiV2SessionVerify
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  /api/v2/session/verify/reissue:
+    post:
+      summary: ''
+      operationId: postApiV2SessionVerifyReissue
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/beatmaps/{beatmap}/solo/scores':
+    post:
+      summary: ''
+      operationId: postApiV2BeatmapsBeatmapSoloScores
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'The beatmap.'
+        example: molestiae
+        required: true
+        schema:
+          type: string
+  '/api/v2/beatmaps/{beatmap}/solo/scores/{token}':
+    put:
+      summary: ''
+      operationId: putApiV2BeatmapsBeatmapSoloScoresToken
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'The beatmap.'
+        example: est
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: token
+        description: ''
+        example: quia
+        required: true
+        schema:
+          type: string
+  '/api/v2/beatmaps/{beatmap}/tags/{tag}':
+    put:
+      summary: ''
+      operationId: putApiV2BeatmapsBeatmapTagsTag
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    delete:
+      summary: ''
+      operationId: deleteApiV2BeatmapsBeatmapTagsTag
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmap
+        description: 'The beatmap.'
+        example: rem
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: tag
+        description: 'The tag.'
+        example: sed
+        required: true
+        schema:
+          type: string
+  /api/v2/beatmapsets/events:
+    get:
+      summary: ''
+      operationId: getApiV2BeatmapsetsEvents
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/beatmapsets/{beatmapset}/favourites':
+    post:
+      summary: ''
+      operationId: postApiV2BeatmapsetsBeatmapsetFavourites
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: beatmapset
+        description: 'The beatmapset.'
+        example: qui
+        required: true
+        schema:
+          type: string
+  /api/v2/blocks:
+    get:
+      summary: ''
+      operationId: getApiV2Blocks
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    post:
+      summary: ''
+      operationId: postApiV2Blocks
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/blocks/{block}':
+    delete:
+      summary: ''
+      operationId: deleteApiV2BlocksBlock
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: block
+        description: 'The block.'
+        example: doloribus
+        required: true
+        schema:
+          type: string
+  /api/v2/chat/presence:
+    get:
+      summary: ''
+      operationId: getApiV2ChatPresence
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  /api/v2/reports:
+    post:
+      summary: ''
+      operationId: postApiV2Reports
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/rooms/{room}/users/{user}':
+    put:
+      summary: ''
+      operationId: putApiV2RoomsRoomUsersUser
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    delete:
+      summary: ''
+      operationId: deleteApiV2RoomsRoomUsersUser
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'The room.'
+        example: quae
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: user
+        description: 'The user.'
+        example: incidunt
+        required: true
+        schema:
+          type: string
+  '/api/v2/rooms/{room}/leaderboard':
+    get:
+      summary: ''
+      operationId: getApiV2RoomsRoomLeaderboard
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'The room.'
+        example: magni
+        required: true
+        schema:
+          type: string
+  '/api/v2/rooms/{room}/events':
+    get:
+      summary: ''
+      operationId: getApiV2RoomsRoomEvents
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'The room.'
+        example: ea
+        required: true
+        schema:
+          type: string
+  '/api/v2/rooms/{room}':
+    get:
+      summary: ''
+      operationId: getApiV2RoomsRoom
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    delete:
+      summary: ''
+      operationId: deleteApiV2RoomsRoom
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: room
+        description: 'The room.'
+        example: saepe
+        required: true
+        schema:
+          type: string
+  /api/v2/seasonal-backgrounds:
+    get:
+      summary: ''
+      operationId: getApiV2SeasonalBackgrounds
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/scores/{score}/download':
+    get:
+      summary: ''
+      operationId: getApiV2ScoresScoreDownload
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: score
+        description: 'The score.'
+        example: excepturi
+        required: true
+        schema:
+          type: string
+  '/api/v2/scores/{rulesetOrScore}/{score}/download':
+    get:
+      summary: ''
+      operationId: getApiV2ScoresRulesetOrScoreScoreDownload
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: rulesetOrScore
+        description: ''
+        example: omnis
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: score
+        description: ''
+        example: ullam
+        required: true
+        schema:
+          type: string
+  '/api/v2/scores/{rulesetOrScore}/{score}':
+    get:
+      summary: ''
+      operationId: getApiV2ScoresRulesetOrScoreScore
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: rulesetOrScore
+        description: ''
+        example: magni
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: score
+        description: 'Optional parameter.'
+        required: true
+        schema:
+          type: string
+        examples:
+          omitted:
+            summary: 'When the value is omitted'
+            value: ''
+          present:
+            summary: 'When the value is present'
+            value: et
+  /api/v2/users/lookup:
+    get:
+      summary: ''
+      operationId: getApiV2UsersLookup
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  /api/v2/friends:
+    get:
+      summary: ''
+      operationId: getApiV2Friends
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    post:
+      summary: ''
+      operationId: postApiV2Friends
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/friends/{friend}':
+    delete:
+      summary: ''
+      operationId: deleteApiV2FriendsFriend
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+    parameters:
+      -
+        in: path
+        name: friend
+        description: 'The friend.'
+        example: ipsam
+        required: true
+        schema:
+          type: string
+  /api/v2/me/download-quota-check:
+    get:
+      summary: ''
+      operationId: getApiV2MeDownloadQuotaCheck
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  /api/v2/tags:
+    get:
+      summary: ''
+      operationId: getApiV2Tags
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Undocumented
+      security: []
+  '/api/v2/users/{user}/kudosu':
+    get:
+      summary: 'Get User Kudosu'
+      operationId: getUserKudosu
+      description: "Returns kudosu history.\n\n---\n\n### Response format\n\nArray of [KudosuHistory](#kudosuhistory)."
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 10
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 10
+            nullable: false
+        -
+          in: query
+          name: offset
+          description: 'Result offset for pagination.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'Result offset for pagination.'
+            example: '1'
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    id: 1
+                    other: attributes...
+                  -
+                    id: 2
+                    other: attributes...
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'Id of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/v2/users/{user}/scores/{type}':
+    get:
+      summary: 'Get User Scores'
+      operationId: getUserScores
+      description: "This endpoint returns the scores of specified user.\n\n---\n\n### Response format\n\nArray of [Score](#score).\nFollowing attributes are included in the response object when applicable.\n\nAttribute  | Notes\n-----------|----------------------\nbeatmap    | |\nbeatmapset | |\nweight     | Only for type `best`."
+      parameters:
+        -
+          in: query
+          name: legacy_only
+          description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+          example: 0
+          required: false
+          schema:
+            type: integer
+            description: 'Whether or not to exclude lazer scores. Defaults to 0.'
+            example: 0
+            nullable: false
+        -
+          in: query
+          name: include_fails
+          description: 'Only for recent scores, include scores of failed plays. Set to 1 to include them. Defaults to 0.'
+          example: '0'
+          required: false
+          schema:
+            type: string
+            description: 'Only for recent scores, include scores of failed plays. Set to 1 to include them. Defaults to 0.'
+            example: '0'
+            nullable: false
+        -
+          in: query
+          name: mode
+          description: "[Ruleset](#ruleset) of the scores to be returned. Defaults to the specified `user`'s mode."
+          example: osu
+          required: false
+          schema:
+            type: string
+            description: "[Ruleset](#ruleset) of the scores to be returned. Defaults to the specified `user`'s mode."
+            example: osu
+            nullable: false
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 11
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 11
+            nullable: false
+        -
+          in: query
+          name: offset
+          description: 'Result offset for pagination.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'Result offset for pagination.'
+            example: '1'
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    id: 1
+                    other: attributes...
+                  -
+                    id: 2
+                    other: attributes...
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'Id of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: type
+        description: 'Score type. Must be one of these: `best`, `firsts`, `recent`.'
+        example: best
+        required: true
+        schema:
+          type: string
+  '/api/v2/users/{user}/beatmapsets/{type}':
+    get:
+      summary: 'Get User Beatmaps'
+      operationId: getUserBeatmaps
+      description: "Returns the beatmaps of specified user.\n\n| Type        | Notes\n|------------ | -----\n| favourite   | |\n| graveyard   | |\n| guest       | |\n| loved       | |\n| most_played | |\n| nominated   | |\n| pending     | Previously `unranked`\n| ranked      | Previously `ranked_and_approved`\n\n---\n\n### Response format\n\nArray of [BeatmapPlaycount](#beatmapplaycount) when `type` is `most_played`;\narray of [BeatmapsetExtended](#beatmapsetextended), otherwise."
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 1
+            nullable: false
+        -
+          in: query
+          name: offset
+          description: 'Result offset for pagination.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'Result offset for pagination.'
+            example: '1'
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    id: 1
+                    other: attributes...
+                  -
+                    id: 2
+                    other: attributes...
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'Id of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: type
+        description: 'Beatmap type.'
+        example: favourite
+        required: true
+        schema:
+          type: string
+  '/api/v2/users/{user}/recent_activity':
+    get:
+      summary: 'Get User Recent Activity'
+      operationId: getUserRecentActivity
+      description: "Returns recent activity.\n\n---\n\n### Response format\n\nArray of [Event](#event)."
+      parameters:
+        -
+          in: query
+          name: limit
+          description: 'Maximum number of results.'
+          example: 11
+          required: false
+          schema:
+            type: integer
+            description: 'Maximum number of results.'
+            example: 11
+            nullable: false
+        -
+          in: query
+          name: offset
+          description: 'Result offset for pagination.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'Result offset for pagination.'
+            example: '1'
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    id: 1
+                    other: attributes...
+                  -
+                    id: 2
+                    other: attributes...
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'Id of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/v2/users/{user}/beatmaps-passed':
+    get:
+      summary: 'Search Beatmaps Passed'
+      operationId: searchBeatmapsPassed
+      description: "Searches for the Beatmaps a User has passed by Beatmapset.\n\n---\n\n### Response format\n\nReturns the list of [Beatmaps](#beatmap) completed matching the criteria.\n\nField           | Type\n--------------- | ----\nbeatmaps_passed | [Beatmap](#beatmap)[]"
+      parameters:
+        -
+          in: query
+          name: beatmapset_ids
+          description: 'The list of Beatmapset.'
+          example:
+            - 1
+            - 2
+          required: false
+          schema:
+            type: array
+            description: 'The list of Beatmapset.'
+            example:
+              - 1
+              - 2
+            items:
+              type: integer
+        -
+          in: query
+          name: exclude_converts
+          description: 'Whether or not to exclude converts.'
+          example: null
+          required: false
+          schema:
+            type: boolean
+            description: 'Whether or not to exclude converts.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: is_legacy
+          description: 'Whether or not to consider legacy scores. Leave empty for all scores.'
+          example: null
+          required: false
+          schema:
+            type: boolean
+            description: 'Whether or not to consider legacy scores. Leave empty for all scores.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: no_diff_reduction
+          description: 'Whether or not to exclude diff reduction mods. Defaults to true.'
+          example: null
+          required: false
+          schema:
+            type: boolean
+            description: 'Whether or not to exclude diff reduction mods. Defaults to true.'
+            example: null
+            nullable: false
+        -
+          in: query
+          name: ruleset_id
+          description: 'The [Ruleset](#ruleset) ID. Leave empty for all rulesets.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'The [Ruleset](#ruleset) ID. Leave empty for all rulesets.'
+            example: null
+            nullable: false
+      responses: {  }
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'The id of the user.'
+        example: 18
+        required: true
+        schema:
+          type: integer
+  '/api/v2/users/{user}/{mode}':
+    get:
+      summary: 'Get User'
+      operationId: getUser
+      description: "This endpoint returns the detail of specified user.\n\n<aside class=\"notice\">\nIt's highly recommended to pass <code>key</code> parameter to avoid getting unexpected result (mainly when looking up user with numeric username or nonexistent user id).\n</aside>\n\n---\n\n### Response format\n\nReturns [UserExtended](#userextended) object.\nThe following [optional attributes on User](#user-optionalattributes) are included:\n\n- account_history\n- active_tournament_banner\n- badges\n- beatmap_playcounts_count\n- favourite_beatmapset_count\n- follower_count\n- graveyard_beatmapset_count\n- groups\n- loved_beatmapset_count\n- mapping_follower_count\n- monthly_playcounts\n- page\n- pending_beatmapset_count\n- previous_usernames\n- rank_highest\n- rank_history\n- ranked_beatmapset_count\n- replays_watched_counts\n- scores_best_count\n- scores_first_count\n- scores_recent_count\n- statistics\n- statistics.country_rank\n- statistics.rank\n- statistics.variants\n- support_level\n- user_achievements"
+      parameters:
+        -
+          in: query
+          name: key
+          description: 'Type of `user` passed in url parameter. Can be either `id` or `username` to limit lookup by their respective type. Passing empty or invalid value will result in id lookup followed by username lookup if not found. This parameter has been deprecated. Prefix `user` parameter with `@` instead to lookup by username.'
+          example: dolorem
+          required: false
+          schema:
+            type: string
+            description: 'Type of `user` passed in url parameter. Can be either `id` or `username` to limit lookup by their respective type. Passing empty or invalid value will result in id lookup followed by username lookup if not found. This parameter has been deprecated. Prefix `user` parameter with `@` instead to lookup by username.'
+            example: dolorem
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'See User object section'
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: user
+        description: 'Id or `@`-prefixed username of the user. Previous usernames are also checked in some cases.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: mode
+        description: 'Optional parameter. [Ruleset](#ruleset). User default mode will be used if not specified.'
+        required: true
+        schema:
+          type: string
+        examples:
+          omitted:
+            summary: 'When the value is omitted'
+            value: ''
+          present:
+            summary: 'When the value is present'
+            value: osu
+  /api/v2/users:
+    get:
+      summary: 'Get Users'
+      operationId: getUsers
+      description: "Returns list of users.\n\n---\n\n### Response format\n\nField | Type            | Description\n----- | --------------- | -----------\nusers | [User](#user)[] | Includes `country`, `cover`, `groups`, and `statistics_rulesets`."
+      parameters:
+        -
+          in: query
+          name: 'ids[]'
+          description: 'User id to be returned. Specify once for each user id requested. Up to 50 users can be requested at once.'
+          example: '1'
+          required: false
+          schema:
+            type: string
+            description: 'User id to be returned. Specify once for each user id requested. Up to 50 users can be requested at once.'
+            example: '1'
+            nullable: false
+        -
+          in: query
+          name: include_variant_statistics
+          description: 'Whether to additionally include `statistics_rulesets.variants` (default: `false`).'
+          example: null
+          required: false
+          schema:
+            type: boolean
+            description: 'Whether to additionally include `statistics_rulesets.variants` (default: `false`).'
+            example: null
+            nullable: false
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  users:
+                    -
+                      id: 1
+                      other: attributes...
+                    -
+                      id: 2
+                      other: attributes...
+                properties:
+                  users:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        other: attributes...
+                      -
+                        id: 2
+                        other: attributes...
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        other:
+                          type: string
+                          example: attributes...
+      tags:
+        - Users
+      security: []
+  '/api/v2/me/{mode}':
+    get:
+      summary: 'Get Own Data'
+      operationId: getOwnData
+      description: "Similar to [Get User](#get-user) but with authenticated user (token owner) as user id.\n\n---\n\n### Response format\n\nSee [Get User](#get-user).\n\n`session_verified` attribute is included.\nAdditionally, `statistics_rulesets` is included, containing statistics for all rulesets."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'See User object section'
+      tags:
+        - Users
+      security: []
+    parameters:
+      -
+        in: path
+        name: mode
+        description: 'Optional parameter. [Ruleset](#ruleset). User default mode will be used if not specified.'
+        required: true
+        schema:
+          type: string
+        examples:
+          omitted:
+            summary: 'When the value is omitted'
+            value: ''
+          present:
+            summary: 'When the value is present'
+            value: osu
+  '/api/v2/wiki/{locale}/{path}':
+    get:
+      summary: 'Get Wiki Page'
+      operationId: getWikiPage
+      description: "The wiki article or image data.\n\n---\n\n### Response Format\n\nReturns [WikiPage](#wikipage)."
+      parameters: []
+      responses: {  }
+      tags:
+        - Wiki
+      security: []
+    parameters:
+      -
+        in: path
+        name: locale
+        description: 'Two-letter language code of the wiki page.'
+        example: en
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: path
+        description: 'The path name of the wiki page.'
+        example: Welcome
+        required: true
+        schema:
+          type: string

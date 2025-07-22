@@ -1,0 +1,699 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Company API",
+    "description": "API for Company's internal systems. This API provides access to various departments and business functions.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/hr/employees/list": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "list employees",
+        "description": "List employees for HR",
+        "operationId": "getlistemployees",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/finance/invoices/list": {
+      "get": {
+        "tags": [
+          "Finance",
+          "v1"
+        ],
+        "summary": "list invoices",
+        "description": "List invoices for Finance",
+        "operationId": "getlistinvoices",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/tickets/list": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "list tickets",
+        "description": "List tickets for IT",
+        "operationId": "getlisttickets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/users/list": {
+      "get": {
+        "tags": [
+          "System",
+          "v1"
+        ],
+        "summary": "list users",
+        "description": "List users for System",
+        "operationId": "getlistusers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/hr/departments/list": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "list departments",
+        "description": "List departments for HR",
+        "operationId": "getlistdepartments",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/finance/expenses/list": {
+      "get": {
+        "tags": [
+          "Finance",
+          "v1"
+        ],
+        "summary": "list expenses",
+        "description": "List expenses for Finance",
+        "operationId": "getlistexpenses",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/servers/list": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "list servers",
+        "description": "List servers for IT",
+        "operationId": "getlistservers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/logs/list": {
+      "get": {
+        "tags": [
+          "System",
+          "v1"
+        ],
+        "summary": "list logs",
+        "description": "List logs for System",
+        "operationId": "getlistlogs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/hr/positions/list": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "list positions",
+        "description": "List positions for HR",
+        "operationId": "getlistpositions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/finance/budgets/list": {
+      "get": {
+        "tags": [
+          "Finance",
+          "v1"
+        ],
+        "summary": "list budgets",
+        "description": "List budgets for Finance",
+        "operationId": "getlistbudgets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/applications/list": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "list applications",
+        "description": "List applications for IT",
+        "operationId": "getlistapplications",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/status/list": {
+      "get": {
+        "tags": [
+          "System",
+          "v1"
+        ],
+        "summary": "list status",
+        "description": "List status for System",
+        "operationId": "getliststatus",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/hr/employees/get": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "get employees",
+        "description": "Get employees for HR",
+        "operationId": "getgetemployees",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/finance/invoices/get": {
+      "get": {
+        "tags": [
+          "Finance",
+          "v1"
+        ],
+        "summary": "get invoices",
+        "description": "Get invoices for Finance",
+        "operationId": "getgetinvoices",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/tickets/get": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "get tickets",
+        "description": "Get tickets for IT",
+        "operationId": "getgettickets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/users/get": {
+      "get": {
+        "tags": [
+          "System",
+          "v1"
+        ],
+        "summary": "get users",
+        "description": "Get users for System",
+        "operationId": "getgetusers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/hr/departments/get": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "get departments",
+        "description": "Get departments for HR",
+        "operationId": "getgetdepartments",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/finance/expenses/get": {
+      "get": {
+        "tags": [
+          "Finance",
+          "v1"
+        ],
+        "summary": "get expenses",
+        "description": "Get expenses for Finance",
+        "operationId": "getgetexpenses",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/servers/get": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "get servers",
+        "description": "Get servers for IT",
+        "operationId": "getgetservers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/it/servers/status": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "Get server status",
+        "description": "Returns the current status of all servers.",
+        "operationId": "getServerStatus",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "example": "1.2.3"
+                    },
+                    "environment": {
+                      "type": "string",
+                      "example": "development"
+                    },
+                    "config": {
+                      "type": "object",
+                      "properties": {
+                        "debug": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "adminCredentials": {
+                          "type": "object",
+                          "properties": {
+                            "username": {
+                              "type": "string",
+                              "example": "admin"
+                            },
+                            "password": {
+                              "type": "string",
+                              "example": "supersecret123"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "name": "api-threat-assessment-backend",
   "version": "1.0.0",
@@ -114,3 +115,15 @@
     ]
   }
 }
+=======
+{
+  "dependencies": {
+    "axios": "^1.9.0",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.1.1"
+  }
+}
+>>>>>>> main

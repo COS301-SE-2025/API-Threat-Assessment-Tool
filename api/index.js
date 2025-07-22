@@ -301,7 +301,8 @@ app.get('/', (req, res) => {
       addFlags: 'POST /api/endpoints/tags/add',
       removeFlags: 'POST /api/endpoints/tags/remove',
       replaceFlags: 'POST /api/endpoints/tags/replace',
-      listFlags: 'GET /api/tags'
+      listFlags: 'GET /api/tags',
+      createScan: 'POST /api/scan/create'
     }
   });
 });
@@ -890,6 +891,38 @@ app.post('/api/endpoints/details', async (req, res) => {
     sendError(res, 'Endpoint details retrieval failed', err.message, 500);
   }
 });
+app.post('/api/scan/create', async (req, res) => {
+  try {
+    const { api_id, filename, filetype, scan_profile } = req.body;
+
+    // Validate required fields
+    if (!api_id || !filename || !filetype) {
+      return sendError(res, 'Missing required fields: api_id, filename, or filetype', null, 400);
+    }
+
+    // Construct payload exactly as in Commands.MD
+    const payload = {
+      command: "scan.create",
+      data: {
+        api_id,
+        scan_profile: scan_profile || "Default",
+        filename,
+        filetype
+      }
+    };
+    // Check engine response
+    const engineResponse = await sendToEngine(payload);
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan started successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Scan start failed', engineResponse.data || 'Unknown error', engineResponse.code);
+    }
+  } catch (err) {
+    console.error('Scan create error:', err.message);
+    sendError(res, 'Scan start error', err.message, 500);
+  }
+});
+
 
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);

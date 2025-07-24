@@ -644,7 +644,7 @@ def handle_request(request: dict):
 
     else:
         return bad_request(f"Unknown command '{command}'")
-
+        
 def run_server():
     print(f"[ATAT] Listening on {HOST}:{PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -655,24 +655,34 @@ def run_server():
             with conn:
                 print("New connection")
                 data = b""
+                
+                # Read until we have a complete JSON message
                 while True:
                     chunk = conn.recv(4096)
                     if not chunk:
                         break
                     data += chunk
-
-                try:
-                    request = json.loads(data.decode())
-                    print(f"[RECV] {request}")
-                    response = handle_request(request)
-                except json.JSONDecodeError:
-                    response = bad_request("Invalid JSON")
-                except Exception as e:
-                    response = server_error(str(e))
-
-                response_bytes = json.dumps(response).encode()
-                conn.sendall(response_bytes)
-                print(f"[SEND] {response}")
+                    
+                    # Try to parse JSON - if successful, we have complete message
+                    try:
+                        request = json.loads(data.decode())
+                        print(f"[RECV] {request}")
+                        
+                        # Process immediately when we have valid JSON
+                        response = handle_request(request)
+                        response_bytes = json.dumps(response).encode()
+                        conn.sendall(response_bytes)
+                        print(f"[SEND] {response}")
+                        break  # Exit the reading loop
+                        
+                    except json.JSONDecodeError:
+                        # Not complete JSON yet, continue reading
+                        continue
+                    except Exception as e:
+                        response = server_error(str(e))
+                        response_bytes = json.dumps(response).encode()
+                        conn.sendall(response_bytes)
+                        break
 
 if __name__ == "__main__":
     run_server()

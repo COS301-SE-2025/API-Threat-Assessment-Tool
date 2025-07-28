@@ -298,10 +298,10 @@ app.get('/', (req, res) => {
       removeTags: 'POST /api/endpoints/tags/remove',
       replaceTags: 'POST /api/endpoints/tags/replace',
       listTags: 'GET /api/tags',
-      addFlags: 'POST /api/endpoints/tags/add',
-      removeFlags: 'POST /api/endpoints/tags/remove',
-      replaceFlags: 'POST /api/endpoints/tags/replace',
-      listFlags: 'GET /api/tags',
+      addFlags: 'POST /api/endpoints/flags/add',
+      removeFlags: 'POST /api/endpoints/flags/remove',
+      replaceFlags: 'POST /api/endpoints/flags/replace',
+      listFlags: 'GET /api/flags',
       createScan: 'POST /api/scan/create'
     }
   });
@@ -562,8 +562,10 @@ app.post('/api/endpoints', async (req, res) => {
     if (engineResponse.code === 200 || engineResponse.code === '200') {
       sendSuccess(res, 'Endpoints retrieved successfully', engineResponse.data);
     } else {
-      const errorMsg = engineResponse.data || 'Failed to retrieve endpoints';
-      sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
+    const errorMsg =
+  typeof engineResponse.data === 'string'
+    ? engineResponse.data
+    : engineResponse.data?.message || 'Failed to retrieve endpoints';  sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
     }
 
   } catch (err) {
@@ -717,7 +719,7 @@ app.get('/api/tags', async (req, res) => {
 // Add endpoint Flags
 app.post('/api/endpoints/flags/add', async (req, res) => {
   try {
-    const { endpoint_id, path, method, flags } = req.body;
+    const { endpoint_id, flags } = req.body;
     
     if (!flags || !Array.isArray(flags)) {
       return sendError(res, 'Missing flags (must be array)', null, 400);
@@ -731,8 +733,7 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
     const engineRequest = {
       command: "endpoints.flags.add",
       data: {
-        path: path,
-        method: method,
+        endpoint_id : "string",
         flags: flags
       }
     };
@@ -770,8 +771,7 @@ try {
     const engineRequest = {
       command: "endpoints.flags.remove",
       data: {
-        path: path,
-        method: method,
+        endpoint_id : "string",
         flags: flags
       }
     };
@@ -809,8 +809,7 @@ app.post('/api/endpoints/flags/replace', async (req, res) => {
     const engineRequest = {
       command: "endpoints.flags.replace",
       data: {
-        path: path,
-        method: method,
+        endpoint_id : "string",
         flags: flags
       }
     };

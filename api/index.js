@@ -921,6 +921,31 @@ app.post('/api/scan/create', async (req, res) => {
     sendError(res, 'Scan start error', err.message, 500);
   }
 });
+app.post('/api/scan/progress', async (req, res) => {
+  try {
+    const { scan_id } = req.body;
+    if (!scan_id) return sendError(res, 'Missing `scan_id`', null, 400);
+
+    const engineRequest = {
+      command: "scan.progress",
+      data: { scan_id }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'scan.progress executed successfully', engineResponse.data);
+    } else {
+      const errorMsg = typeof engineResponse.data === 'string'
+        ? engineResponse.data
+        : engineResponse.data?.message || 'scan.progress failed';
+      sendError(res, 'scan.progress failed', errorMsg, engineResponse.code || 500);
+    }
+  } catch (err) {
+    console.error('scan.progress error:', err.message);
+    sendError(res, 'scan.progress failed', err.message, 500);
+  }
+});
 
 
 app.use('*', (req, res) => {

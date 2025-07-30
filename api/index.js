@@ -302,7 +302,12 @@ app.get('/', (req, res) => {
       removeFlags: 'POST /api/endpoints/flags/remove',
       replaceFlags: 'POST /api/endpoints/flags/replace',
       listFlags: 'GET /api/flags',
-      createScan: 'POST /api/scan/create'
+      createScan: 'POST /api/scan/create',
+      scanProgress: 'POST /api/scan/progress',
+      scanResults: 'POST /api/scan/results',
+      getHeuristics: 'POST /api/endpoints/heuristics/get',
+      setHeuristics: 'POST /api/endpoints/heuristics/set',
+      exportReport: 'POST /api/report/export'
     }
   });
 });
@@ -921,25 +926,27 @@ app.post('/api/scan/create', async (req, res) => {
     sendError(res, 'Scan start error', err.message, 500);
   }
 });
+
 app.post('/api/scan/progress', async (req, res) => {
   try {
     const { scan_id } = req.body;
+    //validate required fields
     if (!scan_id) return sendError(res, 'Missing `scan_id`', null, 400);
 
+    // Send request to engine with required parameters
     const engineRequest = {
       command: "scan.progress",
       data: { scan_id }
     };
-
+    // Check engine response
     const engineResponse = await sendToEngine(engineRequest);
-
     if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'scan.progress executed successfully', engineResponse.data);
+      sendSuccess(res, 'scan progress checked successfully', engineResponse.data);
     } else {
       const errorMsg = typeof engineResponse.data === 'string'
         ? engineResponse.data
         : engineResponse.data?.message || 'scan.progress failed';
-      sendError(res, 'scan.progress failed', errorMsg, engineResponse.code || 500);
+      sendError(res, 'scan progress check failed', errorMsg, engineResponse.code || 500);
     }
   } catch (err) {
     console.error('scan.progress error:', err.message);
@@ -947,6 +954,85 @@ app.post('/api/scan/progress', async (req, res) => {
   }
 });
 
+app.post('/api/endpoints/heuristics/get', async (req, res) => {
+  try {
+    const { endpoint_id } = req.body;
+    if (!endpoint_id) return sendError(res, 'Missing `endpoint_id`', null, 400);
+
+    const engineRequest = {
+      command: "endpoints.heuristics.get",
+      data: { endpoint_id }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'endpoints.heuristics.get executed successfully', engineResponse.data);
+    } else {
+      const errorMsg = typeof engineResponse.data === 'string'
+        ? engineResponse.data
+        : engineResponse.data?.message || 'endpoints.heuristics.get failed';
+      sendError(res, 'endpoints.heuristics.get failed', errorMsg, engineResponse.code || 500);
+    }
+  } catch (err) {
+    console.error('endpoints.heuristics.get error:', err.message);
+    sendError(res, 'endpoints.heuristics.get failed', err.message, 500);
+  }
+});
+
+app.post('/api/endpoints/heuristics/set', async (req, res) => {
+  try {
+    const { endpoint_id, heuristics } = req.body;
+    if (!endpoint_id) return sendError(res, 'Missing `endpoint_id`', null, 400);
+    if (!heuristics) return sendError(res, 'Missing `heuristics`', null, 400);
+
+    const engineRequest = {
+      command: "endpoints.heuristics.set",
+      data: { endpoint_id, heuristics }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'endpoints.heuristics.set executed successfully', engineResponse.data);
+    } else {
+      const errorMsg = typeof engineResponse.data === 'string'
+        ? engineResponse.data
+        : engineResponse.data?.message || 'endpoints.heuristics.set failed';
+      sendError(res, 'endpoints.heuristics.set failed', errorMsg, engineResponse.code || 500);
+    }
+  } catch (err) {
+    console.error('endpoints.heuristics.set error:', err.message);
+    sendError(res, 'endpoints.heuristics.set failed', err.message, 500);
+  }
+});
+
+app.post('/api/report/export', async (req, res) => {
+  try {
+    const { scan_id, format } = req.body;
+    if (!scan_id) return sendError(res, 'Missing `scan_id`', null, 400);
+    if (!format) return sendError(res, 'Missing `format`', null, 400);
+
+    const engineRequest = {
+      command: "report.export",
+      data: { scan_id, format }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'report.export executed successfully', engineResponse.data);
+    } else {
+      const errorMsg = typeof engineResponse.data === 'string'
+        ? engineResponse.data
+        : engineResponse.data?.message || 'report.export failed';
+      sendError(res, 'report.export failed', errorMsg, engineResponse.code || 500);
+    }
+  } catch (err) {
+    console.error('report.export error:', err.message);
+    sendError(res, 'report.export failed', err.message, 500);
+  }
+});
 
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);

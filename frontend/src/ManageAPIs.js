@@ -1514,30 +1514,7 @@ const ManageAPIs = () => {
                   ))}
                 </ul>
                 <button
-                  onClick={async () => {
-                    setScanLoading(true);
-                    setScanResult(null);
-                    setScanError("");
-                    try {
-                      // Replace this with a real API call to your backend
-                      // Example:
-                      // const res = await fetch('/api/scan', {
-                      //   method: 'POST',
-                      //   headers: { 'Content-Type': 'application/json' },
-                      //   credentials: 'include',
-                      //   body: JSON.stringify({ api_id: scanTargetApi.api_id || scanTargetApi.id, scanType: selectedScanType })
-                      // });
-                      // const data = await res.json();
-                      // if (!res.ok || !data.success) throw new Error(data.message || "Scan failed");
-                      // setScanResult(data.data);
-
-                      // Demo placeholder:
-                      await new Promise(r => setTimeout(r, 1400));
-                      setScanResult(`Scan "${selectedScanType}" completed! (Demo result)`);
-                    } catch (e) {
-                      setScanError(e.message || "Scan failed.");
-                    }
-                    setScanLoading(false);
+                
                   }}
                   disabled={!selectedScanType || scanLoading}
                   style={{

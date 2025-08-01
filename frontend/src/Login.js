@@ -106,83 +106,85 @@ const Login = () => {
   };
 
   return (
-    <div className={`login-container ${animationPhase}`}>
-      <header className="login-header">
-        <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Logo />
-          <span style={{ fontWeight: 700, fontSize: 24, letterSpacing: 2, color: darkMode ? "#fff" : "#222", userSelect: "none" }}>
-            AT-AT
-          </span>
-        </div>
-        <div className="user-info">
-          <button onClick={handleThemeToggle} className="theme-toggle-btn" aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
-            {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-          </button>
-        </div>
-      </header>
-
-      <main className="login-main">
-        <section className="login-form-section" ref={formRef}>
-          <h1>Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your AT-AT account</p>
-
-          <div className="or-separator"><span>Login</span></div>
-
-          {showSuccess && <div className="success-message">✅ Login successful! Redirecting to dashboard...</div>}
-          {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
-
-          <form onSubmit={handleLogin} noValidate>
-            <div className={`form-group ${error && !identifier.trim() ? 'error' : ''}`}>
-              <label htmlFor="identifier">Username or Email:</label>
-              <input
-                type="text"
-                id="identifier"
-                value={identifier}
-                onChange={(e) => handleInputChange('identifier', e.target.value)}
-                disabled={isSubmitting}
-                placeholder="Enter your username or email"
-                required
-                autoComplete="username"
-              />
-            </div>
-            <div className={`form-group ${error && !password ? 'error' : ''}`}>
-              <label htmlFor="password">Password:</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                disabled={isSubmitting}
-                placeholder="Enter your password"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-            <button
-              type="submit"
-              className="login-btn"
-              disabled={isSubmitting || isLoading}
-              ref={submitButtonRef}
-              aria-label={isSubmitting ? 'Signing in...' : 'Sign in'}
-            >
-              {getButtonContent(isSubmitting ? 'Signing In...' : 'Sign In')}
-            </button>
-          </form>
-
-          <div className="login-links">
-            <Link to="/signup" className="create-account-link" aria-label="Create new account">Create Account</Link>
-            <Link to="/forgot-password" className="forgot-password-link" aria-label="Reset forgotten password">Forgot Password?</Link>
+    <div className={`login-page ${darkMode ? 'dark-mode' : ''}`}>
+      <div className={`login-container ${animationPhase}`}>
+        <header className="login-header">
+          <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Logo />
+            <span style={{ fontWeight: 700, fontSize: 24, letterSpacing: 2, color: darkMode ? "#fff" : "#222", userSelect: "none" }}>
+              AT-AT
+            </span>
           </div>
-        </section>
-      </main>
+          <div className="user-info">
+            <button onClick={handleThemeToggle} className="theme-toggle-btn" aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
+              {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            </button>
+          </div>
+        </header>
 
-      <footer className="login-footer">
-        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links">
-          <a href="#" aria-label="Privacy Policy">Privacy Policy</a>
-          <a href="#" aria-label="Terms of Service">Terms of Service</a>
-        </div>
-      </footer>
+        <main className="login-main">
+          <section className="login-form-section" ref={formRef}>
+            <h1>Welcome Back</h1>
+            <p className="login-subtitle">Sign in to your AT-AT account</p>
+
+            <div className="or-separator"><span>Login</span></div>
+
+            {showSuccess && <div className="success-message">✅ Login successful! Redirecting to dashboard...</div>}
+            {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
+
+            <form onSubmit={handleLogin} noValidate>
+              <div className={`form-group ${error && !identifier.trim() ? 'error' : ''}`}>
+                <label htmlFor="identifier">Username or Email:</label>
+                <input
+                  type="text"
+                  id="identifier"
+                  value={identifier}
+                  onChange={(e) => handleInputChange('identifier', e.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Enter your username or email"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+              <div className={`form-group ${error && !password ? 'error' : ''}`}>
+                <label htmlFor="password">Password:</label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Enter your password"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+              <button
+                type="submit"
+                className="login-btn"
+                disabled={isSubmitting || isLoading}
+                ref={submitButtonRef}
+                aria-label={isSubmitting ? 'Signing in...' : 'Sign in'}
+              >
+                {getButtonContent(isSubmitting ? 'Signing In...' : 'Sign In')}
+              </button>
+            </form>
+
+            <div className="login-links">
+              <Link to="/signup" className="create-account-link" aria-label="Create new account">Create Account</Link>
+              <Link to="/forgot-password" className="forgot-password-link" aria-label="Reset forgotten password">Forgot Password?</Link>
+            </div>
+          </section>
+        </main>
+
+        <footer className="login-footer">
+          <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+          <div className="footer-links">
+            <a href="#" aria-label="Privacy Policy">Privacy Policy</a>
+            <a href="#" aria-label="Terms of Service">Terms of Service</a>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 };

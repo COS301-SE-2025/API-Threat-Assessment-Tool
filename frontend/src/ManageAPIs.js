@@ -1572,20 +1572,93 @@ const handleViewEndpoints = async (api) => {
           </div>
         )}
 
-        {/* Scan Modal */}
+       {/* Scan Modal */}
         {isScanModalOpen && scanTargetApi && (
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsScanModalOpen(false)}>
-            <div className="modal-content" style={{ minWidth: 360 }}>
-              <div className="modal-header">
-                <h2>🔍 Scan API: {scanTargetApi.name}</h2>
-                <button onClick={() => setIsScanModalOpen(false)} className="close-btn">×</button>
+          <div className="modal-overlay" style={{
+            background: "rgba(60, 60, 120, 0.70)",
+            backdropFilter: "blur(3px)",
+            zIndex: 1002,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }} onClick={e => e.target === e.currentTarget && setIsScanModalOpen(false)}>
+            <div className="modal-content"
+              style={{
+                minWidth: 380,
+                maxWidth: 440,
+                background: "var(--bg-secondary)",
+                borderRadius: "var(--border-radius)",
+                boxShadow: "0 8px 32px rgba(107,70,193,0.18)",
+                padding: 0,
+                overflow: "hidden",
+                border: "2px solid var(--primary-color)",
+                animation: "slideInUp 0.3s"
+              }}>
+              <div className="modal-header"
+                style={{
+                  background: "linear-gradient(90deg, var(--primary-color) 0%, var(--primary-light) 100%)",
+                  color: "#fff",
+                  padding: "22px 32px 14px 32px",
+                  borderTopLeftRadius: "var(--border-radius)",
+                  borderTopRightRadius: "var(--border-radius)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}>
+                <h2 style={{
+                  fontWeight: 800,
+                  fontSize: 22,
+                  letterSpacing: 1,
+                  margin: 0
+                }}>
+                  🔍 Scan API: <span style={{ color: "#fbbf24" }}>{scanTargetApi.name}</span>
+                </h2>
+                <button onClick={() => setIsScanModalOpen(false)}
+                  className="close-btn"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#fff",
+                    fontSize: 28,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    marginLeft: 12
+                  }}
+                  aria-label="Close">×</button>
               </div>
-              <div style={{ padding: 16 }}>
-                <p>Select a scan type to perform:</p>
-                <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
+              <div style={{ padding: "28px 32px 22px 32px", background: "var(--bg-primary)" }}>
+                <p style={{
+                  fontWeight: 600,
+                  fontSize: 15,
+                  marginBottom: 14,
+                  color: "var(--text-primary)"
+                }}>
+                  Select a scan type to perform:
+                </p>
+                <ul style={{
+                  padding: 0,
+                  margin: 0,
+                  listStyle: 'none',
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px 18px"
+                }}>
                   {SCAN_TYPES.map(type => (
-                    <li key={type} style={{ marginBottom: 8 }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <li key={type}>
+                      <label style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        cursor: scanLoading ? "not-allowed" : "pointer",
+                        background: selectedScanType === type ? "var(--primary-light)" : "var(--bg-secondary)",
+                        border: selectedScanType === type ? "2px solid var(--primary-color)" : "1px solid var(--secondary-color)",
+                        borderRadius: "var(--border-radius-small)",
+                        padding: "8px 10px",
+                        fontWeight: selectedScanType === type ? 700 : 500,
+                        color: selectedScanType === type ? "#fff" : "var(--text-primary)",
+                        boxShadow: selectedScanType === type ? "0 2px 8px #6366f140" : "none",
+                        transition: "all 0.18s"
+                      }}>
                         <input
                           type="radio"
                           name="scan-type"
@@ -1593,7 +1666,12 @@ const handleViewEndpoints = async (api) => {
                           checked={selectedScanType === type}
                           onChange={() => setSelectedScanType(type)}
                           disabled={scanLoading}
-                          style={{ accentColor: "#6366f1" }}
+                          style={{
+                            accentColor: "var(--primary-color)",
+                            width: 18,
+                            height: 18,
+                            marginRight: 2
+                          }}
                         />
                         {type}
                       </label>
@@ -1628,30 +1706,73 @@ const handleViewEndpoints = async (api) => {
                   }}
                   disabled={!selectedScanType || scanLoading}
                   style={{
-                    marginTop: 18,
-                    background: "#34d399",
+                    marginTop: 22,
+                    background: scanLoading ? "var(--success-color)" : "var(--primary-color)",
                     color: "#fff",
-                    borderRadius: 6,
-                    padding: "10px 20px",
-                    fontWeight: 600,
+                    borderRadius: "var(--border-radius-small)",
+                    padding: "12px 0",
+                    fontWeight: 700,
                     border: "none",
-                    cursor: !selectedScanType || scanLoading ? "not-allowed" : "pointer"
+                    fontSize: 16,
+                    width: "100%",
+                    boxShadow: scanLoading ? "none" : "0 2px 8px #34d39940",
+                    cursor: !selectedScanType || scanLoading ? "not-allowed" : "pointer",
+                    transition: "background 0.18s"
                   }}
                 >
-                  {scanLoading ? "Scanning..." : "Run Scan"}
+                  {scanLoading ? (
+                    <span>
+                      <span className="spinner" style={{
+                        display: "inline-block",
+                        width: 18,
+                        height: 18,
+                        border: "3px solid #fff",
+                        borderTop: "3px solid var(--success-color)",
+                        borderRadius: "50%",
+                        marginRight: 8,
+                        verticalAlign: "middle",
+                        animation: "spin .8s linear infinite"
+                      }}></span>
+                      Scanning...
+                    </span>
+                  ) : "Run Scan"}
                 </button>
                 {scanResult && (
-                  <div style={{ marginTop: 12, color: "#10b981", fontWeight: 600 }}>
+                  <div style={{
+                    marginTop: 16,
+                    color: "var(--success-color)",
+                    fontWeight: 700,
+                    background: "#d1fae5",
+                    borderRadius: "var(--border-radius-small)",
+                    padding: "10px 14px",
+                    fontSize: 15,
+                    boxShadow: "0 1px 4px #10b98122"
+                  }}>
                     {scanResult}
                   </div>
                 )}
                 {scanError && (
-                  <div style={{ marginTop: 12, color: "#ef4444", fontWeight: 600 }}>
+                  <div style={{
+                    marginTop: 16,
+                    color: "var(--danger-color)",
+                    fontWeight: 700,
+                    background: "#fee2e2",
+                    borderRadius: "var(--border-radius-small)",
+                    padding: "10px 14px",
+                    fontSize: 15,
+                    boxShadow: "0 1px 4px #ef444422"
+                  }}>
                     ❌ {scanError}
                   </div>
                 )}
               </div>
             </div>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg);}
+                100% { transform: rotate(360deg);}
+              }
+            `}</style>
           </div>
         )}
 

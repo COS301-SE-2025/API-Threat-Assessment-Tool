@@ -69,7 +69,7 @@ async function fetchEndpointDetails({ endpoint_id, path, method }) {
   return data.data;
 }
 
-function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "" }) {
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags }) {
   const [tagInput, setTagInput] = React.useState('');
   const [removeInput, setRemoveInput] = React.useState('');
   const [replaceInput, setReplaceInput] = React.useState('');
@@ -106,6 +106,11 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       const newTags = [...new Set([...currentTags, ...tags])];
       setCurrentTags(newTags);
       
+      // Refresh available tags to include any new tags
+      if (onRefreshTags) {
+        onRefreshTags();
+      }
+      
       if (onTagsAdded) onTagsAdded(tags);
     } catch (err) {
       setMessage('❌ ' + err.message);
@@ -135,6 +140,11 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       const newTags = currentTags.filter(tag => !tags.includes(tag));
       setCurrentTags(newTags);
       
+      // Refresh available tags (some tags might no longer be used anywhere)
+      if (onRefreshTags) {
+        onRefreshTags();
+      }
+      
       if (onTagsRemoved) onTagsRemoved(tags);
     } catch (err) {
       setMessage('❌ ' + err.message);
@@ -162,6 +172,11 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       
       // Update local state immediately
       setCurrentTags(tags);
+      
+      // Refresh available tags to include any new tags and remove unused ones
+      if (onRefreshTags) {
+        onRefreshTags();
+      }
       
       if (onTagsAdded) onTagsAdded(tags); // Or a dedicated onTagsReplaced callback
     } catch (err) {
@@ -462,6 +477,25 @@ const ManageAPIs = () => {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState(null);
 
+  // FIXED: Define refreshAllTags with useCallback and proper dependencies
+  const refreshAllTags = useCallback(async () => {
+    setTagsLoading(true);
+    setTagsError('');
+    try {
+      const tags = await fetchAllTags();
+      setAllTags(Array.isArray(tags) ? tags : []);
+    } catch (e) {
+      setTagsError(e.message || "Failed to fetch tags");
+    } finally {
+      setTagsLoading(false);
+    }
+  }, []); // Empty dependency array since it doesn't depend on any props or state
+
+  // FIXED: Load tags only once when component mounts
+  useEffect(() => {
+    refreshAllTags();
+  }, [refreshAllTags]);
+
   // Safe intersection observer setup
   useEffect(() => {
     try {
@@ -516,15 +550,6 @@ const ManageAPIs = () => {
     } catch (error) {
       console.warn('Error setting up intersection observer:', error);
     }
-  }, []);
-
-  useEffect(() => {
-    setTagsLoading(true);
-    setTagsError('');
-    fetchAllTags()
-      .then(tags => setAllTags(Array.isArray(tags) ? tags : []))
-      .catch(e => setTagsError(e.message || "Failed to fetch tags"))
-      .finally(() => setTagsLoading(false));
   }, []);
 
   const handleViewDetails = async (endpoint) => {
@@ -1489,12 +1514,13 @@ const handleViewEndpoints = async (api) => {
                           <div className="endpoint-summary">{ep.summary || ep.description}</div>
                         ) : null}
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <EndpointTagEditor 
-                            endpoint={ep}
-                            allTags={allTags}
-                            tagsLoading={tagsLoading}
-                            tagsError={tagsError}
-                          />
+                         <EndpointTagEditor 
+                          endpoint={ep}
+                          allTags={allTags}
+                          tagsLoading={tagsLoading}
+                          tagsError={tagsError}
+                          onRefreshTags={refreshAllTags} 
+                        />
                           <button
                             onClick={() => handleViewDetails(ep)}
                             className="action-btn details"

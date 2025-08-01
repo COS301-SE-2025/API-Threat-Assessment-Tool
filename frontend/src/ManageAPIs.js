@@ -545,26 +545,37 @@ const ManageAPIs = () => {
   };
 
   // Safe View Endpoint handler
-  const handleViewEndpoints = async (api) => {
-    setEndpointsLoading(true);
-    setEndpointsError('');
-    setSelectedApiForEndpoints(api);
-    try {
-      const id = api.api_id || api.id;
-      const endpointsData = await fetchApiEndpoints(id);
-      let endpoints = endpointsData;
-      if (endpoints && typeof endpoints === 'object' && Array.isArray(endpoints.endpoints)) {
-        endpoints = endpoints.endpoints;
-      } else if (!Array.isArray(endpoints)) {
-        endpoints = [];
-      }
-      setSelectedApiEndpoints(endpoints);
-    } catch (err) {
-      setEndpointsError(err.message || "Failed to load endpoints");
-      setSelectedApiEndpoints([]);
+ // Updated handleViewEndpoints function
+const handleViewEndpoints = async (api) => {
+  setEndpointsLoading(true);
+  setEndpointsError('');
+  setSelectedApiForEndpoints(api);
+  
+  try {
+    const id = api.api_id || api.id;
+    const endpointsData = await fetchApiEndpoints(id);
+    
+    let endpoints = endpointsData;
+    if (endpoints && typeof endpoints === 'object' && Array.isArray(endpoints.endpoints)) {
+      endpoints = endpoints.endpoints;
+    } else if (!Array.isArray(endpoints)) {
+      endpoints = [];
     }
-    setEndpointsLoading(false);
-  };
+    
+    // Ensure each endpoint has a tags array - this is the key fix
+    const endpointsWithTags = endpoints.map(endpoint => ({
+      ...endpoint,
+      tags: endpoint.tags || [] // Ensure tags is always an array
+    }));
+    
+    setSelectedApiEndpoints(endpointsWithTags);
+  } catch (err) {
+    setEndpointsError(err.message || "Failed to load endpoints");
+    setSelectedApiEndpoints([]);
+  }
+  
+  setEndpointsLoading(false);
+};
 
   const closeEndpointsModal = () => {
     setSelectedApiEndpoints(null);

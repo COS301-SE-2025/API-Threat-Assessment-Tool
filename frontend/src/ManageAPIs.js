@@ -77,6 +77,13 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
   const [removing, setRemoving] = React.useState(false);
   const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
+  // Add state to track current endpoint tags
+  const [currentTags, setCurrentTags] = React.useState(endpoint.tags || []);
+
+  // Update current tags when endpoint changes
+  React.useEffect(() => {
+    setCurrentTags(endpoint.tags || []);
+  }, [endpoint.tags]);
 
   const handleAddTags = async () => {
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
@@ -94,6 +101,11 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       });
       setMessage('✅ Tags added!');
       setTagInput('');
+      
+      // Update local state immediately
+      const newTags = [...new Set([...currentTags, ...tags])];
+      setCurrentTags(newTags);
+      
       if (onTagsAdded) onTagsAdded(tags);
     } catch (err) {
       setMessage('❌ ' + err.message);
@@ -118,6 +130,11 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       });
       setMessage('✅ Tags removed!');
       setRemoveInput('');
+      
+      // Update local state immediately
+      const newTags = currentTags.filter(tag => !tags.includes(tag));
+      setCurrentTags(newTags);
+      
       if (onTagsRemoved) onTagsRemoved(tags);
     } catch (err) {
       setMessage('❌ ' + err.message);
@@ -142,6 +159,10 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
       });
       setMessage('✅ Tags replaced!');
       setReplaceInput('');
+      
+      // Update local state immediately
+      setCurrentTags(tags);
+      
       if (onTagsAdded) onTagsAdded(tags); // Or a dedicated onTagsReplaced callback
     } catch (err) {
       setMessage('❌ ' + err.message);
@@ -152,6 +173,34 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
 
   return (
     <div style={{ marginTop: 8 }}>
+      {/* Display Current Tags */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 4 }}>
+          Current Tags:
+        </div>
+        {currentTags && currentTags.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {currentTags.map(tag => (
+              <span key={tag} style={{
+                display: 'inline-block', 
+                background: "#22c55e", 
+                color: "white",
+                borderRadius: 8, 
+                padding: "2px 8px", 
+                fontSize: 11,
+                fontWeight: 600
+              }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "#999", fontStyle: 'italic' }}>
+            No tags assigned
+          </div>
+        )}
+      </div>
+
       {tagsLoading ? (
         <div style={{ fontSize: 13, color: "#888" }}>Loading tags...</div>
       ) : tagsError ? (
@@ -194,6 +243,7 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
           {adding ? "Adding..." : "Add Tag"}
         </button>
       </div>
+      
       {/* Remove tags */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <input

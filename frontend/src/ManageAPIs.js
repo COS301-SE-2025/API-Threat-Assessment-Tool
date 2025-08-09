@@ -391,7 +391,7 @@ const ManageAPIs = () => {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
-
+  const [pendingFile, setPendingFile] = useState(null);
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
   const location = useLocation?.() || { pathname: '/manage-apis' };
   
@@ -745,56 +745,95 @@ const handleViewEndpoints = async (api) => {
       setError('Error updating field. Please try again.');
     }
   }, []);
-const handleFileUploadInModal = useCallback(async (e) => {
+  
+const handleFileUploadInModal = useCallback((e) => {
   try {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file) {
+      setPendingFile(null);
+      return;
+    }
+    
     if (!file.name.toLowerCase().endsWith('.json') && 
         !file.name.toLowerCase().endsWith('.yaml') && 
         !file.name.toLowerCase().endsWith('.yml')) {
       showMessage('Please upload a JSON, YAML, or YML file.', 'error');
+      setPendingFile(null);
       return;
     }
 
-   setIsLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
+    // Store the file for later upload, don't upload immediately
+    setPendingFile(file);
+    showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
+    
+    // Optionally, you can still parse the file locally to auto-fill form fields
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target.result;
+        let apiData;
 
-    try {
-      const res = await fetch("/api/import", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      const result = await res.json();
-      
-      if (!res.ok || !result.success) {
-        throw new Error(result.message || "Upload failed");
+        // Parse file content based on extension
+        if (file.name.toLowerCase().endsWith('.json')) {
+          try {
+            apiData = JSON.parse(content);
+          } catch (jsonError) {
+            showMessage('Invalid JSON file format.', 'error');
+            return;
+          }
+        } else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+          try {
+            apiData = YAML.parse(content);
+          } catch (yamlError) {
+            showMessage('Invalid YAML file format.', 'error');
+            return;
+          }
+        }
+
+        // Auto-fill form fields based on file content
+        const isOpenAPI = apiData.openapi || apiData.swagger;
+        let name, baseUrl, description;
+
+        if (isOpenAPI) {
+          name = apiData.info?.title || currentApi?.name || '';
+          baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
+          description = apiData.info?.description || currentApi?.description || '';
+        } else {
+          name = apiData.name || currentApi?.name || '';
+          baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
+          description = apiData.description || currentApi?.description || '';
+        }
+
+        // Update form fields with parsed data
+        setCurrentApi(prev => ({
+          ...prev,
+          name: name,
+          baseUrl: baseUrl,
+          description: description,
+          status: apiData.status || prev?.status || 'Active'
+        }));
+
+        showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
+      } catch (error) {
+        console.error('Error parsing file:', error);
+        showMessage('Error parsing file content.', 'error');
       }
+    };
 
-      const { filename, api_id } = result.data;
-      
-      // Update form with imported data
-      setCurrentApi(prev => ({
-        ...prev,
-        name: filename.replace(/\.[^/.]+$/, ''),
-        description: `Imported from ${filename}`,
-        api_id: api_id,
-        filename: filename
-      }));
+    reader.onerror = () => {
+      showMessage('Error reading file.', 'error');
+    };
 
-      showMessage(`✅ File "${filename}" uploaded and processed!`, "success");
-    } catch (err) {
-      showMessage(err.message || "Upload failed", "error");
-    } finally {
-      setIsLoading(false);
-    }
+    reader.readAsText(file);
   } catch (error) {
-    console.error('Error in file upload handler:', error);
+    console.error('Error in file selection handler:', error);
     showMessage('Error processing file. Please try again.', 'error');
   }
-}, [showMessage]);
+}, [currentApi, showMessage]);
+
+
+
+
   // ----------- IMPORT API MODAL (BACKEND) -----------
   const handleImportAPISubmit = async (e) => {
     e.preventDefault();
@@ -846,62 +885,102 @@ const handleFileUploadInModal = useCallback(async (e) => {
   };
 
   // Safe API save handler
-  const handleSaveApi = useCallback(async () => {
-    try {
-      if (!currentApi) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      // Validate required fields
-      if (!currentApi.name?.trim()) {
-        setError('API name is required');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!currentApi.baseUrl?.trim()) {
-        setError('Base URL is required');
-        setIsLoading(false);
-        return;
-      }
-
-      // Simulate API save delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (currentApi.id) {
-        // Update existing API
-        setApis(prevApis => 
-          prevApis.map(api => 
-            api.id === currentApi.id ? { 
-              ...currentApi, 
-              lastScanned: api.lastScanned || 'Never' 
-            } : api
-          )
-        );
-        showMessage(`✅ API "${currentApi.name}" updated successfully!`, 'success');
-      } else {
-        // Add new API
-        const newApi = {
-          ...currentApi,
-          id: Math.max(...apis.map(a => a.id), 0) + 1,
-          lastScanned: 'Never',
-          scanCount: 0,
-          lastScanResult: 'Pending'
-        };
-        setApis(prevApis => [...prevApis, newApi]);
-        showMessage(`✅ API "${currentApi.name}" added successfully!`, 'success');
-      }
-      
-      setIsModalOpen(false);
-      setCurrentApi(null);
-    } catch (error) {
-      console.error('Error saving API:', error);
-      setError('Failed to save API. Please try again.');
-    } finally {
+const handleSaveApi = useCallback(async () => {
+  try {
+    if (!currentApi) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    // Validate required fields
+    if (!currentApi.name?.trim()) {
+      setError('API name is required');
       setIsLoading(false);
+      return;
     }
-  }, [currentApi, apis, showMessage]);
+    
+    if (!currentApi.baseUrl?.trim()) {
+      setError('Base URL is required');
+      setIsLoading(false);
+      return;
+    }
+
+    let apiToSave = { ...currentApi };
+
+    // If there's a pending file, upload it first
+    if (pendingFile) {
+      try {
+        showMessage(`🔄 Uploading file "${pendingFile.name}"...`, 'info');
+        
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+
+        const res = await fetch("/api/import", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        
+        const result = await res.json();
+        
+        if (!res.ok || !result.success) {
+          throw new Error(result.message || "Upload failed");
+        }
+
+        const { filename, api_id } = result.data;
+        
+        // Update API data with upload results
+        apiToSave = {
+          ...apiToSave,
+          api_id: api_id,
+          filename: filename
+        };
+
+        showMessage(`✅ File "${filename}" uploaded successfully!`, "success");
+      } catch (uploadError) {
+        setError(`File upload failed: ${uploadError.message}`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Simulate API save delay (replace with your actual API call)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (apiToSave.id) {
+      // Update existing API
+      setApis(prevApis => 
+        prevApis.map(api => 
+          api.id === apiToSave.id ? { 
+            ...apiToSave, 
+            lastScanned: api.lastScanned || 'Never' 
+          } : api
+        )
+      );
+      showMessage(`✅ API "${apiToSave.name}" updated successfully!`, 'success');
+    } else {
+      // Add new API
+      const newApi = {
+        ...apiToSave,
+        id: Math.max(...apis.map(a => a.id), 0) + 1,
+        lastScanned: 'Never',
+        scanCount: 0,
+        lastScanResult: 'Pending'
+      };
+      setApis(prevApis => [...prevApis, newApi]);
+      showMessage(`✅ API "${apiToSave.name}" added successfully!`, 'success');
+    }
+    
+    setIsModalOpen(false);
+    setCurrentApi(null);
+    setPendingFile(null); // Clear the pending file
+  } catch (error) {
+    console.error('Error saving API:', error);
+    setError('Failed to save API. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}, [currentApi, apis, showMessage, pendingFile]);
 
   // Safe delete confirmation handler
   const confirmDelete = useCallback(async () => {

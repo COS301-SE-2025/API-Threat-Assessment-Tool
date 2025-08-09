@@ -570,12 +570,11 @@ const ManageAPIs = () => {
   };
 
   // Safe View Endpoint handler
- // Updated handleViewEndpoints function
 const handleViewEndpoints = async (api) => {
   setEndpointsLoading(true);
   setEndpointsError('');
   setSelectedApiForEndpoints(api);
-  
+
   try {
     const id = api.api_id || api.id;
     const endpointsData = await fetchApiEndpoints(id);
@@ -594,13 +593,18 @@ const handleViewEndpoints = async (api) => {
     }));
     
     setSelectedApiEndpoints(endpointsWithTags);
+    
+    // Force fetchAllTags to run and update the tags
+    await refreshAllTags();  // Force reload of all tags
+    
   } catch (err) {
     setEndpointsError(err.message || "Failed to load endpoints");
     setSelectedApiEndpoints([]);
   }
-  
+
   setEndpointsLoading(false);
 };
+
 
   const closeEndpointsModal = () => {
     setSelectedApiEndpoints(null);

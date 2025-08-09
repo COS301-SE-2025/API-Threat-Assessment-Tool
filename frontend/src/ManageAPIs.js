@@ -745,7 +745,56 @@ const handleViewEndpoints = async (api) => {
       setError('Error updating field. Please try again.');
     }
   }, []);
+const handleFileUploadInModal = useCallback(async (e) => {
+  try {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    if (!file.name.toLowerCase().endsWith('.json') && 
+        !file.name.toLowerCase().endsWith('.yaml') && 
+        !file.name.toLowerCase().endsWith('.yml')) {
+      showMessage('Please upload a JSON, YAML, or YML file.', 'error');
+      return;
+    }
+
+   setIsLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/import", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const result = await res.json();
+      
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Upload failed");
+      }
+
+      const { filename, api_id } = result.data;
+      
+      // Update form with imported data
+      setCurrentApi(prev => ({
+        ...prev,
+        name: filename.replace(/\.[^/.]+$/, ''),
+        description: `Imported from ${filename}`,
+        api_id: api_id,
+        filename: filename
+      }));
+
+      showMessage(`✅ File "${filename}" uploaded and processed!`, "success");
+    } catch (err) {
+      showMessage(err.message || "Upload failed", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  } catch (error) {
+    console.error('Error in file upload handler:', error);
+    showMessage('Error processing file. Please try again.', 'error');
+  }
+}, [showMessage]);
   // ----------- IMPORT API MODAL (BACKEND) -----------
   const handleImportAPISubmit = async (e) => {
     e.preventDefault();
@@ -1273,112 +1322,112 @@ const handleViewEndpoints = async (api) => {
         </main>
 
         {/* Add/Edit API Modal */}
-        {isModalOpen && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
-            <div className="modal-content">
-              <div className="modal-header">
-                <h2>{currentApi?.id ? '✏️ Edit API' : '➕ Add New API'}</h2>
-                <button onClick={() => setIsModalOpen(false)} className="close-btn">×</button>
-              </div>
-              
-              <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
-                <div className="form-group">
-                  <label htmlFor="api-name">API Name *</label>
-                  <input
-                    id="api-name"
-                    type="text"
-                    name="name"
-                    value={currentApi?.name || ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g., E-commerce API"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="base-url">Base URL *</label>
-                  <input
-                    id="base-url"
-                    type="url"
-                    name="baseUrl"
-                    value={currentApi?.baseUrl || ''}
-                    onChange={handleInputChange}
-                    placeholder="https://api.example.com/v1"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-description">Description</label>
-                  <textarea
-                    id="api-description"
-                    name="description"
-                    value={currentApi?.description || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    placeholder="Brief description of this API..."
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-status">Status</label>
-                  <select
-                    id="api-status"
-                    name="status"
-                    value={currentApi?.status || 'Active'}
-                    onChange={handleInputChange}
-                  >
-                    <option value="Active">✅ Active</option>
-                    <option value="Inactive">⏸️ Inactive</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-file">Import from File</label>
-                  <div 
-                    className={`file-upload-area ${dragActive ? 'dragover' : ''}`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => document.getElementById('api-file')?.click()}
-                  >
-                    <div className="upload-icon">📁</div>
-                    <div className="upload-text">Drop JSON file here or click to browse</div>
-                    <div className="upload-hint">Upload a JSON file with API configuration</div>
-                  </div>
-                  <input
-                    id="api-file"
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <small>JSON format: {"{ \"name\": \"API Name\", \"baseUrl\": \"https://...\", \"description\": \"...\" }"}</small>
-                </div>
-              </form>
-              
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)} 
-                  className="cancel-btn"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveApi}
-                  className="save-btn"
-                  disabled={isLoading}
-                >
-                  {isLoading ? '⏳ Saving...' : (currentApi?.id ? '💾 Update API' : '➕ Add API')}
-                </button>
-              </div>
-            </div>
+{/* Add/Edit API Modal */}
+{isModalOpen && (
+  <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+    <div className="modal-content">
+      <div className="modal-header">
+        <h2>{currentApi?.id ? '✏️ Edit API' : '➕ Add New API'}</h2>
+        <button onClick={() => setIsModalOpen(false)} className="close-btn">×</button>
+      </div>
+      
+      <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-group">
+          <label htmlFor="api-name">API Name *</label>
+          <input
+            id="api-name"
+            type="text"
+            name="name"
+            value={currentApi?.name || ''}
+            onChange={handleInputChange}
+            placeholder="e.g., E-commerce API"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="base-url">Base URL *</label>
+          <input
+            id="base-url"
+            type="url"
+            name="baseUrl"
+            value={currentApi?.baseUrl || ''}
+            onChange={handleInputChange}
+            placeholder="https://api.example.com/v1"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-description">Description</label>
+          <textarea
+            id="api-description"
+            name="description"
+            value={currentApi?.description || ''}
+            onChange={handleInputChange}
+            rows="3"
+            placeholder="Brief description of this API..."
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-status">Status</label>
+          <select
+            id="api-status"
+            name="status"
+            value={currentApi?.status || 'Active'}
+            onChange={handleInputChange}
+          >
+            <option value="Active">✅ Active</option>
+            <option value="Inactive">⏸️ Inactive</option>
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-file">Import from File (Optional)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              id="api-file"
+              type="file"
+              accept=".json,.yaml,.yml"
+              onChange={handleFileUploadInModal}
+              style={{
+                padding: "8px",
+                background: "#23232b",
+                color: "#fff",
+                borderRadius: 7,
+                fontWeight: 600,
+                border: "1px solid #444"
+              }}
+            />
+            <small style={{ color: "#888", fontSize: "12px" }}>
+              Upload OpenAPI/Swagger .json/.yaml/.yml file to auto-fill fields
+            </small>
           </div>
-        )}
+        </div>
+      </form>
+      
+      <div className="modal-actions">
+        <button 
+          type="button" 
+          onClick={() => setIsModalOpen(false)} 
+          className="cancel-btn"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveApi}
+          className="save-btn"
+          disabled={isLoading}
+        >
+          {isLoading ? '⏳ Saving...' : (currentApi?.id ? '💾 Update API' : '➕ Add API')}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Delete Confirmation Modal */}
         {isDeleteConfirmOpen && (

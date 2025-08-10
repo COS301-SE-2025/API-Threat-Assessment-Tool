@@ -3,3 +3,10 @@
     "multer": "^2.0.1"
   }
 }
+
+{
+  "scripts": {
+    "lint": "npm run lint --workspace=api"
+  }
+}
+

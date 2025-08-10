@@ -156,7 +156,8 @@
    MAIN CONTAINER STYLES WITH ANIMATIONS
    ======================================== */
 
-.login-page .login-container {
+/* Fixed: Remove .login-page dependency and make it more specific */
+.login-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -168,12 +169,13 @@
   transition: color 0.3s ease;
 }
 
-.dark-mode .login-page .login-container {
+.dark-mode .login-container {
   color: #e0e0e0;
   animation: themeTransition 0.4s ease-out;
 }
 
-.login-page .login-container::before {
+/* Fixed: Correct selector for background image */
+.login-container::before {
   content: '';
   position: absolute;
   top: 0;
@@ -187,7 +189,7 @@
   transition: filter 0.3s ease;
 }
 
-.dark-mode .login-page .login-container::before {
+.dark-mode .login-container::before {
   filter: blur(5px) brightness(0.7);
   animation: darkBackgroundBlur 1s ease-out;
 }
@@ -196,7 +198,7 @@
    HEADER STYLES WITH ANIMATIONS
    ======================================== */
 
-.login-header {
+.login-container .login-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -208,12 +210,12 @@
   backdrop-filter: blur(10px);
 }
 
-.dark-mode .login-header {
+.dark-mode .login-container .login-header {
   background: rgba(45, 45, 45, 0.9);
   border-bottom: 1px solid #444;
 }
 
-.logo {
+.login-container .logo {
   font-size: 1.5em;
   font-weight: bold;
   color: #6b46c1;
@@ -221,22 +223,22 @@
   animation: slideInFromTop 0.6s ease-out;
 }
 
-.logo:hover {
+.login-container .logo:hover {
   transform: scale(1.05);
 }
 
-.dark-mode .logo {
+.dark-mode .login-container .logo {
   color: #a3bffa;
 }
 
-.user-info {
+.login-container .user-info {
   display: flex;
   align-items: center;
   gap: 10px;
   animation: slideInFromTop 0.7s ease-out;
 }
 
-.theme-toggle-btn {
+.login-container .theme-toggle-btn {
   background: none;
   border: 1px solid #6b46c1;
   color: #6b46c1;
@@ -248,7 +250,7 @@
   overflow: hidden;
 }
 
-.theme-toggle-btn::before {
+.login-container .theme-toggle-btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -259,27 +261,27 @@
   transition: left 0.5s ease;
 }
 
-.theme-toggle-btn:hover::before {
+.login-container .theme-toggle-btn:hover::before {
   left: 100%;
 }
 
-.dark-mode .theme-toggle-btn {
+.dark-mode .login-container .theme-toggle-btn {
   border-color: #a3bffa;
   color: #a3bffa;
   background: rgba(51, 51, 51, 0.5);
 }
 
-.theme-toggle-btn:hover {
+.login-container .theme-toggle-btn:hover {
   background: #f0f0f0;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.dark-mode .theme-toggle-btn:hover {
+.dark-mode .login-container .theme-toggle-btn:hover {
   background: rgba(68, 68, 68, 0.7);
 }
 
-.theme-toggle-btn:active {
+.login-container .theme-toggle-btn:active {
   animation: buttonPress 0.2s ease;
 }
 
@@ -287,7 +289,7 @@
    MAIN CONTENT AREA ANIMATIONS
    ======================================== */
 
-.login-main {
+.login-container .login-main {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -296,7 +298,7 @@
   animation: fadeInScale 0.8s ease-out 0.2s both;
 }
 
-.login-form-section {
+.login-container .login-form-section {
   background: rgba(255, 255, 255, 0.95);
   padding: 30px;
   border-radius: 10px;
@@ -309,21 +311,21 @@
   backdrop-filter: blur(10px);
 }
 
-.login-form-section:hover {
+.login-container .login-form-section:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.dark-mode .login-form-section {
+.dark-mode .login-container .login-form-section {
   background: rgba(45, 45, 45, 0.95);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.dark-mode .login-form-section:hover {
+.dark-mode .login-container .login-form-section:hover {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
-.login-form-section h1 {
+.login-container .login-form-section h1 {
   font-size: 2em;
   color: #333;
   margin-bottom: 10px;
@@ -331,11 +333,11 @@
   transition: color 0.3s ease;
 }
 
-.dark-mode .login-form-section h1 {
+.dark-mode .login-container .login-form-section h1 {
   color: #e0e0e0;
 }
 
-.login-subtitle {
+.login-container .login-subtitle {
   color: #666;
   margin-bottom: 25px;
   font-size: 0.95em;
@@ -343,7 +345,7 @@
   transition: color 0.3s ease;
 }
 
-.dark-mode .login-subtitle {
+.dark-mode .login-container .login-subtitle {
   color: #a3a3a3;
 }
 
@@ -351,7 +353,7 @@
    GOOGLE LOGIN BUTTON ANIMATIONS
    ======================================== */
 
-.google-login-btn {
+.login-container .google-login-btn {
   width: 100%;
   display: flex;
   align-items: center;
@@ -373,7 +375,7 @@
   overflow: hidden;
 }
 
-.google-login-btn::before {
+.login-container .google-login-btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -384,48 +386,48 @@
   transition: left 0.6s ease;
 }
 
-.google-login-btn:hover::before {
+.login-container .google-login-btn:hover::before {
   left: 100%;
 }
 
-.dark-mode .google-login-btn {
+.dark-mode .login-container .google-login-btn {
   background: #2d3748;
   border-color: #4a5568;
   color: #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.google-login-btn:hover:not(:disabled) {
+.login-container .google-login-btn:hover:not(:disabled) {
   background: #f8f9fa;
   border-color: #c1c5c9;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
 
-.dark-mode .google-login-btn:hover:not(:disabled) {
+.dark-mode .login-container .google-login-btn:hover:not(:disabled) {
   background: #374151;
   border-color: #6b7280;
   transform: translateY(-2px);
 }
 
-.google-login-btn:active {
+.login-container .google-login-btn:active {
   animation: buttonPress 0.2s ease;
 }
 
-.google-login-btn:disabled {
+.login-container .google-login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   animation: pulse 1.5s infinite;
 }
 
-.google-login-btn img {
+.login-container .google-login-btn img {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
 
-.google-login-btn:hover:not(:disabled) img {
+.login-container .google-login-btn:hover:not(:disabled) img {
   transform: rotate(360deg);
 }
 
@@ -433,14 +435,14 @@
    OR SEPARATOR WITH ANIMATION
    ======================================== */
 
-.or-separator {
+.login-container .or-separator {
   position: relative;
   margin: 20px 0;
   text-align: center;
   animation: fadeInScale 0.5s ease-out 0.8s both;
 }
 
-.or-separator::before {
+.login-container .or-separator::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -451,11 +453,11 @@
   transition: all 0.3s ease;
 }
 
-.dark-mode .or-separator::before {
+.dark-mode .login-container .or-separator::before {
   background: #444;
 }
 
-.or-separator span {
+.login-container .or-separator span {
   background: rgba(255, 255, 255, 0.95);
   color: #666;
   padding: 0 15px;
@@ -464,7 +466,7 @@
   transition: all 0.3s ease;
 }
 
-.dark-mode .or-separator span {
+.dark-mode .login-container .or-separator span {
   background: rgba(45, 45, 45, 0.95);
   color: #a3a3a3;
 }
@@ -473,7 +475,7 @@
    ERROR MESSAGE ANIMATIONS
    ======================================== */
 
-.error-message {
+.login-container .error-message {
   background: #fee;
   border: 1px solid #fcc;
   color: #c33;
@@ -485,7 +487,7 @@
   transition: all 0.3s ease;
 }
 
-.dark-mode .error-message {
+.dark-mode .login-container .error-message {
   background: #4a1e1e;
   border-color: #6b2c2c;
   color: #f87171;
@@ -495,17 +497,17 @@
    FORM ELEMENTS WITH ANIMATIONS
    ======================================== */
 
-.form-group {
+.login-container .form-group {
   margin-bottom: 15px;
   text-align: left;
   animation: slideInFromBottom 0.5s ease-out calc(0.9s + var(--delay, 0s)) both;
 }
 
-.form-group:nth-child(1) { --delay: 0s; }
-.form-group:nth-child(2) { --delay: 0.1s; }
-.form-group:nth-child(3) { --delay: 0.2s; }
+.login-container .form-group:nth-child(1) { --delay: 0s; }
+.login-container .form-group:nth-child(2) { --delay: 0.1s; }
+.login-container .form-group:nth-child(3) { --delay: 0.2s; }
 
-.form-group label {
+.login-container .form-group label {
   display: block;
   font-size: 1em;
   color: #333;
@@ -513,11 +515,11 @@
   transition: all 0.3s ease;
 }
 
-.dark-mode .form-group label {
+.dark-mode .login-container .form-group label {
   color: #e0e0e0;
 }
 
-.form-group input {
+.login-container .form-group input {
   width: 100%;
   padding: 10px;
   border: 1px solid #e0e0e0;
@@ -530,25 +532,25 @@
   position: relative;
 }
 
-.form-group input:focus {
+.login-container .form-group input:focus {
   outline: none;
   border-color: #6b46c1;
   animation: inputFocus 0.3s ease-out both;
   transform: translateY(-2px);
 }
 
-.dark-mode .form-group input {
+.dark-mode .login-container .form-group input {
   background: #3d3d3d;
   border-color: #555;
   color: #e0e0e0;
 }
 
-.dark-mode .form-group input:focus {
+.dark-mode .login-container .form-group input:focus {
   border-color: #a3bffa;
   animation: darkInputFocus 0.3s ease-out both;
 }
 
-.dark-mode .form-group input::placeholder {
+.dark-mode .login-container .form-group input::placeholder {
   color: #a3a3a3;
 }
 
@@ -556,7 +558,7 @@
    LOGIN BUTTON ANIMATIONS
    ======================================== */
 
-.login-btn {
+.login-container .login-btn {
   width: 100%;
   padding: 12px;
   background: #6b46c1;
@@ -573,7 +575,7 @@
   overflow: hidden;
 }
 
-.login-btn::before {
+.login-container .login-btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -584,30 +586,30 @@
   transition: left 0.6s ease;
 }
 
-.login-btn:hover:not(:disabled)::before {
+.login-container .login-btn:hover:not(:disabled)::before {
   left: 100%;
 }
 
-.dark-mode .login-btn {
+.dark-mode .login-container .login-btn {
   background: #7a5cd1;
 }
 
-.login-btn:hover:not(:disabled) {
+.login-container .login-btn:hover:not(:disabled) {
   background: #5a3da0;
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
 }
 
-.dark-mode .login-btn:hover:not(:disabled) {
+.dark-mode .login-container .login-btn:hover:not(:disabled) {
   background: #6a4ac1;
   box-shadow: 0 6px 20px rgba(122, 92, 209, 0.4);
 }
 
-.login-btn:active {
+.login-container .login-btn:active {
   animation: buttonPress 0.2s ease;
 }
 
-.login-btn:disabled {
+.login-container .login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   animation: pulse 1.5s infinite;
@@ -617,7 +619,7 @@
    DEMO SECTION ANIMATIONS
    ======================================== */
 
-.demo-section {
+.login-container .demo-section {
   margin: 20px 0;
   padding: 20px;
   background: rgba(240, 240, 240, 0.5);
@@ -627,45 +629,45 @@
   transition: all 0.3s ease;
 }
 
-.demo-section:hover {
+.login-container .demo-section:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.dark-mode .demo-section {
+.dark-mode .login-container .demo-section {
   background: rgba(60, 60, 60, 0.5);
   border-color: #555;
 }
 
-.demo-section h3 {
+.login-container .demo-section h3 {
   color: #333;
   margin-bottom: 8px;
   font-size: 1.1em;
   transition: color 0.3s ease;
 }
 
-.dark-mode .demo-section h3 {
+.dark-mode .login-container .demo-section h3 {
   color: #e0e0e0;
 }
 
-.demo-section p {
+.login-container .demo-section p {
   color: #666;
   margin-bottom: 15px;
   font-size: 0.9em;
   transition: color 0.3s ease;
 }
 
-.dark-mode .demo-section p {
+.dark-mode .login-container .demo-section p {
   color: #a3a3a3;
 }
 
-.demo-buttons {
+.login-container .demo-buttons {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.demo-btn {
+.login-container .demo-btn {
   padding: 8px 12px;
   background: #f0f0f0;
   border: 1px solid #ccc;
@@ -675,12 +677,14 @@
   transition: all 0.3s ease;
   color: #333;
   animation: slideInFromBottom 0.4s ease-out calc(1.4s + var(--btn-delay, 0s)) both;
+  position: relative;
+  overflow: hidden;
 }
 
-.demo-btn:nth-child(1) { --btn-delay: 0s; }
-.demo-btn:nth-child(2) { --btn-delay: 0.1s; }
+.login-container .demo-btn:nth-child(1) { --btn-delay: 0s; }
+.login-container .demo-btn:nth-child(2) { --btn-delay: 0.1s; }
 
-.demo-btn::before {
+.login-container .demo-btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -691,33 +695,33 @@
   transition: left 0.5s ease;
 }
 
-.demo-btn:hover:not(:disabled)::before {
+.login-container .demo-btn:hover:not(:disabled)::before {
   left: 100%;
 }
 
-.dark-mode .demo-btn {
+.dark-mode .login-container .demo-btn {
   background: #4a4a4a;
   border-color: #666;
   color: #e0e0e0;
 }
 
-.demo-btn:hover:not(:disabled) {
+.login-container .demo-btn:hover:not(:disabled) {
   background: #e8e8e8;
   border-color: #bbb;
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.dark-mode .demo-btn:hover:not(:disabled) {
+.dark-mode .login-container .demo-btn:hover:not(:disabled) {
   background: #5a5a5a;
   border-color: #777;
 }
 
-.demo-btn:active {
+.login-container .demo-btn:active {
   animation: buttonPress 0.2s ease;
 }
 
-.demo-btn:disabled {
+.login-container .demo-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   animation: pulse 1.5s infinite;
@@ -727,15 +731,15 @@
    LOGIN LINKS ANIMATIONS
    ======================================== */
 
-.login-links {
+.login-container .login-links {
   margin-top: 15px;
   display: flex;
   justify-content: space-between;
   animation: fadeInScale 0.5s ease-out 1.5s both;
 }
 
-.create-account-link,
-.forgot-password-link {
+.login-container .create-account-link,
+.login-container .forgot-password-link {
   color: #6b46c1;
   text-decoration: none;
   font-size: 0.9em;
@@ -743,8 +747,8 @@
   position: relative;
 }
 
-.create-account-link::after,
-.forgot-password-link::after {
+.login-container .create-account-link::after,
+.login-container .forgot-password-link::after {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -755,23 +759,23 @@
   transition: width 0.3s ease;
 }
 
-.create-account-link:hover::after,
-.forgot-password-link:hover::after {
+.login-container .create-account-link:hover::after,
+.login-container .forgot-password-link:hover::after {
   width: 100%;
 }
 
-.dark-mode .create-account-link,
-.dark-mode .forgot-password-link {
+.dark-mode .login-container .create-account-link,
+.dark-mode .login-container .forgot-password-link {
   color: #a3bffa;
 }
 
-.dark-mode .create-account-link::after,
-.dark-mode .forgot-password-link::after {
+.dark-mode .login-container .create-account-link::after,
+.dark-mode .login-container .forgot-password-link::after {
   background: #a3bffa;
 }
 
-.create-account-link:hover,
-.forgot-password-link:hover {
+.login-container .create-account-link:hover,
+.login-container .forgot-password-link:hover {
   text-decoration: none;
   transform: translateY(-1px);
 }
@@ -780,7 +784,7 @@
    FOOTER ANIMATIONS
    ======================================== */
 
-.login-footer {
+.login-container .login-footer {
   text-align: center;
   padding: 10px;
   background: #333;
@@ -790,15 +794,15 @@
   transition: background 0.3s ease;
 }
 
-.dark-mode .login-footer {
+.dark-mode .login-container .login-footer {
   background: #222;
 }
 
-.footer-links {
+.login-container .footer-links {
   margin-top: 5px;
 }
 
-.footer-links a {
+.login-container .footer-links a {
   color: white;
   margin: 0 10px;
   text-decoration: none;
@@ -806,7 +810,7 @@
   position: relative;
 }
 
-.footer-links a::after {
+.login-container .footer-links a::after {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -817,11 +821,11 @@
   transition: width 0.3s ease;
 }
 
-.footer-links a:hover::after {
+.login-container .footer-links a:hover::after {
   width: 100%;
 }
 
-.footer-links a:hover {
+.login-container .footer-links a:hover {
   text-decoration: none;
   transform: translateY(-1px);
 }
@@ -830,7 +834,7 @@
    LOADING STATES AND SPECIAL ANIMATIONS
    ======================================== */
 
-.loading-spinner {
+.login-container .loading-spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -841,23 +845,23 @@
   margin-right: 8px;
 }
 
-.dark-mode .loading-spinner {
+.dark-mode .login-container .loading-spinner {
   border-color: #444;
   border-top-color: #a3bffa;
 }
 
 /* Form validation animation */
-.form-group.error input {
+.login-container .form-group.error input {
   border-color: #e53e3e;
   animation: shake 0.5s ease-in-out;
 }
 
-.dark-mode .form-group.error input {
+.dark-mode .login-container .form-group.error input {
   border-color: #f87171;
 }
 
 /* Success animation */
-.success-message {
+.login-container .success-message {
   background: #e6fffa;
   border: 1px solid #38d9a9;
   color: #065f46;
@@ -868,7 +872,7 @@
   animation: slideInFromTop 0.5s ease-out;
 }
 
-.dark-mode .success-message {
+.dark-mode .login-container .success-message {
   background: #1a3636;
   border-color: #38d9a9;
   color: #6ee7b7;
@@ -879,32 +883,32 @@
    ======================================== */
 
 @media (max-width: 768px) {
-  .login-form-section {
+  .login-container .login-form-section {
     padding: 20px;
     animation: slideInFromBottom 0.4s ease-out 0.2s both;
   }
 
-  .login-form-section h1 {
+  .login-container .login-form-section h1 {
     font-size: 1.5em;
   }
 
-  .login-links {
+  .login-container .login-links {
     flex-direction: column;
     gap: 10px;
   }
 
-  .demo-buttons {
+  .login-container .demo-buttons {
     gap: 6px;
   }
 
   /* Reduce animation intensity on mobile */
-  .login-form-section:hover {
+  .login-container .login-form-section:hover {
     transform: translateY(-2px);
   }
   
-  .google-login-btn:hover:not(:disabled),
-  .login-btn:hover:not(:disabled),
-  .demo-btn:hover:not(:disabled) {
+  .login-container .google-login-btn:hover:not(:disabled),
+  .login-container .login-btn:hover:not(:disabled),
+  .login-container .demo-btn:hover:not(:disabled) {
     transform: translateY(-1px);
   }
 }
@@ -925,10 +929,10 @@
     animation: none;
   }
   
-  .login-form-section:hover,
-  .google-login-btn:hover:not(:disabled),
-  .login-btn:hover:not(:disabled),
-  .demo-btn:hover:not(:disabled) {
+  .login-container .login-form-section:hover,
+  .login-container .google-login-btn:hover:not(:disabled),
+  .login-container .login-btn:hover:not(:disabled),
+  .login-container .demo-btn:hover:not(:disabled) {
     transform: none;
   }
 }

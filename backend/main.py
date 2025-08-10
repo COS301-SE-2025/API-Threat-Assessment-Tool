@@ -6,7 +6,7 @@ from core.report_generator import ReportGenerator
 from core.scan_manager import ScanManager
 from core.result_manager import ResultManager
 from utils.query import success, bad_request, not_found, server_error, connection_test, response, HTTPCode
-
+from typing import Dict, Any, List
 
 import socket
 import json
@@ -16,38 +16,17 @@ import os
 HOST = '127.0.0.1'
 PORT = 9011
 
-scan_manager = ScanManager()
-result_manager = ResultManager()
+scan_manager = ""
+result_manager = ""
 CLIENT_STORE = {}
 API_METADATA = {}
 
 # temporary
 # All connected users will share access to the same api that was loaded
-# 
 GLOBAL_API_CLIENT = None  
-GLOBAL_CLIENT_ID = None   
+GLOBAL_CLIENT_ID = None
+GLOBAL_SCAN_MANAGER = None
 
-
-# === Implemented ===
-
-def create_scan(request):
-    client_id = request.get("client_id")
-    profile = request.get("scan_profile", "default")
-    client = CLIENT_STORE.get(client_id)
-
-    if not client:
-        return not_found(f"No APIClient found for ID {client_id}")
-
-    try:
-        scanner = scan_manager.create_scanner(client, profile)
-        results = scanner.run_tests()
-        result_manager.store_results(profile, results)
-        return success({"results_count": len(results)})
-    except Exception as e:
-        return server_error(str(e))
-
-# === Skeletons ===
-# Move skeletons to implemented once done
 
 
 # === Auth ===
@@ -78,7 +57,7 @@ CLIENT_STORE = {}
 GLOBAL_API_CLIENT = None
 GLOBAL_CLIENT_ID = None
 
-API_METADATA = {}  # ✅ Add this if not declared
+API_METADATA = {} 
 
 def import_file(request):
     global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
@@ -106,6 +85,7 @@ def import_file(request):
 
         GLOBAL_API_CLIENT = api_client
         GLOBAL_CLIENT_ID = client_id
+        GLOBAL_SCAN_MANAGER = ScanManager(api_client)
 
         return response(HTTPCode.SUCCESS, {"client_id": client_id})
     except Exception as e:
@@ -175,7 +155,7 @@ def update_api(request):
             meta[key] = updates[key]
             setattr(client, key, updates[key])
 
-    return success({ "message": "API metadata updated." })  # ✅ Fix: return data
+    return success({ "message": "API metadata updated." }) 
 
 
 def delete_api(request):
@@ -193,7 +173,7 @@ def delete_api(request):
         GLOBAL_CLIENT_ID = None
         GLOBAL_API_CLIENT = None
 
-    return success({ "message": "API deleted." })  # ✅ Fix: return data
+    return success({ "message": "API deleted." })  #Fix: return data
 
 
 def import_url(request): 
@@ -317,19 +297,163 @@ def get_all_tags(request):
 
     return response(HTTPCode.SUCCESS, {"tags": list(all_tags)})
 
+def add_flags(request):
+    global GLOBAL_API_CLIENT
+
+    path = request.get("data", {}).get("path")
+    method = request.get("data", {}).get("method")
+    flag = request.get("data", {}).get("flag")
+
+    if not path or not method or not tags:
+        return bad_request("Missing 'path', 'method', or 'flags'")
+
+    for ep in GLOBAL_API_CLIENT.endpoints:
+        if ep.path == path and ep.method == method:
+            ep.add_flag(flag)
+            return response(HTTPCode.SUCCESS, {"flags": ep.flags})
+
+    return not_found("Endpoint not found")
+
+def remove_flags(request):
+    global GLOBAL_API_CLIENT
+
+    path = request.get("data", {}).get("path")
+    method = request.get("data", {}).get("method")
+    flag = request.get("data", {}).get("flag")
+
+    if not path or not method or not tags:
+        return bad_request("Missing 'path', 'method', or 'flags'")
+
+    for ep in GLOBAL_API_CLIENT.endpoints:
+        if ep.path == path and ep.method == method:
+            ep.remove_flag(flag)
+            return response(HTTPCode.SUCCESS, {"flags": ep.flags})
+
+    return not_found("Endpoint not found")
 
 # === Scans ===
-def get_scan_results(request): 
-    return server_error("Not yet implemented")
+def create_scan(request):
+    client_id = request.get("client_id")
+    scan_profile = request.get("scan_profile", "OWASP_API_10")
+    # client = CLIENT_STORE.get(client_id)
+    client = GLOBAL_CLIENT_ID # temp
+
+    if not client:
+        return not_found(f"{client_id} not found")
+
+    try:
+        scanner = GLOBAL_SCAN_MANAGER.createScan(scan_profile)
+        return success({"New Scan create"})
+    except Exception as e:
+        return server_error(str(e))
 
 def start_scan(request): 
-    return server_error("Not yet implemented")
+    api_name= request.get("api_name")
+    scan_profile = request.get("scan_profile", "OWASP_API_10")
+
+    if not api_name:
+        return not_found(f"{api_name} not found")
+
+    try:
+        scan_id = GLOBAL_SCAN_MANAGER.runScan(scan_profile)
+        return success({"scan_id": scan_id})
+    except Exception as e:
+        return server_error(str(e))
+
+def scan_progress(request):
+    scan_id= request.get("scan_id")
+
+    if not scan_id:
+        return not_found(f"{scan_id} not found")
+
+    return success({"scan_id": scan_id, "endpoints_remaining": 0})
+    
 
 def stop_scan(request): 
-    return server_error("Not yet implemented")
+    scan_id= request.get("scan_id")
 
-def get_all_scans(request): 
-    return server_error("Not yet implemented")
+    if not scan_id:
+        return not_found(f"{scan_id} not found")
+
+    return success({f"{scan_id} stopped"})
+
+def get_scan_result(request):
+    scan_id= request.get("scan_id")
+
+    if not scan_id:
+        return not_found(f"{scan_id} missing")
+
+    try:
+        scans = GLOBAL_SCAN_MANAGER.get_scan(scan_id)
+
+        if not scans:
+            return not_found(f"{scan_id} not found")
+
+        scan_results = [{
+        "endpoint_id": scan.endpoint.id,
+        "vulnerability_name": scan.vulnerability_name,
+        "severity": scan.severity,
+        "cvss_score": float(scan.cvss_score),
+        "description": scan.description,
+        "recommendation": scan.recommendation,
+        "evidence": scan.evidence,
+        "test_name": scan.test_name,
+        "affected_params": scan.affected_params,
+        "timestamp": scan.timestamp,
+        } for scan in scans]
+        
+
+        return success({"result": scan_results})
+
+    except Exception as e:
+        return server_error(str(e))
+
+def get_all_scans(request):
+    scan_id = request.get("scan_id")
+
+    if not scan_id:
+        return not_found("scan_id missing")
+
+    try:
+        all_scans = GLOBAL_SCAN_MANAGER.get_all_scans()
+
+        if not all_scans:
+            return not_found("no scans found")
+
+        result_map = {}
+
+        for sid, scans in all_scans.items():
+            if not scans:
+                continue
+
+            scan_results = []
+            for scan in scans:
+                scan_results.append({
+                    "endpoint_id":        scan.endpoint.id,
+                    "vulnerability_name": scan.vulnerability_name,
+                    "severity":           scan.severity,
+                    "cvss_score":         float(scan.cvss_score),
+                    "description":        scan.description,
+                    "recommendation":     scan.recommendation,
+                    "evidence":           scan.evidence,
+                    "test_name":          scan.test_name,
+                    "affected_params":    scan.affected_params,
+                    "timestamp": (
+                        scan.timestamp.isoformat()
+                        if isinstance(scan.timestamp, datetime)
+                        else str(scan.timestamp)
+                    ),
+                })
+
+            result_map[sid] = scan_results
+
+        if not result_map:
+            return not_found("no populated scan results")
+
+        return success({"result": result_map})
+
+    except Exception as exc:
+        return server_error(str(exc))
 
 # === Repots ===
 def get_all_reports(request): 
@@ -447,6 +571,13 @@ def handle_request(request: dict):
         response = get_all_tags(request)
         return response
 
+    elif command == "endpoints.flags.add":
+        response = add_tags(request)
+        return response
+
+    elif command == "endpoints.flags.remove":
+        response = remove_tags(request)
+
     elif command == "scan.create":
         response = create_scan(request)
         return response
@@ -513,7 +644,7 @@ def handle_request(request: dict):
 
     else:
         return bad_request(f"Unknown command '{command}'")
-
+        
 def run_server():
     print(f"[ATAT] Listening on {HOST}:{PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

@@ -1,5 +1,8 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ThemeContext } from './App';
+import { useAuth } from './AuthContext';
+import Logo from './components/Logo';
 import './ManageAPIs.css';
 export {
   fetchAllTags,
@@ -293,37 +296,7 @@ function loadApisFromLocal() {
 }
 
 
-// Safe imports with fallbacks
-let ThemeContext, useAuth, Logo;
 
-try {
-  const AppModule = require('./App');
-  ThemeContext = AppModule.ThemeContext || React.createContext({ darkMode: false, toggleDarkMode: () => {} });
-} catch {
-  ThemeContext = React.createContext({ darkMode: false, toggleDarkMode: () => {} });
-}
-
-try {
-  const AuthModule = require('./AuthContext');
-  useAuth = AuthModule.useAuth || (() => ({ 
-    currentUser: null, 
-    logout: () => {}, 
-    getUserFullName: () => 'User' 
-  }));
-} catch {
-  useAuth = () => ({ 
-    currentUser: { firstName: 'Demo' }, 
-    logout: () => {}, 
-    getUserFullName: () => 'Demo User' 
-  });
-}
-
-try {
-  const LogoModule = require('./components/Logo');
-  Logo = LogoModule.default || (() => React.createElement('div', { style: { width: 32, height: 32, background: '#6b46c1', borderRadius: '50%' } }));
-} catch {
-  Logo = () => React.createElement('div', { style: { width: 32, height: 32, background: '#6b46c1', borderRadius: '50%' } });
-}
 
 const ManageAPIs = () => {
   // Safe hooks with error handling

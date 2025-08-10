@@ -1096,8 +1096,10 @@ app.post('/api/endpoints', async (req, res) => {
     if (engineResponse.code === 200 || engineResponse.code === '200') {
       sendSuccess(res, 'Endpoints retrieved successfully', engineResponse.data);
     } else {
-      const errorMsg = engineResponse.data || 'Failed to retrieve endpoints';
-      sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
+    const errorMsg =
+  typeof engineResponse.data === 'string'
+    ? engineResponse.data
+    : engineResponse.data?.message || 'Failed to retrieve endpoints';  sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
     }
 
   } catch (err) {

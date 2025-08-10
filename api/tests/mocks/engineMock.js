@@ -67,6 +67,8 @@ class MockEngine {
             console.log(`Mock Engine received: ${request.command}`);
             
             const response = this.handleRequest(request);
+            console.log(`Mock Engine responding with code: ${response.code}`);
+            
             socket.write(JSON.stringify(response));
             socket.end();
           } catch (err) {
@@ -80,13 +82,23 @@ class MockEngine {
               code: 500,
               data: err.message
             };
-            socket.write(JSON.stringify(errorResponse));
-            socket.end();
+            
+            try {
+              socket.write(JSON.stringify(errorResponse));
+              socket.end();
+            } catch (writeErr) {
+              console.error('Failed to write error response:', writeErr);
+              socket.destroy();
+            }
           }
         });
 
         socket.on('error', (err) => {
           console.error('Mock Engine socket error:', err);
+        });
+
+        socket.on('close', () => {
+          // Connection closed, cleanup if needed
         });
       });
 
@@ -118,35 +130,46 @@ class MockEngine {
   }
 
   handleRequest(request) {
-    const { command, data } = request;
+    try {
+      const { command, data } = request;
 
-    switch (command) {
-      case 'apis.import_file':
-        return this.handleImportFile(data);
-      
-      case 'endpoints.list':
-        return this.handleListEndpoints(data);
-      
-      case 'endpoints.details':
-        return this.handleEndpointDetails(data);
-      
-      case 'endpoints.tags.add':
-        return this.handleAddTags(data);
-      
-      case 'endpoints.tags.remove':
-        return this.handleRemoveTags(data);
-      
-      case 'endpoints.tags.replace':
-        return this.handleReplaceTags(data);
-      
-      case 'tags.list':
-        return this.handleListTags(data);
-      
-      default:
-        return {
-          code: 400,
-          data: `Unknown command: ${command}`
-        };
+      console.log(`Mock Engine handling command: ${command} with data:`, data);
+
+      switch (command) {
+        case 'apis.import_file':
+          return this.handleImportFile(data);
+        
+        case 'endpoints.list':
+          return this.handleListEndpoints(data);
+        
+        case 'endpoints.details':
+          return this.handleEndpointDetails(data);
+        
+        case 'endpoints.tags.add':
+          return this.handleAddTags(data);
+        
+        case 'endpoints.tags.remove':
+          return this.handleRemoveTags(data);
+        
+        case 'endpoints.tags.replace':
+          return this.handleReplaceTags(data);
+        
+        case 'tags.list':
+          return this.handleListTags(data);
+        
+        default:
+          console.log(`Mock Engine: Unknown command: ${command}`);
+          return {
+            code: 400,
+            data: `Unknown command: ${command}`
+          };
+      }
+    } catch (error) {
+      console.error('Mock Engine error handling request:', error);
+      return {
+        code: 500,
+        data: `Mock Engine error: ${error.message}`
+      };
     }
   }
 
@@ -188,10 +211,19 @@ class MockEngine {
   }
 
   handleEndpointDetails(data) {
+    // Handle undefined/null data gracefully
+    if (!data) {
+      return {
+        code: 400,
+        data: 'Missing request data'
+      };
+    }
+
     const { id, path, method } = data;
     
     // Match Python backend validation order: path/method first, then id
     if (!path || !method) {
+      console.log(`Mock: Missing path (${path}) or method (${method})`);
       return {
         code: 400,
         data: 'Missing \'path\' or \'method\''
@@ -199,6 +231,7 @@ class MockEngine {
     }
     
     if (!id) {
+      console.log(`Mock: Missing id (${id})`);
       return {
         code: 400,
         data: 'Missing \'id\''
@@ -212,8 +245,21 @@ class MockEngine {
       };
     }
 
-    const endpoint = this.mockData.globalApi.endpoints.find(ep => ep.id === id);
+    // Try to find by ID first
+    let endpoint = this.mockData.globalApi.endpoints.find(ep => ep.id === id);
+    
+    // If not found by ID, try to find by path and method as fallback
     if (!endpoint) {
+      endpoint = this.mockData.globalApi.endpoints.find(
+        ep => ep.path === path && ep.method === method
+      );
+    }
+
+    if (!endpoint) {
+      console.log(`Mock: No endpoint found for id=${id}, path=${path}, method=${method}`);
+      console.log(`Mock: Available endpoints:`, this.mockData.globalApi.endpoints.map(ep => 
+        `{id: ${ep.id}, path: ${ep.path}, method: ${ep.method}}`
+      ));
       return {
         code: 404,
         data: 'Endpoint not found'
@@ -248,6 +294,10 @@ class MockEngine {
     );
 
     if (!endpoint) {
+      console.log(`Mock: No endpoint found for path=${path}, method=${method}`);
+      console.log(`Mock: Available endpoints:`, this.mockData.globalApi.endpoints.map(ep => 
+        `{path: ${ep.path}, method: ${ep.method}}`
+      ));
       return {
         code: 404,
         data: 'Endpoint not found'

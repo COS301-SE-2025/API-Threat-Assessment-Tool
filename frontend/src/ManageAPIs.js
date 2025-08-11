@@ -1361,45 +1361,31 @@ const handleSaveApi = useCallback(async () => {
           </select>
         </div>
         
-        <div className="form-group">
-          <label htmlFor="api-file">Import from File (Optional)</label>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              border: "2px dashed #444",
-              borderRadius: 7,
-              padding: "12px",
-              textAlign: "center",
-              background: dragActive ? "#2c2c36" : "#23232b",
-              transition: "background 0.3s ease"
-            }}
-            onDragEnter={handleDrag}
-            onDragOver={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-          >
-            <input
-              id="api-file"
-              type="file"
-              accept=".json,.yaml,.yml"
-              onChange={handleFileUploadInModal}
-              style={{
-                padding: "8px",
-                background: "transparent",
-                color: "#fff",
-                borderRadius: 7,
-                fontWeight: 600,
-                border: "none",
-                cursor: "pointer"
-              }}
-            />
-            <small style={{ color: "#aaa" }}>
-              Drag & drop your file here or click to select.
-            </small>
+      <div className="form-group">
+        <label htmlFor="api-file">Import from File </label>
+        <div
+          className={`file-upload-zone ${dragActive ? 'active' : ''}`}
+          onClick={() => document.getElementById('api-file').click()}
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            id="api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            onChange={handleFileUploadInModal}
+            style={{ display: "none" }}
+          />
+          <div className="file-upload-content">
+            <i className="fas fa-cloud-upload-alt upload-icon"></i>
+            <p>Drag & drop your file here, or <span className="file-select-text">click to browse</span></p>
+            {pendingFile && <p className="file-name">📄 {pendingFile.name}</p>}
           </div>
         </div>
+      </div>
+
 
       </form>
       

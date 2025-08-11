@@ -1383,3 +1383,35 @@
 .dark-mode .endpoint-path {
   color: var(--primary-light);
 }
+.file-upload-zone {
+  border: 2px dashed #555;
+  background: #1c1c23;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.file-upload-zone.active {
+  background: #262630;
+  border-color: #7f5af0;
+}
+
+.file-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.file-select-text {
+  color: #7f5af0;
+  font-weight: 600;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  color: #aaa;
+}

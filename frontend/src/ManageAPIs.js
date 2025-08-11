@@ -752,91 +752,97 @@ const handleViewEndpoints = async (api) => {
     }
   }, []);
   
-const handleFileUploadInModal = useCallback((e) => {
-  try {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setPendingFile(null);
-      return;
-    }
-    
-    if (!file.name.toLowerCase().endsWith('.json') && 
-        !file.name.toLowerCase().endsWith('.yaml') && 
-        !file.name.toLowerCase().endsWith('.yml')) {
-      showMessage('Please upload a JSON, YAML, or YML file.', 'error');
-      setPendingFile(null);
-      return;
-    }
-
-    // Store the file for later upload, don't upload immediately
-    setPendingFile(file);
-    showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
-    
-    // Optionally, you can still parse the file locally to auto-fill form fields
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target.result;
-        let apiData;
-
-        // Parse file content based on extension
-        if (file.name.toLowerCase().endsWith('.json')) {
-          try {
-            apiData = JSON.parse(content);
-          } catch (jsonError) {
-            showMessage('Invalid JSON file format.', 'error');
-            return;
-          }
-        } else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
-          try {
-            apiData = YAML.parse(content);
-          } catch (yamlError) {
-            showMessage('Invalid YAML file format.', 'error');
-            return;
-          }
-        }
-
-        // Auto-fill form fields based on file content
-        const isOpenAPI = apiData.openapi || apiData.swagger;
-        let name, baseUrl, description;
-
-        if (isOpenAPI) {
-          name = apiData.info?.title || currentApi?.name || '';
-          baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
-          description = apiData.info?.description || currentApi?.description || '';
-        } else {
-          name = apiData.name || currentApi?.name || '';
-          baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
-          description = apiData.description || currentApi?.description || '';
-        }
-
-        // Update form fields with parsed data
-        setCurrentApi(prev => ({
-          ...prev,
-          name: prev?.name?.trim() ? prev.name : name,
-          baseUrl: prev?.baseUrl?.trim() ? prev.baseUrl : baseUrl,
-          description: prev?.description?.trim() ? prev.description : description,
-          status: apiData.status || prev?.status || 'Active'
-        }));
-
-        showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
-      } catch (error) {
-        console.error('Error parsing file:', error);
-        showMessage('Error parsing file content.', 'error');
-      }
-    };
-
-    reader.onerror = () => {
-      showMessage('Error reading file.', 'error');
-    };
-
-    reader.readAsText(file);
-  } catch (error) {
-    console.error('Error in file selection handler:', error);
-    showMessage('Error processing file. Please try again.', 'error');
+// Drag state handler
+const handleDrag = useCallback((e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.type === 'dragenter' || e.type === 'dragover') {
+    setDragActive(true);
+  } else if (e.type === 'dragleave') {
+    setDragActive(false);
   }
+}, []);
+
+// Process file (shared for both click-upload & drag-drop)
+const processFile = useCallback((file) => {
+  if (!file) {
+    setPendingFile(null);
+    return;
+  }
+  
+  if (!file.name.toLowerCase().endsWith('.json') && 
+      !file.name.toLowerCase().endsWith('.yaml') && 
+      !file.name.toLowerCase().endsWith('.yml')) {
+    showMessage('Please upload a JSON, YAML, or YML file.', 'error');
+    setPendingFile(null);
+    return;
+  }
+
+  setPendingFile(file);
+  showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target.result;
+      let apiData;
+
+      if (file.name.toLowerCase().endsWith('.json')) {
+        apiData = JSON.parse(content);
+      } else {
+        apiData = YAML.parse(content);
+      }
+
+      const isOpenAPI = apiData.openapi || apiData.swagger;
+      let name, baseUrl, description;
+
+      if (isOpenAPI) {
+        name = apiData.info?.title || currentApi?.name || '';
+        baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
+        description = apiData.info?.description || currentApi?.description || '';
+      } else {
+        name = apiData.name || currentApi?.name || '';
+        baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
+        description = apiData.description || currentApi?.description || '';
+      }
+
+      setCurrentApi(prev => ({
+        ...prev,
+        name: prev?.name?.trim() ? prev.name : name,
+        baseUrl: prev?.baseUrl?.trim() ? prev.baseUrl : baseUrl,
+        description: prev?.description?.trim() ? prev.description : description,
+        status: apiData.status || prev?.status || 'Active'
+      }));
+
+      showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      showMessage('Error parsing file content.', 'error');
+    }
+  };
+
+  reader.onerror = () => {
+    showMessage('Error reading file.', 'error');
+  };
+
+  reader.readAsText(file);
 }, [currentApi, showMessage]);
 
+// Click-upload
+const handleFileUploadInModal = useCallback((e) => {
+  processFile(e.target.files?.[0]);
+}, [processFile]);
+
+// Drop-upload
+const handleDrop = useCallback((e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragActive(false);
+  
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    processFile(e.dataTransfer.files[0]);
+  }
+}, [processFile]);
 
 
 
@@ -1010,16 +1016,7 @@ const handleSaveApi = useCallback(async () => {
     }
   }, [apiToDelete, showMessage]);
 
-  // Safe file upload handlers
-  const handleDrag = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
+
 
 
 
@@ -1366,7 +1363,23 @@ const handleSaveApi = useCallback(async () => {
         
         <div className="form-group">
           <label htmlFor="api-file">Import from File (Optional)</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              border: "2px dashed #444",
+              borderRadius: 7,
+              padding: "12px",
+              textAlign: "center",
+              background: dragActive ? "#2c2c36" : "#23232b",
+              transition: "background 0.3s ease"
+            }}
+            onDragEnter={handleDrag}
+            onDragOver={handleDrag}
+            onDragLeave={handleDrag}
+            onDrop={handleDrop}
+          >
             <input
               id="api-file"
               type="file"
@@ -1374,18 +1387,20 @@ const handleSaveApi = useCallback(async () => {
               onChange={handleFileUploadInModal}
               style={{
                 padding: "8px",
-                background: "#23232b",
+                background: "transparent",
                 color: "#fff",
                 borderRadius: 7,
                 fontWeight: 600,
-                border: "1px solid #444"
+                border: "none",
+                cursor: "pointer"
               }}
             />
-            <small style={{ color: "#888", fontSize: "12px" }}>
-              Upload OpenAPI/Swagger .json/.yaml/.yml file to auto-fill fields
+            <small style={{ color: "#aaa" }}>
+              Drag & drop your file here or click to select.
             </small>
           </div>
         </div>
+
       </form>
       
       <div className="modal-actions">

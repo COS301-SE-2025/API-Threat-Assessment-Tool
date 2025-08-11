@@ -5,3 +5,4 @@ openapi-spec-validator
 PyYAML
 jwt
 psycopg2
+python-dotenv

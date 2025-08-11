@@ -1,8 +1,8 @@
 flask
-unittest
 requests
 openapi-spec-validator
 PyYAML
-jwt
+PyJWT
 psycopg2
 python-dotenv
+pytest

@@ -1450,73 +1450,103 @@ const handleSaveApi = useCallback(async () => {
             </div>
           </div>
         )}
+{/* Import API Modal */}
+{isImportModalOpen && (
+  <div
+    className="modal-overlay"
+    onClick={(e) => e.target === e.currentTarget && setIsImportModalOpen(false)}
+  >
+    <div className="modal-content" style={{ minWidth: 380 }}>
+      <div className="modal-header">
+        <h2>⬆️ Import API Spec</h2>
+        <button onClick={() => setIsImportModalOpen(false)} className="close-btn">
+          ×
+        </button>
+      </div>
 
-        {/* Import API Modal */}
-        {isImportModalOpen && (
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsImportModalOpen(false)}>
-            <div className="modal-content" style={{ minWidth: 380 }}>
-              <div className="modal-header">
-                <h2>⬆️ Import API Spec</h2>
-                <button onClick={() => setIsImportModalOpen(false)} className="close-btn">×</button>
-              </div>
-              <form
-                className="modal-form"
-                style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 10 }}
-                onSubmit={handleImportAPISubmit}
-              >
-                <label style={{ fontWeight: 600 }}>
-                  <span>Choose .json, .yaml, or .yml file:</span>
-                  <input
-                    id="import-api-file"
-                    type="file"
-                    accept=".json,.yaml,.yml"
-                    style={{
-                      marginTop: 8,
-                      padding: "7px",
-                      background: "#23232b",
-                      color: "#fff",
-                      borderRadius: 7,
-                      fontWeight: 600,
-                    }}
-                    disabled={importLoading}
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={importLoading}
-                  style={{
-                    background: "#6366f1",
-                    color: "#fff",
-                    borderRadius: 7,
-                    fontWeight: 700,
-                    padding: "12px 0",
-                    fontSize: 16,
-                    marginTop: 10,
-                    cursor: importLoading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  {importLoading ? "Uploading..." : "Import & Add API"}
-                </button>
-                {importError && (
-                  <div style={{
-                    background: "#ef444420",
-                    color: "#f87171",
-                    borderRadius: 8,
-                    marginTop: 10,
-                    padding: "8px 12px",
-                    fontWeight: 600
-                  }}>
-                    ❌ {importError}
-                  </div>
-                )}
-              </form>
-              <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
-                Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
-                After import, you can edit API details.
-              </div>
-            </div>
+      <form
+        className="modal-form"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+          marginTop: 10
+        }}
+        onSubmit={handleImportAPISubmit}
+      >
+        <label style={{ fontWeight: 600, marginBottom: -8 }}>
+          Choose .json, .yaml, or .yml file:
+        </label>
+
+        {/* Drag & Drop Zone */}
+        <div
+          className={`file-drop-zone ${dragActive ? "active" : ""}`}
+          onClick={() => document.getElementById("import-api-file").click()}
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            id="import-api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            style={{ display: "none" }}
+            onChange={handleFileUploadInModal}
+            disabled={importLoading}
+          />
+          <p style={{ margin: 0, color: "#aaa" }}>
+            Drag & drop your file here or{" "}
+            <span style={{ color: "#6366f1", fontWeight: 600 }}>click to select</span>
+          </p>
+          {pendingFile && (
+            <p style={{ marginTop: 6, color: "#fff" }}>
+              📄 {pendingFile.name}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={importLoading}
+          style={{
+            background: "#6366f1",
+            color: "#fff",
+            borderRadius: 7,
+            fontWeight: 700,
+            padding: "12px 0",
+            fontSize: 16,
+            marginTop: 10,
+            cursor: importLoading ? "not-allowed" : "pointer"
+          }}
+        >
+          {importLoading ? "Uploading..." : "Import & Add API"}
+        </button>
+
+        {importError && (
+          <div
+            style={{
+              background: "#ef444420",
+              color: "#f87171",
+              borderRadius: 8,
+              marginTop: 10,
+              padding: "8px 12px",
+              fontWeight: 600
+            }}
+          >
+            ❌ {importError}
           </div>
         )}
+      </form>
+
+      <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
+        Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
+        After import, you can edit API details.
+      </div>
+    </div>
+  </div>
+)}
+
 
         {/* Endpoints Modal */}
         {selectedApiEndpoints !== null && (

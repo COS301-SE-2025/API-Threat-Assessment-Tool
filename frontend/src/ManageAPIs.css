@@ -1415,3 +1415,17 @@
   font-size: 0.9rem;
   color: #aaa;
 }
+.file-drop-zone {
+  border: 2px dashed #444;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  background: #23232b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-drop-zone.active {
+  background: #2c2c36;
+  border-color: #6366f1;
+}

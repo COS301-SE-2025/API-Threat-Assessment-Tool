@@ -391,7 +391,7 @@ const ManageAPIs = () => {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
-
+  const [pendingFile, setPendingFile] = useState(null);
   const navigate = useNavigate?.() || { push: () => {}, replace: () => {} };
   const location = useLocation?.() || { pathname: '/manage-apis' };
   
@@ -570,12 +570,11 @@ const ManageAPIs = () => {
   };
 
   // Safe View Endpoint handler
- // Updated handleViewEndpoints function
 const handleViewEndpoints = async (api) => {
   setEndpointsLoading(true);
   setEndpointsError('');
   setSelectedApiForEndpoints(api);
-  
+
   try {
     const id = api.api_id || api.id;
     const endpointsData = await fetchApiEndpoints(id);
@@ -594,13 +593,18 @@ const handleViewEndpoints = async (api) => {
     }));
     
     setSelectedApiEndpoints(endpointsWithTags);
+    
+    // Force fetchAllTags to run and update the tags
+    await refreshAllTags();  // Force reload of all tags
+    
   } catch (err) {
     setEndpointsError(err.message || "Failed to load endpoints");
     setSelectedApiEndpoints([]);
   }
-  
+
   setEndpointsLoading(false);
 };
+
 
   const closeEndpointsModal = () => {
     setSelectedApiEndpoints(null);
@@ -741,6 +745,94 @@ const handleViewEndpoints = async (api) => {
       setError('Error updating field. Please try again.');
     }
   }, []);
+  
+const handleFileUploadInModal = useCallback((e) => {
+  try {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setPendingFile(null);
+      return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.json') && 
+        !file.name.toLowerCase().endsWith('.yaml') && 
+        !file.name.toLowerCase().endsWith('.yml')) {
+      showMessage('Please upload a JSON, YAML, or YML file.', 'error');
+      setPendingFile(null);
+      return;
+    }
+
+    // Store the file for later upload, don't upload immediately
+    setPendingFile(file);
+    showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
+    
+    // Optionally, you can still parse the file locally to auto-fill form fields
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target.result;
+        let apiData;
+
+        // Parse file content based on extension
+        if (file.name.toLowerCase().endsWith('.json')) {
+          try {
+            apiData = JSON.parse(content);
+          } catch (jsonError) {
+            showMessage('Invalid JSON file format.', 'error');
+            return;
+          }
+        } else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+          try {
+            apiData = YAML.parse(content);
+          } catch (yamlError) {
+            showMessage('Invalid YAML file format.', 'error');
+            return;
+          }
+        }
+
+        // Auto-fill form fields based on file content
+        const isOpenAPI = apiData.openapi || apiData.swagger;
+        let name, baseUrl, description;
+
+        if (isOpenAPI) {
+          name = apiData.info?.title || currentApi?.name || '';
+          baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
+          description = apiData.info?.description || currentApi?.description || '';
+        } else {
+          name = apiData.name || currentApi?.name || '';
+          baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
+          description = apiData.description || currentApi?.description || '';
+        }
+
+        // Update form fields with parsed data
+        setCurrentApi(prev => ({
+          ...prev,
+          name: name,
+          baseUrl: baseUrl,
+          description: description,
+          status: apiData.status || prev?.status || 'Active'
+        }));
+
+        showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
+      } catch (error) {
+        console.error('Error parsing file:', error);
+        showMessage('Error parsing file content.', 'error');
+      }
+    };
+
+    reader.onerror = () => {
+      showMessage('Error reading file.', 'error');
+    };
+
+    reader.readAsText(file);
+  } catch (error) {
+    console.error('Error in file selection handler:', error);
+    showMessage('Error processing file. Please try again.', 'error');
+  }
+}, [currentApi, showMessage]);
+
+
+
 
   // ----------- IMPORT API MODAL (BACKEND) -----------
   const handleImportAPISubmit = async (e) => {
@@ -793,62 +885,102 @@ const handleViewEndpoints = async (api) => {
   };
 
   // Safe API save handler
-  const handleSaveApi = useCallback(async () => {
-    try {
-      if (!currentApi) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      // Validate required fields
-      if (!currentApi.name?.trim()) {
-        setError('API name is required');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!currentApi.baseUrl?.trim()) {
-        setError('Base URL is required');
-        setIsLoading(false);
-        return;
-      }
-
-      // Simulate API save delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (currentApi.id) {
-        // Update existing API
-        setApis(prevApis => 
-          prevApis.map(api => 
-            api.id === currentApi.id ? { 
-              ...currentApi, 
-              lastScanned: api.lastScanned || 'Never' 
-            } : api
-          )
-        );
-        showMessage(`✅ API "${currentApi.name}" updated successfully!`, 'success');
-      } else {
-        // Add new API
-        const newApi = {
-          ...currentApi,
-          id: Math.max(...apis.map(a => a.id), 0) + 1,
-          lastScanned: 'Never',
-          scanCount: 0,
-          lastScanResult: 'Pending'
-        };
-        setApis(prevApis => [...prevApis, newApi]);
-        showMessage(`✅ API "${currentApi.name}" added successfully!`, 'success');
-      }
-      
-      setIsModalOpen(false);
-      setCurrentApi(null);
-    } catch (error) {
-      console.error('Error saving API:', error);
-      setError('Failed to save API. Please try again.');
-    } finally {
+const handleSaveApi = useCallback(async () => {
+  try {
+    if (!currentApi) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    // Validate required fields
+    if (!currentApi.name?.trim()) {
+      setError('API name is required');
       setIsLoading(false);
+      return;
     }
-  }, [currentApi, apis, showMessage]);
+    
+    if (!currentApi.baseUrl?.trim()) {
+      setError('Base URL is required');
+      setIsLoading(false);
+      return;
+    }
+
+    let apiToSave = { ...currentApi };
+
+    // If there's a pending file, upload it first
+    if (pendingFile) {
+      try {
+        showMessage(`🔄 Uploading file "${pendingFile.name}"...`, 'info');
+        
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+
+        const res = await fetch("/api/import", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        
+        const result = await res.json();
+        
+        if (!res.ok || !result.success) {
+          throw new Error(result.message || "Upload failed");
+        }
+
+        const { filename, api_id } = result.data;
+        
+        // Update API data with upload results
+        apiToSave = {
+          ...apiToSave,
+          api_id: api_id,
+          filename: filename
+        };
+
+        showMessage(`✅ File "${filename}" uploaded successfully!`, "success");
+      } catch (uploadError) {
+        setError(`File upload failed: ${uploadError.message}`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Simulate API save delay (replace with your actual API call)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (apiToSave.id) {
+      // Update existing API
+      setApis(prevApis => 
+        prevApis.map(api => 
+          api.id === apiToSave.id ? { 
+            ...apiToSave, 
+            lastScanned: api.lastScanned || 'Never' 
+          } : api
+        )
+      );
+      showMessage(`✅ API "${apiToSave.name}" updated successfully!`, 'success');
+    } else {
+      // Add new API
+      const newApi = {
+        ...apiToSave,
+        id: Math.max(...apis.map(a => a.id), 0) + 1,
+        lastScanned: 'Never',
+        scanCount: 0,
+        lastScanResult: 'Pending'
+      };
+      setApis(prevApis => [...prevApis, newApi]);
+      showMessage(`✅ API "${apiToSave.name}" added successfully!`, 'success');
+    }
+    
+    setIsModalOpen(false);
+    setCurrentApi(null);
+    setPendingFile(null); // Clear the pending file
+  } catch (error) {
+    console.error('Error saving API:', error);
+    setError('Failed to save API. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}, [currentApi, apis, showMessage, pendingFile]);
 
   // Safe delete confirmation handler
   const confirmDelete = useCallback(async () => {
@@ -1269,112 +1401,112 @@ const handleViewEndpoints = async (api) => {
         </main>
 
         {/* Add/Edit API Modal */}
-        {isModalOpen && (
-          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
-            <div className="modal-content">
-              <div className="modal-header">
-                <h2>{currentApi?.id ? '✏️ Edit API' : '➕ Add New API'}</h2>
-                <button onClick={() => setIsModalOpen(false)} className="close-btn">×</button>
-              </div>
-              
-              <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
-                <div className="form-group">
-                  <label htmlFor="api-name">API Name *</label>
-                  <input
-                    id="api-name"
-                    type="text"
-                    name="name"
-                    value={currentApi?.name || ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g., E-commerce API"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="base-url">Base URL *</label>
-                  <input
-                    id="base-url"
-                    type="url"
-                    name="baseUrl"
-                    value={currentApi?.baseUrl || ''}
-                    onChange={handleInputChange}
-                    placeholder="https://api.example.com/v1"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-description">Description</label>
-                  <textarea
-                    id="api-description"
-                    name="description"
-                    value={currentApi?.description || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    placeholder="Brief description of this API..."
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-status">Status</label>
-                  <select
-                    id="api-status"
-                    name="status"
-                    value={currentApi?.status || 'Active'}
-                    onChange={handleInputChange}
-                  >
-                    <option value="Active">✅ Active</option>
-                    <option value="Inactive">⏸️ Inactive</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="api-file">Import from File</label>
-                  <div 
-                    className={`file-upload-area ${dragActive ? 'dragover' : ''}`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => document.getElementById('api-file')?.click()}
-                  >
-                    <div className="upload-icon">📁</div>
-                    <div className="upload-text">Drop JSON file here or click to browse</div>
-                    <div className="upload-hint">Upload a JSON file with API configuration</div>
-                  </div>
-                  <input
-                    id="api-file"
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <small>JSON format: {"{ \"name\": \"API Name\", \"baseUrl\": \"https://...\", \"description\": \"...\" }"}</small>
-                </div>
-              </form>
-              
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)} 
-                  className="cancel-btn"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveApi}
-                  className="save-btn"
-                  disabled={isLoading}
-                >
-                  {isLoading ? '⏳ Saving...' : (currentApi?.id ? '💾 Update API' : '➕ Add API')}
-                </button>
-              </div>
-            </div>
+{/* Add/Edit API Modal */}
+{isModalOpen && (
+  <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+    <div className="modal-content">
+      <div className="modal-header">
+        <h2>{currentApi?.id ? '✏️ Edit API' : '➕ Add New API'}</h2>
+        <button onClick={() => setIsModalOpen(false)} className="close-btn">×</button>
+      </div>
+      
+      <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-group">
+          <label htmlFor="api-name">API Name *</label>
+          <input
+            id="api-name"
+            type="text"
+            name="name"
+            value={currentApi?.name || ''}
+            onChange={handleInputChange}
+            placeholder="e.g., E-commerce API"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="base-url">Base URL *</label>
+          <input
+            id="base-url"
+            type="url"
+            name="baseUrl"
+            value={currentApi?.baseUrl || ''}
+            onChange={handleInputChange}
+            placeholder="https://api.example.com/v1"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-description">Description</label>
+          <textarea
+            id="api-description"
+            name="description"
+            value={currentApi?.description || ''}
+            onChange={handleInputChange}
+            rows="3"
+            placeholder="Brief description of this API..."
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-status">Status</label>
+          <select
+            id="api-status"
+            name="status"
+            value={currentApi?.status || 'Active'}
+            onChange={handleInputChange}
+          >
+            <option value="Active">✅ Active</option>
+            <option value="Inactive">⏸️ Inactive</option>
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="api-file">Import from File (Optional)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              id="api-file"
+              type="file"
+              accept=".json,.yaml,.yml"
+              onChange={handleFileUploadInModal}
+              style={{
+                padding: "8px",
+                background: "#23232b",
+                color: "#fff",
+                borderRadius: 7,
+                fontWeight: 600,
+                border: "1px solid #444"
+              }}
+            />
+            <small style={{ color: "#888", fontSize: "12px" }}>
+              Upload OpenAPI/Swagger .json/.yaml/.yml file to auto-fill fields
+            </small>
           </div>
-        )}
+        </div>
+      </form>
+      
+      <div className="modal-actions">
+        <button 
+          type="button" 
+          onClick={() => setIsModalOpen(false)} 
+          className="cancel-btn"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveApi}
+          className="save-btn"
+          disabled={isLoading}
+        >
+          {isLoading ? '⏳ Saving...' : (currentApi?.id ? '💾 Update API' : '➕ Add API')}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Delete Confirmation Modal */}
         {isDeleteConfirmOpen && (

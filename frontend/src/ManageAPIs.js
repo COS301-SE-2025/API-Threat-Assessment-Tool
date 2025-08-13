@@ -20,7 +20,7 @@ export {
   EndpointTagEditor,
 };
 
-export { ManageAPIs };
+
 
 async function fetchAllTags() {
   const res = await fetch('/api/tags', {
@@ -370,6 +370,12 @@ const SCAN_TYPES = [
 
 const ManageAPIs = () => {
   // Safe hooks with error handling
+  const [formData, setFormData] = useState({
+    name: '',
+    baseUrl: '',
+    description: '',
+    file: null
+  });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState("");
@@ -746,91 +752,97 @@ const handleViewEndpoints = async (api) => {
     }
   }, []);
   
-const handleFileUploadInModal = useCallback((e) => {
-  try {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setPendingFile(null);
-      return;
-    }
-    
-    if (!file.name.toLowerCase().endsWith('.json') && 
-        !file.name.toLowerCase().endsWith('.yaml') && 
-        !file.name.toLowerCase().endsWith('.yml')) {
-      showMessage('Please upload a JSON, YAML, or YML file.', 'error');
-      setPendingFile(null);
-      return;
-    }
-
-    // Store the file for later upload, don't upload immediately
-    setPendingFile(file);
-    showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
-    
-    // Optionally, you can still parse the file locally to auto-fill form fields
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target.result;
-        let apiData;
-
-        // Parse file content based on extension
-        if (file.name.toLowerCase().endsWith('.json')) {
-          try {
-            apiData = JSON.parse(content);
-          } catch (jsonError) {
-            showMessage('Invalid JSON file format.', 'error');
-            return;
-          }
-        } else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
-          try {
-            apiData = YAML.parse(content);
-          } catch (yamlError) {
-            showMessage('Invalid YAML file format.', 'error');
-            return;
-          }
-        }
-
-        // Auto-fill form fields based on file content
-        const isOpenAPI = apiData.openapi || apiData.swagger;
-        let name, baseUrl, description;
-
-        if (isOpenAPI) {
-          name = apiData.info?.title || currentApi?.name || '';
-          baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
-          description = apiData.info?.description || currentApi?.description || '';
-        } else {
-          name = apiData.name || currentApi?.name || '';
-          baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
-          description = apiData.description || currentApi?.description || '';
-        }
-
-        // Update form fields with parsed data
-        setCurrentApi(prev => ({
-          ...prev,
-          name: name,
-          baseUrl: baseUrl,
-          description: description,
-          status: apiData.status || prev?.status || 'Active'
-        }));
-
-        showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
-      } catch (error) {
-        console.error('Error parsing file:', error);
-        showMessage('Error parsing file content.', 'error');
-      }
-    };
-
-    reader.onerror = () => {
-      showMessage('Error reading file.', 'error');
-    };
-
-    reader.readAsText(file);
-  } catch (error) {
-    console.error('Error in file selection handler:', error);
-    showMessage('Error processing file. Please try again.', 'error');
+// Drag state handler
+const handleDrag = useCallback((e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.type === 'dragenter' || e.type === 'dragover') {
+    setDragActive(true);
+  } else if (e.type === 'dragleave') {
+    setDragActive(false);
   }
+}, []);
+
+// Process file (shared for both click-upload & drag-drop)
+const processFile = useCallback((file) => {
+  if (!file) {
+    setPendingFile(null);
+    return;
+  }
+  
+  if (!file.name.toLowerCase().endsWith('.json') && 
+      !file.name.toLowerCase().endsWith('.yaml') && 
+      !file.name.toLowerCase().endsWith('.yml')) {
+    showMessage('Please upload a JSON, YAML, or YML file.', 'error');
+    setPendingFile(null);
+    return;
+  }
+
+  setPendingFile(file);
+  showMessage(`📁 File "${file.name}" selected and ready for upload when you save the API.`, 'info');
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target.result;
+      let apiData;
+
+      if (file.name.toLowerCase().endsWith('.json')) {
+        apiData = JSON.parse(content);
+      } else {
+        apiData = YAML.parse(content);
+      }
+
+      const isOpenAPI = apiData.openapi || apiData.swagger;
+      let name, baseUrl, description;
+
+      if (isOpenAPI) {
+        name = apiData.info?.title || currentApi?.name || '';
+        baseUrl = apiData.servers?.[0]?.url || currentApi?.baseUrl || '';
+        description = apiData.info?.description || currentApi?.description || '';
+      } else {
+        name = apiData.name || currentApi?.name || '';
+        baseUrl = apiData.baseUrl || currentApi?.baseUrl || '';
+        description = apiData.description || currentApi?.description || '';
+      }
+
+      setCurrentApi(prev => ({
+        ...prev,
+        name: prev?.name?.trim() ? prev.name : name,
+        baseUrl: prev?.baseUrl?.trim() ? prev.baseUrl : baseUrl,
+        description: prev?.description?.trim() ? prev.description : description,
+        status: apiData.status || prev?.status || 'Active'
+      }));
+
+      showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      showMessage('Error parsing file content.', 'error');
+    }
+  };
+
+  reader.onerror = () => {
+    showMessage('Error reading file.', 'error');
+  };
+
+  reader.readAsText(file);
 }, [currentApi, showMessage]);
 
+// Click-upload
+const handleFileUploadInModal = useCallback((e) => {
+  processFile(e.target.files?.[0]);
+}, [processFile]);
+
+// Drop-upload
+const handleDrop = useCallback((e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragActive(false);
+  
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    processFile(e.dataTransfer.files[0]);
+  }
+}, [processFile]);
 
 
 
@@ -1004,122 +1016,9 @@ const handleSaveApi = useCallback(async () => {
     }
   }, [apiToDelete, showMessage]);
 
-  // Safe file upload handlers
-  const handleDrag = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
 
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    try {
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleFileUpload({ target: { files: e.dataTransfer.files } });
-      }
-    } catch (error) {
-      console.error('Error handling file drop:', error);
-      showMessage('Error processing dropped file.', 'error');
-    }
-  }, []);
 
-  const handleFileUpload = useCallback((e) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) {
-        showMessage('No file selected.', 'error');
-        return;
-      }
 
-      if (!file.name.toLowerCase().endsWith('.json') && !file.name.toLowerCase().endsWith('.yaml') && !file.name.toLowerCase().endsWith('.yml')) {
-        showMessage('Please upload a JSON or YAML file.', 'error');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target.result;
-        let apiData;
-
-        // Handling JSON file
-        if (file.name.toLowerCase().endsWith('.json')) {
-          try {
-            apiData = JSON.parse(content);
-          } catch (jsonError) {
-            showMessage('Invalid JSON file format.', 'error');
-            return;
-          }
-        }
-        
-        // Handling YAML file
-        else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
-          try {
-            apiData = YAML.parse(content);
-          } catch (yamlError) {
-            showMessage('Invalid YAML file format.', 'error');
-            return;
-          }
-        }
-
-        // Recognize OpenAPI/Swagger
-        const isOpenAPI = apiData.openapi || apiData.swagger;
-        let name, baseUrl, description;
-
-        if (isOpenAPI) {
-          name = apiData.info?.title || 'Imported OpenAPI';
-          baseUrl = apiData.servers?.[0]?.url || '';
-          description = apiData.info?.description || '';
-          if (!baseUrl) {
-            showMessage('No servers.url found in OpenAPI file.', 'error');
-            return;
-          }
-        } else {
-          // Fallback: legacy simple format
-          name = apiData.name;
-          baseUrl = apiData.baseUrl;
-          description = apiData.description || '';
-          if (!name || !baseUrl) {
-            showMessage('File must contain "name" and "baseUrl" fields.', 'error');
-            return;
-          }
-        }
-
-        const newApi = {
-          id: Math.max(...apis.map(a => a.id), 0) + 1,
-          name,
-          baseUrl,
-          description,
-          status: apiData.status || 'Active',
-          lastScanned: 'Never',
-          scanCount: 0,
-          lastScanResult: 'Pending'
-        };
-
-        setApis(prevApis => [...prevApis, newApi]);
-        showMessage(`✅ API "${name}" imported successfully!`, 'success');
-        setIsModalOpen(false);
-
-        // Reset file input
-        if (e.target) e.target.value = '';
-      };
-
-      reader.onerror = () => {
-        showMessage('Error reading file.', 'error');
-      };
-
-      reader.readAsText(file);
-    } catch (error) {
-      console.error('Error in file upload handler:', error);
-      showMessage('Error uploading file. Please try again.', 'error');
-    }
-  }, [apis, showMessage]);
 
   // Loading state
   if (!safeCurrentUser && currentUser === null) {
@@ -1462,28 +1361,32 @@ const handleSaveApi = useCallback(async () => {
           </select>
         </div>
         
-        <div className="form-group">
-          <label htmlFor="api-file">Import from File (Optional)</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <input
-              id="api-file"
-              type="file"
-              accept=".json,.yaml,.yml"
-              onChange={handleFileUploadInModal}
-              style={{
-                padding: "8px",
-                background: "#23232b",
-                color: "#fff",
-                borderRadius: 7,
-                fontWeight: 600,
-                border: "1px solid #444"
-              }}
-            />
-            <small style={{ color: "#888", fontSize: "12px" }}>
-              Upload OpenAPI/Swagger .json/.yaml/.yml file to auto-fill fields
-            </small>
+      <div className="form-group">
+        <label htmlFor="api-file">Import from File </label>
+        <div
+          className={`file-upload-zone ${dragActive ? 'active' : ''}`}
+          onClick={() => document.getElementById('api-file').click()}
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            id="api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            onChange={handleFileUploadInModal}
+            style={{ display: "none" }}
+          />
+          <div className="file-upload-content">
+            <i className="fas fa-cloud-upload-alt upload-icon"></i>
+            <p>Drag & drop your file here, or <span className="file-select-text">click to browse</span></p>
+            {pendingFile && <p className="file-name">📄 {pendingFile.name}</p>}
           </div>
         </div>
+      </div>
+
+
       </form>
       
       <div className="modal-actions">
@@ -1547,73 +1450,103 @@ const handleSaveApi = useCallback(async () => {
             </div>
           </div>
         )}
+{/* Import API Modal */}
+{isImportModalOpen && (
+  <div
+    className="modal-overlay"
+    onClick={(e) => e.target === e.currentTarget && setIsImportModalOpen(false)}
+  >
+    <div className="modal-content" style={{ minWidth: 380 }}>
+      <div className="modal-header">
+        <h2>⬆️ Import API Spec</h2>
+        <button onClick={() => setIsImportModalOpen(false)} className="close-btn">
+          ×
+        </button>
+      </div>
 
-        {/* Import API Modal */}
-        {isImportModalOpen && (
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsImportModalOpen(false)}>
-            <div className="modal-content" style={{ minWidth: 380 }}>
-              <div className="modal-header">
-                <h2>⬆️ Import API Spec</h2>
-                <button onClick={() => setIsImportModalOpen(false)} className="close-btn">×</button>
-              </div>
-              <form
-                className="modal-form"
-                style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 10 }}
-                onSubmit={handleImportAPISubmit}
-              >
-                <label style={{ fontWeight: 600 }}>
-                  <span>Choose .json, .yaml, or .yml file:</span>
-                  <input
-                    id="import-api-file"
-                    type="file"
-                    accept=".json,.yaml,.yml"
-                    style={{
-                      marginTop: 8,
-                      padding: "7px",
-                      background: "#23232b",
-                      color: "#fff",
-                      borderRadius: 7,
-                      fontWeight: 600,
-                    }}
-                    disabled={importLoading}
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={importLoading}
-                  style={{
-                    background: "#6366f1",
-                    color: "#fff",
-                    borderRadius: 7,
-                    fontWeight: 700,
-                    padding: "12px 0",
-                    fontSize: 16,
-                    marginTop: 10,
-                    cursor: importLoading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  {importLoading ? "Uploading..." : "Import & Add API"}
-                </button>
-                {importError && (
-                  <div style={{
-                    background: "#ef444420",
-                    color: "#f87171",
-                    borderRadius: 8,
-                    marginTop: 10,
-                    padding: "8px 12px",
-                    fontWeight: 600
-                  }}>
-                    ❌ {importError}
-                  </div>
-                )}
-              </form>
-              <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
-                Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
-                After import, you can edit API details.
-              </div>
-            </div>
+      <form
+        className="modal-form"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+          marginTop: 10
+        }}
+        onSubmit={handleImportAPISubmit}
+      >
+        <label style={{ fontWeight: 600, marginBottom: -8 }}>
+          Choose .json, .yaml, or .yml file:
+        </label>
+
+        {/* Drag & Drop Zone */}
+        <div
+          className={`file-drop-zone ${dragActive ? "active" : ""}`}
+          onClick={() => document.getElementById("import-api-file").click()}
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            id="import-api-file"
+            type="file"
+            accept=".json,.yaml,.yml"
+            style={{ display: "none" }}
+            onChange={handleFileUploadInModal}
+            disabled={importLoading}
+          />
+          <p style={{ margin: 0, color: "#aaa" }}>
+            Drag & drop your file here or{" "}
+            <span style={{ color: "#6366f1", fontWeight: 600 }}>click to select</span>
+          </p>
+          {pendingFile && (
+            <p style={{ marginTop: 6, color: "#fff" }}>
+              📄 {pendingFile.name}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={importLoading}
+          style={{
+            background: "#6366f1",
+            color: "#fff",
+            borderRadius: 7,
+            fontWeight: 700,
+            padding: "12px 0",
+            fontSize: 16,
+            marginTop: 10,
+            cursor: importLoading ? "not-allowed" : "pointer"
+          }}
+        >
+          {importLoading ? "Uploading..." : "Import & Add API"}
+        </button>
+
+        {importError && (
+          <div
+            style={{
+              background: "#ef444420",
+              color: "#f87171",
+              borderRadius: 8,
+              marginTop: 10,
+              padding: "8px 12px",
+              fontWeight: 600
+            }}
+          >
+            ❌ {importError}
           </div>
         )}
+      </form>
+
+      <div style={{ fontSize: 13, color: "#bbb", marginTop: 12 }}>
+        Accepted: OpenAPI or Swagger .json/.yaml/.yml<br />
+        After import, you can edit API details.
+      </div>
+    </div>
+  </div>
+)}
+
 
         {/* Endpoints Modal */}
         {selectedApiEndpoints !== null && (

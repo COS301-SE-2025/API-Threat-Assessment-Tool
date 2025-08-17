@@ -111,8 +111,15 @@ class HTTPInterface:
         body = self._transform_body(content_type)
         return self.session.delete(url, headers=self.headers, params=params, data=body)
 
-    def send_custom(self, method, endpoint, params=None):
+    def send_custom(self, method, endpoint, params=None, json=None):
         url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
+
+        if json is not None:
+            self.body = json
+            if 'Content-Type' not in self.headers:
+                self.headers['Content-Type'] = 'application/json'
+
         content_type = self.headers.get('Content-Type', '')
         body = self._transform_body(content_type)
         return self.session.request(method.upper(), url, headers=self.headers, params=params, data=body)
+

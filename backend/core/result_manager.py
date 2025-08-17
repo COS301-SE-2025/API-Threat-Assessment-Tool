@@ -16,6 +16,7 @@ class ResultManager:
 
         result_id = uuid4().hex
         self.scans[result_id] = results
+        print("New scan finished: ", result_id)
         return result_id
 
     def get_result(self, id):

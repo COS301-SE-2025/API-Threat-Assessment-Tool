@@ -12,7 +12,7 @@ class ScanManager:
         self.vulnScanners = []
         self.resultManager = ResultManager()
         self.APIClient = api_client
-        self.scan_profile = ScanProfiles.DEFAULT #force default for now
+        self.scan_profile = ScanProfiles.DEFAULT #force to default 
         self.loaded_profiles = []
     
     def createScan(self, scan_profile):
@@ -27,10 +27,14 @@ class ScanManager:
 
     def runScan(self, scan_profile):
         id = 0
-        for scanner in self.vulnScanners:
-            if scanner.scanProfile is scan_profile:
+        print("Starting new Scan")
+        try:
+            for scanner in self.vulnScanners:
+                print("Running api test")
                 result = scanner.run_tests()
                 id = self.resultManager.add_result(result)
+        except Exception as e:
+            return str(e)
 
         return id
 
@@ -38,7 +42,16 @@ class ScanManager:
         return self.resultManager.get_all_results()
 
     def get_scan(self, id):
-        return self.resultManager.get_result(id)
+        try:
+            return self.resultManager.get_result(id)
+        except KeyError:
+            return -1
+
+    def reset_all_flags(self):
+        print("reset all flags")
+
+    def reset_endpoint_flags(self, endpoint_id):
+        print("reset flags for a particular endpoint")
 
     def removeScan(self):
         return self.resultManager.remove_result(id)

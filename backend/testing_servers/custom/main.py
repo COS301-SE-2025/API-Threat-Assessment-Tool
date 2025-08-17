@@ -120,21 +120,21 @@ def get_user_profile(user_id: int):
         raise HTTPException(status_code=404, detail="User not found")
     return users_db[user_id]
 
-@app.get("/api/BOLA/{user_id}/invoice/{invoice_id}")
+@app.get("/api/BOLA/{user_id}/invoice/{invoice_id}", openapi_extra={"security": []})
 def get_user_invoice(user_id: int, invoice_id: int):
     """Vulnerable: No check if invoice belongs to user"""
     if invoice_id not in invoices_db:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoices_db[invoice_id]
 
-@app.get("/api/BOLA/purchase")
+@app.get("/api/BOLA/purchase", openapi_extra={"security": []})
 def get_purchase(product: int, user: int):
     """Vulnerable: Any user can access any purchase"""
     if product not in products_db:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"user_id": user, "product": products_db[product], "purchase_date": "2023-01-01"}
 
-@app.get("/api/BOLA/ticket")
+@app.get("/api/BOLA/ticket", openapi_extra={"security": []})
 def get_ticket(id: int):
     """Vulnerable: Direct object reference without authorization"""
     if id not in tickets_db:
@@ -183,14 +183,14 @@ def get_admin_info():
 # 3. BROKEN OBJECT PROPERTY LEVEL AUTHORIZATION (BOPLA)
 # =============================================================================
 
-@app.get("/api/BOPLA/user/{user_id}")
+@app.get("/api/BOPLA/user/{user_id}", openapi_extra={"security": []})
 def get_user_details(user_id: int):
     """Vulnerable: Returns sensitive data like SSN"""
     if user_id not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
     return users_db[user_id]  # Returns SSN and other sensitive data
 
-@app.patch("/api/BOPLA/user/{user_id}")
+@app.patch("/api/BOPLA/user/{user_id}", openapi_extra={"security": []})
 def update_user(user_id: int, data: Dict[str, Any]):
     """Vulnerable: Allows updating any property including role"""
     if user_id not in users_db:
@@ -202,7 +202,7 @@ def update_user(user_id: int, data: Dict[str, Any]):
     
     return users_db[user_id]
 
-@app.get("/api/BOPLA/invoice/{invoice_id}/details")
+@app.get("/api/BOPLA/invoice/{invoice_id}/details", openapi_extra={"security": []})
 def get_invoice_details(invoice_id: int):
     """Vulnerable: Returns internal fields"""
     if invoice_id not in invoices_db:

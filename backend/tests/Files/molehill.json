@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8000",
-      "description": "Testing server"
+      "url": "http://localhost:3000",
+      "description": "Development server"
     }
   ],
   "components": {

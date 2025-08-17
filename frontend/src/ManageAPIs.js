@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
-import YAML from 'js-yaml';
+import * as YAML from 'js-yaml'; // Use this for ES Modules
 import Logo from './components/Logo';
 import './ManageAPIs.css';
 
@@ -769,7 +769,8 @@ const processFile = useCallback((file) => {
     setPendingFile(null);
     return;
   }
-  
+
+  // Check if the file extension is valid
   if (!file.name.toLowerCase().endsWith('.json') && 
       !file.name.toLowerCase().endsWith('.yaml') && 
       !file.name.toLowerCase().endsWith('.yml')) {
@@ -785,14 +786,24 @@ const processFile = useCallback((file) => {
   reader.onload = (event) => {
     try {
       const content = event.target.result;
+
       let apiData;
 
+      // Parse JSON or YAML based on file extension
       if (file.name.toLowerCase().endsWith('.json')) {
-        apiData = JSON.parse(content);
-      } else {
-        apiData = YAML.parse(content);
+        apiData = JSON.parse(content);  // Parse JSON file
+      } else if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+        // Correct method to parse YAML
+        try {
+          apiData = YAML.load(content);  // Use YAML.load (not YAML.parse)
+        } catch (yamlError) {
+          console.error("YAML parsing error:", yamlError);
+          showMessage('Invalid YAML format. Please check the file.', 'error');
+          return;
+        }
       }
 
+      // Handle OpenAPI specification
       const isOpenAPI = apiData.openapi || apiData.swagger;
       let name, baseUrl, description;
 
@@ -816,13 +827,14 @@ const processFile = useCallback((file) => {
 
       showMessage(`✅ Form fields updated from "${file.name}". File will be uploaded when you save.`, 'success');
     } catch (error) {
-      console.error('Error parsing file:', error);
-      showMessage('Error parsing file content.', 'error');
+      console.error('Error reading or parsing file:', error);
+      showMessage('Error reading or parsing the file content.', 'error');
     }
   };
 
-  reader.onerror = () => {
-    showMessage('Error reading file.', 'error');
+  reader.onerror = (error) => {
+    console.error('File read error:', error);
+    showMessage('Error reading the file. Please try again.', 'error');
   };
 
   reader.readAsText(file);

@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Security Scanner Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected {
+            background: #28a745;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 600px;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 2px solid #e9ecef;
+        }
+        
+        .workflow-section {
+            margin-bottom: 20px;
+        }
+        
+        .workflow-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .workflow-step {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+        
+        .workflow-step:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .workflow-step.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .workflow-step.completed {
+            background: #28a745;
+            color: white;
+        }
+        
+        .content-area {
+            padding: 30px;
+        }
+        
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #343a40;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.secondary {
+            background: #6c757d;
+        }
+        
+        .btn.danger {
+            background: #dc3545;
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .response-area {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .response-area h3 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .response-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .endpoints-grid {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .endpoint-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .endpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .endpoint-path {
+            font-weight: 600;
+            color: #343a40;
+        }
+        
+        .endpoint-method {
+            padding: 4px 8px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .flags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .flag-badge {
+            padding: 4px 10px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .flag-badge.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .flag-remove {
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .scan-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .scan-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .scan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .scan-id {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .scan-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .scan-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .scan-status.running {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ API Security Scanner</h1>
+            <p>Test Interface for Engine Commands</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot" id="connectionStatus"></span>
+                <span id="connectionText">Disconnected from Engine (Port 9011)</span>
+            </div>
+            <div>
+                <span id="currentAPI">No API Loaded</span>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="workflow-section">
+                    <div class="workflow-title">New API Workflow</div>
+                    <div class="workflow-step" onclick="showSection('import')">1. Import API Spec</div>
+                    <div class="workflow-step" onclick="showSection('apikey')">2. Set API Key</div>
+                    <div class="workflow-step" onclick="showSection('create-scan')">3. Create Scan</div>
+                    <div class="workflow-step" onclick="showSection('view-endpoints')">4. View/Edit Flags</div>
+                    <div class="workflow-step" onclick="showSection('start-scan')">5. Start Scan</div>
+                    <div class="workflow-step" onclick="showSection('results')">6. View Results</div>
+                </div>
+                
+                <div class="workflow-section">
+                    <div class="workflow-title">Existing API Workflow</div>
+                    <div class="workflow-step" onclick="showSection('list-scans')">View All Scans</div>
+                    <div class="workflow-step" onclick="showSection('view-endpoints')">Update Flags</div>
+                </div>
+            </div>
+            
+            <div class="content-area">
+                <!-- Import API Section -->
+                <div id="import" class="section active">
+                    <h2 class="section-title">Import API Specification</h2>
+                    <div class="form-group">
+                        <label for="apiFile">API Specification File Name:</label>
+                        <input type="text" id="apiFile" placeholder="e.g., openapi.yaml">
+                        <small style="color: #6c757d;">Enter the filename (file should be in the server's configured location)</small>
+                    </div>
+                    <button class="btn" onclick="importAPI()">Import API</button>
+                    <div id="importResponse" class="response-area" style="display: none;">
+                        <h3>Response</h3>
+                        <div class="response-content"></div>
+                    </div>
+                </div>
+                
+                <!-- Set API Key Section -->
+                <div id="apikey" class="section">
+                    <h2 class="section-title">Set API Key</h2>
+                    <div class="form-group">
+                        <label for="apiKeyInput">API Key:</label>
+                        <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+                        <small style="color: #6c757d;">This key will be used for authentication during scanning</small>
+                    </div>
+                    <button class="btn" onclick="setAPIKey()">Set API Key</button>
+                    <div id="apikeyResponse" class="response-area" style="display: none;">
+                        <h3>Response</h3>
+                        <div class="response-content"></div>
+                    </div>
+                </div>
+                
+                <!-- Create Scan Section -->
+                <div id="create-scan" class="section">
+                    <h2 class="section-title">Create New Scan</h2>
+                    <div class="form-group">
+                        <label for="apiNameCreate">API Name:</label>
+                        <input type="text" id="apiNameCreate" placeholder="Enter API name">
+                    </div>
+                    <div class="form-group">
+                        <label for="scanProfile">Scan Profile:</label>
+                        <select id="scanProfile">
+                            <option value="OWASP_API_10">OWASP API Top 10 (All)</option>
+                            <option value="custom">Custom Selection</option>
+                        </select>
+                    </div>
+                    <div id="customProfileSection" style="display: none;">
+                        <div class="form-group">
+                            <label>Select Tests to Run:</label>
+                            <div style="display: grid; gap: 10px;">
+                                <label><input type="checkbox" value="1"> 1. Broken Object Level Authorization (BOLA)</label>
+                                <label><input type="checkbox" value="2"> 2. Broken Authentication</label>
+                                <label><input type="checkbox" value="3"> 3. Broken Object Property Level Authorization (BOPLA)</label>
+                                <label><input type="checkbox" value="4"> 4. Unrestricted Resource Consumption</label>
+                                <label><input type="checkbox" value="5"> 5. Broken Function Level Authorization</label>
+                                <label><input type="checkbox" value="6"> 6. Unrestricted Access to Sensitive Business Flows</label>
+                                <label><input type="checkbox" value="7"> 7. Server Side Request Forgery</label>
+                                <label><input type="checkbox" value="8"> 8. Security Misconfiguration</label>
+                                <label><input type="checkbox" value="9"> 9. Improper Inventory Management</label>
+                                <label><input type="checkbox" value="10"> 10. Unsafe Consumption of APIs</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="createScan()">Create Scan</button>
+                    <div id="createScanResponse" class="response-area" style="display: none;">
+                        <h3>Response</h3>
+                        <div class="response-content"></div>
+                    </div>
+                </div>
+                
+                <!-- View/Edit Endpoints Section -->
+                <div id="view-endpoints" class="section">
+                    <h2 class="section-title">View & Edit Endpoint Flags</h2>
+                    <div class="form-group">
+                        <label for="apiIdEndpoints">API ID/Name:</label>
+                        <input type="text" id="apiIdEndpoints" placeholder="Enter API ID or Name">
+                    </div>
+                    <button class="btn" onclick="loadEndpoints()">Load Endpoints</button>
+                    
+                    <div id="endpointsList" style="margin-top: 20px; display: none;">
+                        <h3>Endpoints</h3>
+                        <div id="endpointsContainer" class="endpoints-grid"></div>
+                    </div>
+                    
+                    <div id="flagManagement" style="margin-top: 30px; display: none;">
+                        <h3>Add/Remove Flags</h3>
+                        <div class="form-group">
+                            <label for="selectedEndpoint">Selected Endpoint ID:</label>
+                            <input type="text" id="selectedEndpoint" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="flagSelect">Flag:</label>
+                            <select id="flagSelect">
+                                <option value="BOLA">1. Broken Object Level Authorization</option>
+                                <option value="BKEN_AUTH">2. Broken Authentication</option>
+                                <option value="BOPLA">3. Broken Object Property Level Authorization</option>
+                                <option value="URC">4. Unrestricted Resource Consumption</option>
+                                <option value="BFLA">5. Broken Function Level Authorization</option>
+                                <option value="UABF">6. Unrestricted Access to Sensitive Business Flows</option>
+                                <option value="SSRF">7. Server Side Request Forgery</option>
+                                <option value="SEC_MISC">8. Security Misconfiguration</option>
+                                <option value="IIM">9. Improper Inventory Management</option>
+                                <option value="UCAPI">10. Unsafe Consumption of APIs</option>
+                                <option value="SKIP">Don't scan this endpoint</option>
+                            </select>
+                        </div>
+                        <button class="btn success" onclick="addFlag()">Add Flag</button>
+                        <button class="btn danger" onclick="removeFlag()">Remove Flag</button>
+                    </div>
+                </div>
+                
+                <!-- Start Scan Section -->
+                <div id="start-scan" class="section">
+                    <h2 class="section-title">Start Scan</h2>
+                    <div class="form-group">
+                        <label for="apiNameStart">API Name:</label>
+                        <input type="text" id="apiNameStart" placeholder="Enter API name">
+                    </div>
+                    <div class="form-group">
+                        <label for="scanProfileStart">Scan Profile:</label>
+                        <input type="text" id="scanProfileStart" value="OWASP_API_10" placeholder="e.g., OWASP_API_10 or 1,3,5">
+                    </div>
+                    <button class="btn" onclick="startScan()">Start Scan</button>
+                    <div id="startScanResponse" class="response-area" style="display: none;">
+                        <h3>Response</h3>
+                        <div class="response-content"></div>
+                    </div>
+                </div>
+                
+                <!-- View Results Section -->
+                <div id="results" class="section">
+                    <h2 class="section-title">View Scan Results</h2>
+                    <div class="form-group">
+                        <label for="scanIdResults">Scan ID:</label>
+                        <input type="text" id="scanIdResults" placeholder="Enter scan ID">
+                    </div>
+                    <button class="btn" onclick="getScanResults()">Get Results</button>
+                    <div id="resultsResponse" class="response-area" style="display: none;">
+                        <h3>Scan Results</h3>
+                        <div class="response-content"></div>
+                    </div>
+                </div>
+                
+                <!-- List All Scans Section -->
+                <div id="list-scans" class="section">
+                    <h2 class="section-title">All Scans</h2>
+                    <button class="btn" onclick="listAllScans()">Refresh Scan List</button>
+                    <div id="scansList" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const PROXY_HOST = 'localhost';
+        const PROXY_PORT = 9011;
+        
+        let currentAPIId = null;
+        let currentScanId = null;
+        let endpointsData = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnection();
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            document.getElementById('scanProfile').addEventListener('change', (e) => {
+                const customSection = document.getElementById('customProfileSection');
+                customSection.style.display = e.target.value === 'custom' ? 'block' : 'none';
+            });
+        }
+        
+        // async function sendCommand(command, data = {}) {
+        //     try {
+        //         const response = await fetch(`http://${PROXY_HOST}:${PROXY_PORT}`, {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //             },
+        //             body: JSON.stringify({
+        //                 command: command,
+        //                 data: data
+        //             })
+        //         });
+                
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+                
+        //         const result = await response.json();
+        //         console.log('Command:', command, 'Response:', result);
+        //         return result;
+        //     } catch (error) {
+        //         console.error('Error sending command:', error);
+        //         return {
+        //             status: 500,
+        //             error: error.message
+        //         };
+        //     }
+        // }
+
+        async function sendCommand(command, data = {}) {
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(`ws://localhost:8080`);
+                const request = JSON.stringify({ command, data });
+                let responseData = '';
+                
+                ws.onopen = () => {
+                    console.log('WebSocket opened, sending command:', request);
+                    ws.send(request);
+                };
+                
+                ws.onmessage = (e) => {
+                    console.log('Received message chunk:', e.data);
+                    responseData += e.data;
+                    
+                    try {
+                        // Try to parse the accumulated response
+                        const response = JSON.parse(responseData);
+                        console.log('Complete response received:', response);
+                        resolve(response);
+                        ws.close();
+                    } catch (e) {
+                        console.log('Partial response, waiting for more chunks');
+                    }
+                };
+                
+                ws.onerror = (e) => {
+                    console.error('WebSocket error:', e);
+                    reject(e);
+                };
+                
+                ws.onclose = () => {
+                    try {
+                        if (responseData) {
+                            const response = JSON.parse(responseData);
+                            resolve(response);
+                        } else {
+                            reject(new Error('Connection closed without response'));
+                        }
+                    } catch (e) {
+                        reject(new Error('Invalid JSON response'));
+                    }
+                };
+                
+                // Set timeout
+                setTimeout(() => {
+                    reject(new Error('Connection timeout after 30 seconds'));
+                    ws.close();
+                }, 30000);
+            });
+        }
+                
+        async function checkConnection() {
+            try {
+                // Try a simple command to check connection
+                const dot = document.getElementById('connectionStatus');
+                const text = document.getElementById('connectionText');
+                
+                // For now, just assume connected if we're running
+                dot.classList.add('connected');
+                text.textContent = `Connected to Engine (Port ${PROXY_PORT})`;
+            } catch (error) {
+                console.error('Connection check failed:', error);
+            }
+        }
+        
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update sidebar
+            document.querySelectorAll('.workflow-step').forEach(step => {
+                step.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        async function importAPI() {
+            const filename = document.getElementById('apiFile').value;
+            if (!filename) {
+                alert('Please enter a filename');
+                return;
+            }
+            
+            const responseDiv = document.getElementById('importResponse');
+            const contentDiv = responseDiv.querySelector('.response-content');
+            
+            responseDiv.style.display = 'block';
+            contentDiv.innerHTML = 'Importing API...';
+            
+            const result = await sendCommand('apis.import_file', {
+                file: filename
+            });
+            
+            if (result.code == 200) {
+                currentAPIId = result.data.api_id;
+                document.getElementById('currentAPI').textContent = `API: ${currentAPIId}`;
+                contentDiv.innerHTML = `✅ Success!\nAPI ID: ${currentAPIId}`;
+                
+                // Mark step as completed
+                document.querySelectorAll('.workflow-step')[0].classList.add('completed');
+            } else {
+                contentDiv.innerHTML = `❌ Error: ${JSON.stringify(result, null, 2)}`;
+            }
+        }
+        
+        async function setAPIKey() {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            if (!apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+            
+            const responseDiv = document.getElementById('apikeyResponse');
+            const contentDiv = responseDiv.querySelector('.response-content');
+            
+            responseDiv.style.display = 'block';
+            contentDiv.innerHTML = 'Setting API key...';
+            
+            const result = await sendCommand('apis.key.set', {
+                api_key: apiKey
+            });
+            
+            if (result.code == 200) {
+                contentDiv.innerHTML = '✅ API Key set successfully!';
+                document.querySelectorAll('.workflow-step')[1].classList.add('completed');
+            } else {
+                contentDiv.innerHTML = `❌ Error: ${JSON.stringify(result, null, 2)}`;
+            }
+        }
+        
+        async function createScan() {
+            const apiName = document.getElementById('apiNameCreate').value;
+            if (!apiName) {
+                alert('Please enter an API name');
+                return;
+            }
+            
+            let scanProfile = document.getElementById('scanProfile').value;
+            
+            if (scanProfile === 'custom') {
+                const checkedBoxes = document.querySelectorAll('#customProfileSection input[type="checkbox"]:checked');
+                if (checkedBoxes.length === 0) {
+                    alert('Please select at least one test');
+                    return;
+                }
+                scanProfile = Array.from(checkedBoxes).map(cb => cb.value).join(',');
+            }
+            
+            const responseDiv = document.getElementById('createScanResponse');
+            const contentDiv = responseDiv.querySelector('.response-content');
+            
+            responseDiv.style.display = 'block';
+            contentDiv.innerHTML = 'Creating scan...';
+            
+            const result = await sendCommand('scan.create', {
+                api_name: apiName,
+                scan_profile: scanProfile
+            });
+            
+            if (result.code == 200) {
+                currentScanId = result.data.scan_id;
+                contentDiv.innerHTML = `✅ Scan created!\nScan ID: ${currentScanId}\nResults Count: ${result.data.results_count}`;
+                document.querySelectorAll('.workflow-step')[2].classList.add('completed');
+            } else {
+                contentDiv.innerHTML = `❌ Error: ${JSON.stringify(result, null, 2)}`;
+            }
+        }
+        
+        async function loadEndpoints() {
+            const apiId = document.getElementById('apiIdEndpoints').value;
+            if (!apiId) {
+                alert('Please enter an API ID');
+                return;
+            }
+            
+            const result = await sendCommand('endpoints.list', {
+                api_id: apiId
+            });
+            
+            // The response structure changed - now endpoints are in result.data.endpoints
+            if (result.code == 200 && result.data && result.data.endpoints) {
+                endpointsData = result.data.endpoints;
+                displayEndpoints(endpointsData);
+                document.getElementById('endpointsList').style.display = 'block';
+                document.getElementById('flagManagement').style.display = 'block';
+            } else {
+                alert('Failed to load endpoints: ' + JSON.stringify(result));
+            }
+        }
+        
+        function displayEndpoints(endpoints) {
+    const container = document.getElementById('endpointsContainer');
+    container.innerHTML = '';
+    
+    endpoints.forEach(endpoint => {
+        const card = document.createElement('div');
+        card.className = 'endpoint-card';
+        
+        card.innerHTML = `
+            <div class="endpoint-header">
+                <span class="endpoint-path">${endpoint.path}</span>
+                <span class="endpoint-method">${endpoint.method || 'GET'}</span>
+            </div>
+            <div style="font-size: 0.85em; color: #6c757d;">ID: ${endpoint.id}</div>
+            
+            <!-- Tags -->
+            <div class="tags-container" id="tags-${endpoint.id}">
+                ${endpoint.tags && endpoint.tags.length > 0 ? 
+                    endpoint.tags.map(tag => `
+                        <span class="tag-badge active">${tag}</span>
+                    `).join('') : 
+                    '<span style="color: #6c757d;">No tags set</span>'
+                }
+            </div>
+            
+            <!-- Flags -->
+            <div class="flags-container" id="flags-${endpoint.id}" style="margin-top: 6px;">
+                ${endpoint.flags && endpoint.flags.length > 0 ? 
+                    endpoint.flags.map(flag => `
+                        <span class="flag-badge active">${flag}</span>
+                    `).join('') : 
+                    '<span style="color: #6c757d;">No flags set</span>'
+                }
+            </div>
+            
+            <button class="btn secondary" style="margin-top: 10px; padding: 8px 16px; font-size: 0.9em;" 
+                    onclick="selectEndpoint('${endpoint.id}')">Select for Flag Management</button>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+        
+        function selectEndpoint(endpointId) {
+            document.getElementById('selectedEndpoint').value = endpointId;
+            document.getElementById('flagManagement').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        async function addFlag() {
+            const endpointId = document.getElementById('selectedEndpoint').value;
+            const flag = document.getElementById('flagSelect').value;
+            
+            if (!endpointId) {
+                alert('Please select an endpoint first');
+                return;
+            }
+            
+            const result = await sendCommand('endpoints.flags.add', {
+                endpoint_id: endpointId,
+                flags: flag
+            });
+            
+            if (result.code == 200) {
+                alert('Flag added successfully!');
+                loadEndpoints(); // Reload to show updated flags
+            } else {
+                alert('Failed to add flag: ' + JSON.stringify(result));
+            }
+        }
+        
+        async function removeFlag() {
+            const endpointId = document.getElementById('selectedEndpoint').value;
+            const flag = document.getElementById('flagSelect').value;
+            
+            if (!endpointId) {
+                alert('Please select an endpoint first');
+                return;
+            }
+            
+            const result = await sendCommand('endpoints.flags.remove', {
+                endpoint_id: endpointId,
+                flags: flag
+            });
+            
+            if (result.code == 200) {
+                alert('Flag removed successfully!');
+                loadEndpoints(); // Reload to show updated flags
+            } else {
+                alert('Failed to remove flag: ' + JSON.stringify(result));
+            }
+        }
+        
+        async function startScan() {
+            const apiName = document.getElementById('apiNameStart').value;
+            const scanProfile = document.getElementById('scanProfileStart').value;
+            
+            if (!apiName || !scanProfile) {
+                alert('Please enter both API name and scan profile');
+                return;
+            }
+            
+            const responseDiv = document.getElementById('startScanResponse');
+            const contentDiv = responseDiv.querySelector('.response-content');
+            
+            responseDiv.style.display = 'block';
+            contentDiv.innerHTML = 'Starting scan... <span class="loading"></span>';
+            
+            const result = await sendCommand('scan.start', {
+                api_name: apiName,
+                scan_profile: scanProfile
+            });
+            
+            if (result.code == 200) {
+                currentScanId = result.data;
+                contentDiv.innerHTML = `✅ Scan completed!\nScan ID: ${currentScanId}\n\nYou can now view the results using this ID.`;
+                document.querySelectorAll('.workflow-step')[4].classList.add('completed');
+            } else if (result.status === 503) {
+                contentDiv.innerHTML = `⏳ ${result.data || 'Scan in Progress'}`;
+            } else {
+                contentDiv.innerHTML = `❌ Error: ${JSON.stringify(result, null, 2)}`;
+            }
+        }
+        
+        async function getScanResults() {
+            const scanId = document.getElementById('scanIdResults').value;
+            if (!scanId) {
+                alert('Please enter a scan ID');
+                return;
+            }
+            
+            const responseDiv = document.getElementById('resultsResponse');
+            const contentDiv = responseDiv.querySelector('.response-content');
+            
+            responseDiv.style.display = 'block';
+            contentDiv.innerHTML = 'Fetching results...';
+            
+            const result = await sendCommand('scan.results', {
+                scan_id: scanId
+            });
+            
+            if (result.code == 200) {
+                const results = result.data;
+                if (Array.isArray(results) && results.length > 0) {
+                    contentDiv.innerHTML = `✅ Found ${results.length} result(s):\n\n${JSON.stringify(results, null, 2)}`;
+                } else if (Array.isArray(results) && results.length === 0) {
+                    contentDiv.innerHTML = '✅ Scan completed with no vulnerabilities found!';
+                } else {
+                    contentDiv.innerHTML = `✅ Results:\n${JSON.stringify(results, null, 2)}`;
+                }
+                document.querySelectorAll('.workflow-step')[5].classList.add('completed');
+            } else if (result.status === 404) {
+                contentDiv.innerHTML = '❌ Scan not found';
+            } else {
+                contentDiv.innerHTML = `❌ Error: ${JSON.stringify(result, null, 2)}`;
+            }
+        }
+        
+        async function listAllScans() {
+            const container = document.getElementById('scansList');
+            container.innerHTML = '<div style="text-align: center;">Loading scans...</div>';
+            
+            const result = await sendCommand('scan.list', {});
+            
+            if (result.code == 200) {
+                const scans = result.data;
+                if (!scans || scans.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #6c757d;">No scans found</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                scans.forEach(scan => {
+                    const scanCard = document.createElement('div');
+                    scanCard.className = 'scan-card';
+                    scanCard.innerHTML = `
+                        <div class="scan-header">
+                            <span class="scan-id">Scan ID: ${scan.scan_id}</span>
+                            <span class="scan-status ${scan.status}">${scan.status}</span>
+                        </div>
+                        <div style="color: #6c757d; font-size: 0.9em;">
+                            ${scan.api_name ? `API: ${scan.api_name}<br>` : ''}
+                            ${scan.created_at ? `Created: ${new Date(scan.created_at).toLocaleString()}<br>` : ''}
+                            ${scan.profile ? `Profile: ${scan.profile}` : ''}
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button class="btn" style="padding: 8px 16px; font-size: 0.9em;" 
+                                    onclick="document.getElementById('scanIdResults').value='${scan.scan_id}'; showSection('results')">
+                                View Results
+                            </button>
+                            ${scan.status === 'running' ? `
+                                <button class="btn secondary" style="padding: 8px 16px; font-size: 0.9em;" 
+                                        onclick="checkProgress('${scan.scan_id}')">
+                                    Check Progress
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    container.appendChild(scanCard);
+                });
+            } else {
+                container.innerHTML = `<div class="error-message">Failed to load scans: ${JSON.stringify(result)}</div>`;
+            }
+        }
+        
+        async function checkProgress(scanId) {
+            const result = await sendCommand('scan.progress', {
+                scan_id: scanId
+            });
+            
+            if (result.code == 200) {
+                alert(`Progress: ${JSON.stringify(result.data, null, 2)}`);
+            } else {
+                alert(`Failed to get progress: ${JSON.stringify(result)}`);
+            }
+        }
+        
+        // Helper function to display messages
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `<div class="${isError ? 'error-message' : 'success-message'}">${message}</div>`;
+                element.style.display = 'block';
+            }
+        }
+        
+        // Auto-refresh scan list if on that page
+        setInterval(() => {
+            const scanListSection = document.getElementById('list-scans');
+            if (scanListSection && scanListSection.classList.contains('active')) {
+                listAllScans();
+            }
+        }, 10000); // Refresh every 10 seconds
+    </script>
+</body>
+</html>

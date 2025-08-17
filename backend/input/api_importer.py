@@ -53,6 +53,7 @@ class APIImporter:
         for path, method_dict in paths.items():
             for method, method_info in method_dict.items():
                 summary = method_info.get("summary", "")
+                description = method_info.get("description", "")
                 parameters = method_info.get("parameters", [])
                 request_body = method_info.get("requestBody", {})
                 responses = method_info.get("responses", {})
@@ -67,6 +68,7 @@ class APIImporter:
                     request_body = request_body,
                     responses = responses,
                     tags = tags,
+                    description = description
                 )
 
                 if operation_security == "":

@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.10.0",
     "js-cookie": "^3.0.5",
+    "js-yaml": "^4.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.28.0",
@@ -20,11 +21,7 @@
     "start:client": "react-scripts start",
     "start:api": "cross-env-shell \"cd ../api && npm start\"",
     "build": "react-scripts build",
-<<<<<<< HEAD
     "test": "react-scripts test --coverage --watchAll --testPathIgnorePatterns=/Dashboard.test.js --testPathIgnorePatterns=/Home.test.js",
-=======
-    "test": "react-scripts test --watchAll=false --passWithNoTests",
->>>>>>> main
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -51,6 +48,6 @@
     "cross-env": "^7.0.3",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.3.3"
-  },"proxy": "http://localhost:3001"
-
+  },
+  "proxy": "http://localhost:3001"
 }

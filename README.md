@@ -28,12 +28,22 @@ Comprehensive Software Requirements Specification detailing functional and non-f
 Track our development progress, sprint planning, and task management through our organized project board.
 
 ---
+---
+## 🎬 Demo Video
+
+🌟 **See AT-AT in Action!**  
+Curious how our API Threat Assessment Tool works?  
+Watch our official demo video for a guided walkthrough of all the key features, and powerful security scanning capabilities.
+
+[![Watch the Full Demo on YouTube](https://img.youtube.com/vi/V0At4vOyM9w/hqdefault.jpg)](https://youtu.be/V0At4vOyM9w)
+
+---
 
 ## 🛠️ Technology Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Python (FastAPI) |
+| **Backend** | Python |
 | **Frontend** | React.js |
 | **Database** | PostgreSQL |
 | **Containerization** | Docker & Kubernetes |

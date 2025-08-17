@@ -1,0 +1,8 @@
+flask
+requests
+openapi-spec-validator
+PyYAML
+PyJWT
+psycopg2
+python-dotenv
+pytest

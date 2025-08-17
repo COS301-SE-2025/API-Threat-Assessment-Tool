@@ -707,8 +707,6 @@ def handle_request(request: dict):
     else:
         return bad_request(f"Unknown command '{command}'")
 
-
-
 def run_server():
     print(f"[ATAT] Listening on {HOST}:{PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -783,6 +781,7 @@ def run_server():
                     print(f"[UNEXPECTED ERROR] {e}")
     
     print("[ATAT] Server has shut down")
+
 
 if __name__ == "__main__":
     run_server()

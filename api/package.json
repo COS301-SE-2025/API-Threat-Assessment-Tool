@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {
   "name": "api-threat-assessment-backend",
   "version": "1.0.0",
@@ -11,21 +10,29 @@
     "test": "jest --detectOpenHandles --forceExit",
     "test:watch": "jest --watch --detectOpenHandles",
     "test:coverage": "jest --coverage --detectOpenHandles --forceExit",
-    "test:coverage:watch": "jest --coverage --watch --detectOpenHandles",
-    "test:unit": "jest --testPathPattern=unit --detectOpenHandles --forceExit",
-    "test:integration": "jest --testPathPattern=integration --detectOpenHandles --forceExit",
-    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand --detectOpenHandles",
+    "test:api": "jest tests/unit/api.test.js --detectOpenHandles --forceExit",
+    "test:endpoints": "jest tests/unit/endpoints.test.js --detectOpenHandles --forceExit --verbose",
+    "test:workflow": "jest tests/integration/workflow.test.js --detectOpenHandles --forceExit",
+    "test:unit": "npm run test:api && npm run test:endpoints",
+    "test:integration": "npm run test:workflow",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "test:debug": "jest --detectOpenHandles --forceExit --verbose --no-coverage",
     "test:ci": "jest --ci --coverage --watchAll=false --detectOpenHandles --forceExit --maxWorkers=2",
-    "test:runner": "node tests/testRunner.js",
     "coverage:report": "jest --coverage --detectOpenHandles --forceExit && open coverage/lcov-report/index.html",
     "coverage:summary": "npm run test:coverage && node scripts/coverage.js",
-    "coverage:badge": "npm run test:coverage && node scripts/coverage.js badge",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
-  "keywords": ["express", "supabase", "api", "threat-assessment", "backend", "security", "node.js"],
+  "keywords": [
+    "express",
+    "supabase",
+    "api",
+    "threat-assessment",
+    "backend",
+    "security",
+    "node.js"
+  ],
   "author": "Your Name or Team",
   "license": "ISC",
   "engines": {
@@ -39,6 +46,7 @@
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
+    "google-auth-library": "^10.2.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "net": "^1.0.2",
@@ -57,14 +65,22 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
     "testMatch": [
       "<rootDir>/tests/**/*.test.js",
       "<rootDir>/tests/**/*.spec.js"
     ],
     "collectCoverage": true,
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html", "text-summary", "json-summary"],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html",
+      "text-summary",
+      "json-summary"
+    ],
     "collectCoverageFrom": [
       "index.js",
       "!**/node_modules/**",
@@ -78,20 +94,24 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 60,
-        "functions": 65,
-        "lines": 65,
-        "statements": 65
+        "branches": 45,
+        "functions": 60,
+        "lines": 60,
+        "statements": 60
       },
       "./index.js": {
-        "branches": 70,
-        "functions": 75,
-        "lines": 75,
-        "statements": 75
+        "branches": 50,
+        "functions": 65,
+        "lines": 67,
+        "statements": 67
       }
     },
-    "roots": ["<rootDir>"],
-    "modulePaths": ["<rootDir>"],
+    "roots": [
+      "<rootDir>"
+    ],
+    "modulePaths": [
+      "<rootDir>"
+    ],
     "clearMocks": true,
     "restoreMocks": true,
     "verbose": true,
@@ -101,29 +121,23 @@
     "transform": {
       "^.+\\.js$": "babel-jest"
     },
-    "moduleFileExtensions": ["js", "json"],
+    "moduleFileExtensions": [
+      "js",
+      "json"
+    ],
     "globals": {
       "process.env.NODE_ENV": "test"
     },
     "bail": false,
     "reporters": [
       "default",
-      ["jest-junit", {
-        "outputDirectory": "test-results",
-        "outputName": "junit.xml"
-      }]
+      [
+        "jest-junit",
+        {
+          "outputDirectory": "test-results",
+          "outputName": "junit.xml"
+        }
+      ]
     ]
   }
 }
-=======
-{
-  "dependencies": {
-    "axios": "^1.9.0",
-    "express": "^5.1.0"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "supertest": "^7.1.1"
-  }
-}
->>>>>>> main

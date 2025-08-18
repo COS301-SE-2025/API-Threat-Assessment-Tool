@@ -159,18 +159,18 @@ for endpoint in api_client.endpoints:
         if flag == OWASP_FLAGS.UABF:
             print(endpoint.path)
 
-# print("=====================================================================")
-# print("==========================\nSEC_MISC Testing\n==========================")
-# print("=====================================================================")
-# sec_misc_scanner = SEC_MISC_Scan()
-# print(sec_misc_scanner.name.value)
-# print("setting flags")
-# sec_misc_scanner._set_flag(api_client)
-# print("\nEndpoints with the SEC_MISC flag:")
-# for endpoint in api_client.endpoints:
-#     for flag in endpoint.flags:
-#         if flag == OWASP_FLAGS.SEC_MISC:
-#             print(endpoint.path)
+print("=====================================================================")
+print("==========================\nSEC_MISC Testing\n==========================")
+print("=====================================================================")
+sec_misc_scanner = SEC_MISC_Scan()
+print(sec_misc_scanner.name.value)
+print("setting flags")
+sec_misc_scanner._set_flag(api_client)
+print("\nEndpoints with the SEC_MISC flag:")
+for endpoint in api_client.endpoints:
+    for flag in endpoint.flags:
+        if flag == OWASP_FLAGS.SEC_MISC:
+            print(endpoint.path)
 
 # print("=====================================================================")
 # print("==========================\nUCAPI Testing\n==========================")

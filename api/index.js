@@ -1,4 +1,4 @@
-// index.js
+// index.js - Enhanced with user profile and preferences endpoints + Commands.MD compliance
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -32,7 +32,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 // Engine config
 const ENGINE_HOST = '127.0.0.1';
 const ENGINE_PORT = process.env.ENGINE_PORT || 9011;
-const ENGINE_SCRIPT = 'main.py'; // Script name in backend folder
+const ENGINE_SCRIPT = 'main.py';
 
 // Engine process management
 let engineProcess = null;
@@ -40,7 +40,7 @@ let engineStarting = false;
 
 // File upload setup
 const upload = multer({
-  dest: 'uploads/',  // Fixed: was 'uploaads/' 
+  dest: 'uploads/',
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
@@ -57,14 +57,14 @@ const upload = multer({
 
 // Middleware
 app.use(cors({
-  origin: true, // Allow all origins for testing
+  origin: true,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`📥 [${timestamp}] ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+  console.log(`🔥 [${timestamp}] ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
   next();
 });
 
@@ -89,11 +89,157 @@ const createRateLimit = (maxRequests, windowMs) => {
   };
 };
 
-// Check if engine is running
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No valid token provided.',
+        statusCode: 401
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error',
+        statusCode: 500
+      });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+        statusCode: 401
+      });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, username, first_name, last_name, email_confirmed, created_at')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        statusCode: 404
+      });
+    }
+
+    req.user = user;
+    req.userId = user.id;
+    
+    next();
+  } catch (error) {
+    console.error('Authentication middleware error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Authentication error',
+      statusCode: 500
+    });
+  }
+};
+
+// Input validation functions
+const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateSignupData = data => {
+  const { email, password, firstName, lastName } = data;
+  const errors = [];
+  if (!email) errors.push({ field: 'email', message: 'Email is required' });
+  else if (!validateEmail(email)) errors.push({ field: 'email', message: 'Invalid email format' });
+  if (!password) errors.push({ field: 'password', message: 'Password is required' });
+  else if (password.length < 8) errors.push({ field: 'password', message: 'Password must be at least 8 characters' });
+  if (!firstName?.trim()) errors.push({ field: 'firstName', message: 'First name is required' });
+  if (!lastName?.trim()) errors.push({ field: 'lastName', message: 'Last name is required' });
+  return { isValid: errors.length === 0, errors };
+};
+
+const validateProfileUpdate = data => {
+  const { firstName, lastName, username } = data;
+  const errors = [];
+  
+  if (firstName !== undefined) {
+    if (!firstName || !firstName.trim()) {
+      errors.push({ field: 'firstName', message: 'First name cannot be empty' });
+    } else if (firstName.trim().length < 2) {
+      errors.push({ field: 'firstName', message: 'First name must be at least 2 characters' });
+    }
+  }
+  
+  if (lastName !== undefined) {
+    if (!lastName || !lastName.trim()) {
+      errors.push({ field: 'lastName', message: 'Last name cannot be empty' });
+    } else if (lastName.trim().length < 2) {
+      errors.push({ field: 'lastName', message: 'Last name must be at least 2 characters' });
+    }
+  }
+  
+  if (username !== undefined) {
+    if (!username || !username.trim()) {
+      errors.push({ field: 'username', message: 'Username cannot be empty' });
+    } else if (username.trim().length < 3) {
+      errors.push({ field: 'username', message: 'Username must be at least 3 characters' });
+    }
+  }
+  
+  return { isValid: errors.length === 0, errors };
+};
+
+const validatePasswordUpdate = data => {
+  const { currentPassword, newPassword, confirmPassword } = data;
+  const errors = [];
+  
+  if (!currentPassword) {
+    errors.push({ field: 'currentPassword', message: 'Current password is required' });
+  }
+  
+  if (!newPassword) {
+    errors.push({ field: 'newPassword', message: 'New password is required' });
+  } else if (newPassword.length < 8) {
+    errors.push({ field: 'newPassword', message: 'New password must be at least 8 characters' });
+  }
+  
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    errors.push({ field: 'confirmPassword', message: 'Password confirmation does not match' });
+  }
+  
+  if (currentPassword && newPassword && currentPassword === newPassword) {
+    errors.push({ field: 'newPassword', message: 'New password must be different from current password' });
+  }
+  
+  return { isValid: errors.length === 0, errors };
+};
+
+// Response helpers
+const sendSuccess = (res, message, data = null, statusCode = 200) => {
+  const payload = { success: true, message, timestamp: new Date().toISOString(), statusCode };
+  if (data) payload.data = data;
+  res.status(statusCode).json(payload);
+};
+
+const sendError = (res, message, errors = null, statusCode = 500) => {
+  const payload = { success: false, message, timestamp: new Date().toISOString(), statusCode };
+  if (errors) payload.errors = errors;
+  res.status(statusCode).json(payload);
+};
+
+// Engine management functions
 const isEngineRunning = () => {
   return new Promise((resolve) => {
     const client = new net.Socket();
-    client.setTimeout(2000); // 2 second timeout for check
+    client.setTimeout(2000);
     
     client.on('connect', () => {
       client.destroy();
@@ -113,7 +259,6 @@ const isEngineRunning = () => {
   });
 };
 
-// Start the Python engine
 const startEngine = () => {
   return new Promise((resolve, reject) => {
     if (engineProcess || engineStarting) {
@@ -123,21 +268,20 @@ const startEngine = () => {
     
     engineStarting = true;
     console.log('🚀 Starting Python engine...');
-    console.log(`🔍 Working directory: ${path.join(process.cwd(), '../backend')}`);
+    console.log(`📁 Working directory: ${path.join(process.cwd(), '../backend')}`);
     
-    engineProcess = spawn('python', ['-u', 'main.py'], {  // Add -u flag for unbuffered output
+    engineProcess = spawn('python', ['-u', 'main.py'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: path.join(process.cwd(), '../backend'),
       shell: true
     });
     
-    console.log(`🔍 Spawned process with PID: ${engineProcess.pid}`);
+    console.log(`📝 Spawned process with PID: ${engineProcess.pid}`);
     
     engineProcess.stdout.on('data', (data) => {
       const output = data.toString();
       console.log(`🐍 Engine stdout: ${output.trim()}`);
       
-      // Check if engine is ready
       if (output.includes('Listening on')) {
         engineStarting = false;
         console.log('✅ Engine started successfully');
@@ -166,7 +310,6 @@ const startEngine = () => {
       reject(err);
     });
     
-    // Timeout if engine doesn't start within 30 seconds
     setTimeout(() => {
       if (engineStarting) {
         console.log('⏰ Engine startup timeout - killing process');
@@ -180,21 +323,16 @@ const startEngine = () => {
   });
 };
 
-// Ensure engine is running before sending request
 const ensureEngineRunning = async () => {
   const running = await isEngineRunning();
   if (!running) {
     console.log('⚡ Engine not running, starting it...');
     await startEngine();
-    
-    // Wait a bit more for engine to be fully ready
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
 };
 
-// Engine communication helper
 const sendToEngine = async (request) => {
-  // Ensure engine is running first
   await ensureEngineRunning();
   
   return new Promise((resolve, reject) => {
@@ -202,8 +340,8 @@ const sendToEngine = async (request) => {
     let responseData = '';
     const startTime = Date.now();
 
-    console.log(`🔍 Setting socket timeout to 120 seconds`);
-    client.setTimeout(120000); // 2 minutes
+    console.log(`📝 Setting socket timeout to 120 seconds`);
+    client.setTimeout(120000);
 
     client.on('connect', () => {
       console.log(`🔗 Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT}`);
@@ -222,9 +360,8 @@ const sendToEngine = async (request) => {
       console.log(`📦 Raw response data: [${responseData}]`);
       try {
         const response = JSON.parse(responseData);
-        console.log(`📥 Engine response code: ${response.code}`);
+        console.log(`🔥 Engine response code: ${response.code}`);
         
-        // Check if engine returned an error code
         if (response.code !== 200 && response.code !== '200') {
           const errorMessage = response.data || 'Unknown engine error';
           return reject(new Error(errorMessage));
@@ -254,50 +391,62 @@ const sendToEngine = async (request) => {
   });
 };
 
-// Validators
-const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const validateSignupData = data => {
-  const { email, password, firstName, lastName } = data;
-  const errors = [];
-  if (!email) errors.push({ field: 'email', message: 'Email is required' });
-  else if (!validateEmail(email)) errors.push({ field: 'email', message: 'Invalid email format' });
-  if (!password) errors.push({ field: 'password', message: 'Password is required' });
-  else if (password.length < 8) errors.push({ field: 'password', message: 'Password must be at least 8 characters' });
-  if (!firstName?.trim()) errors.push({ field: 'firstName', message: 'First name is required' });
-  if (!lastName?.trim()) errors.push({ field: 'lastName', message: 'Last name is required' });
-  return { isValid: errors.length === 0, errors };
-};
-
-// Response helpers
-const sendSuccess = (res, message, data = null, statusCode = 200) => {
-  const payload = { success: true, message, timestamp: new Date().toISOString(), statusCode };
-  if (data) payload.data = data;
-  res.status(statusCode).json(payload);
-};
-const sendError = (res, message, errors = null, statusCode = 500) => {
-  const payload = { success: false, message, timestamp: new Date().toISOString(), statusCode };
-  if (errors) payload.errors = errors;
-  res.status(statusCode).json(payload);
-};
-
 // Routes
 app.get('/', (req, res) => {
   sendSuccess(res, 'AT-AT API is running!', {
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
       health: 'GET /',
       signup: 'POST /api/auth/signup',
       login: 'POST /api/auth/login',
       logout: 'POST /api/auth/logout',
       profile: 'GET /api/auth/profile',
-      users: 'GET /users',
-      importApi: 'POST /api/import',
-      listEndpoints: 'POST /api/endpoints',
+      // User management
+      updateProfile: 'PUT /api/user/update',
+      updatePassword: 'PUT /api/user/password',
+      getUserPreferences: 'GET /api/user/preferences',
+      updatePreferences: 'PUT /api/user/preferences',
+      // Engine commands from Commands.MD
+      authRegister: 'POST /api/auth/register',
+      authCheckLogin: 'POST /api/auth/check-login',
+      authGoogle: 'POST /api/auth/google',
+      dashboardOverview: 'GET /api/dashboard/overview',
+      dashboardMetrics: 'GET /api/dashboard/metrics',
+      dashboardAlerts: 'GET /api/dashboard/alerts',
+      getAllApis: 'GET /api/apis',
+      createApi: 'POST /api/apis/create',
+      getApiDetails: 'GET /api/apis/details',
+      updateApi: 'PUT /api/apis/update',
+      deleteApi: 'DELETE /api/apis/delete',
+      validateApiKey: 'POST /api/apis/key/validate',
+      setApiKey: 'POST /api/apis/key/set',
+      importApiFromFile: 'POST /api/apis/import/file',
+      importApiFromUrl: 'POST /api/apis/import/url',
+      listEndpoints: 'POST /api/endpoints/list',
       endpointDetails: 'POST /api/endpoints/details',
-      addTags: 'POST /api/endpoints/tags/add',
-      removeTags: 'POST /api/endpoints/tags/remove',
-      replaceTags: 'POST /api/endpoints/tags/replace',
-      listTags: 'GET /api/tags'
+      addEndpointTags: 'POST /api/endpoints/tags/add',
+      removeEndpointTags: 'POST /api/endpoints/tags/remove',
+      replaceEndpointTags: 'POST /api/endpoints/tags/replace',
+      addEndpointFlags: 'POST /api/endpoints/flags/add',
+      removeEndpointFlags: 'POST /api/endpoints/flags/remove',
+      listTags: 'GET /api/tags',
+      createScan: 'POST /api/scan/create',
+      startScan: 'POST /api/scan/start',
+      scanProgress: 'GET /api/scan/progress',
+      stopScan: 'POST /api/scan/stop',
+      scanResults: 'GET /api/scan/results',
+      listScans: 'GET /api/scan/list',
+      listTemplates: 'GET /api/templates/list',
+      getTemplateDetails: 'GET /api/templates/details',
+      useTemplate: 'POST /api/templates/use',
+      getUserProfile: 'GET /api/user/profile/get',
+      updateUserProfile: 'PUT /api/user/profile/update',
+      getUserSettings: 'GET /api/user/settings/get',
+      updateUserSettings: 'PUT /api/user/settings/update',
+      listReports: 'GET /api/reports/list',
+      getReportDetails: 'GET /api/reports/details',
+      downloadReport: 'POST /api/reports/download',
+      connectionTest: 'GET /api/connection/test'
     }
   });
 });
@@ -314,7 +463,441 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// Signup
+// ==========================================================
+// EXISTING USER MANAGEMENT ENDPOINTS
+// ==========================================================
+
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    sendSuccess(res, 'Profile retrieved successfully', { 
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        username: req.user.username,
+        firstName: req.user.first_name,
+        lastName: req.user.last_name,
+        emailConfirmed: req.user.email_confirmed,
+        createdAt: req.user.created_at
+      }
+    });
+  } catch (err) {
+    sendError(res, 'Profile error', err.message, 500);
+  }
+});
+
+app.put('/api/user/update', authenticateToken, async (req, res) => {
+  try {
+    const validation = validateProfileUpdate(req.body);
+    if (!validation.isValid) {
+      return sendError(res, 'Validation failed', validation.errors, 400);
+    }
+
+    const { firstName, lastName, username } = req.body;
+    const updateData = {};
+    const changedFields = [];
+
+    if (firstName !== undefined) {
+      updateData.first_name = firstName.trim();
+      changedFields.push('firstName');
+    }
+    if (lastName !== undefined) {
+      updateData.last_name = lastName.trim();
+      changedFields.push('lastName');
+    }
+    if (username !== undefined) {
+      updateData.username = username.trim();
+      changedFields.push('username');
+    }
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', req.userId)
+      .select('id, email, username, first_name, last_name, email_confirmed, created_at')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return sendError(res, 'Username already exists', null, 409);
+      }
+      console.error('Profile update error:', error);
+      return sendError(res, 'Database error', error.message, 500);
+    }
+
+    if (!data) {
+      return sendError(res, 'User not found or update failed', null, 404);
+    }
+
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: req.userId,
+          action: 'profile_updated',
+          description: `User updated profile fields: ${changedFields.join(', ')}`,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent'),
+          metadata: { changedFields, newValues: updateData }
+        }]);
+    } catch (logError) {
+      console.warn('Failed to log activity:', logError);
+    }
+
+    sendSuccess(res, 'Profile updated successfully', {
+      user: {
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        emailConfirmed: data.email_confirmed,
+        createdAt: data.created_at
+      }
+    });
+
+  } catch (err) {
+    console.error('Update profile error:', err);
+    sendError(res, 'Failed to update profile', err.message, 500);
+  }
+});
+
+app.put('/api/user/password', authenticateToken, async (req, res) => {
+  try {
+    const validation = validatePasswordUpdate(req.body);
+    if (!validation.isValid) {
+      return sendError(res, 'Validation failed', validation.errors, 400);
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    const { data: userData, error: fetchError } = await supabase
+      .from('users')
+      .select('password')
+      .eq('id', req.userId)
+      .single();
+
+    if (fetchError || !userData) {
+      return sendError(res, 'User not found', null, 404);
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userData.password);
+    if (!isCurrentPasswordValid) {
+      try {
+        await supabase
+          .from('user_activity_log')
+          .insert([{
+            user_id: req.userId,
+            action: 'password_change_failed',
+            description: 'Failed password change attempt - incorrect current password',
+            ip_address: req.ip,
+            user_agent: req.get('User-Agent')
+          }]);
+      } catch (logError) {
+        console.warn('Failed to log activity:', logError);
+      }
+      
+      return sendError(res, 'Current password is incorrect', null, 400);
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedNewPassword,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.userId);
+
+    if (updateError) {
+      console.error('Password update error:', updateError);
+      return sendError(res, 'Password update failed', updateError.message, 500);
+    }
+
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: req.userId,
+          action: 'password_changed',
+          description: 'User successfully changed their password',
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent')
+        }]);
+    } catch (logError) {
+      console.warn('Failed to log activity:', logError);
+    }
+
+    sendSuccess(res, 'Password updated successfully');
+
+  } catch (err) {
+    console.error('Update password error:', err);
+    sendError(res, 'Failed to update password', err.message, 500);
+  }
+});
+
+app.get('/api/user/preferences', authenticateToken, async (req, res) => {
+  try {
+    const { data: prefsData, error: prefsError } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', req.userId)
+      .single();
+
+    let preferences;
+    if (prefsError && prefsError.code === 'PGRST116') {
+      const defaultPrefs = {
+        user_id: req.userId,
+        notification_scan_completed: true,
+        notification_critical_findings: true,
+        notification_weekly_report: false,
+        notification_product_updates: true,
+        notification_email_digest: true,
+        notification_sms_alerts: false,
+        security_two_factor_auth: false,
+        security_session_timeout: 30,
+        security_login_notifications: true,
+        pref_theme: 'auto',
+        pref_default_scan_profile: 'owasp',
+        pref_auto_save_reports: true,
+        pref_email_frequency: 'weekly'
+      };
+
+      const { data: newPrefs, error: insertError } = await supabase
+        .from('user_preferences')
+        .insert([defaultPrefs])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating default preferences:', insertError);
+        preferences = {
+          notifications: {
+            scanCompleted: true,
+            criticalFindings: true,
+            weeklyReport: false,
+            productUpdates: true,
+            emailDigest: true,
+            smsAlerts: false,
+          },
+          security: {
+            twoFactorAuth: false,
+            sessionTimeout: '30',
+            loginNotifications: true,
+          },
+          preferences: {
+            theme: 'auto',
+            defaultScanProfile: 'owasp',
+            autoSaveReports: true,
+            emailFrequency: 'weekly',
+          },
+        };
+      } else {
+        prefsData = newPrefs;
+      }
+    }
+
+    if (prefsData) {
+      preferences = {
+        notifications: {
+          scanCompleted: prefsData.notification_scan_completed,
+          criticalFindings: prefsData.notification_critical_findings,
+          weeklyReport: prefsData.notification_weekly_report,
+          productUpdates: prefsData.notification_product_updates,
+          emailDigest: prefsData.notification_email_digest,
+          smsAlerts: prefsData.notification_sms_alerts,
+        },
+        security: {
+          twoFactorAuth: prefsData.security_two_factor_auth,
+          sessionTimeout: String(prefsData.security_session_timeout),
+          loginNotifications: prefsData.security_login_notifications,
+        },
+        preferences: {
+          theme: prefsData.pref_theme,
+          defaultScanProfile: prefsData.pref_default_scan_profile,
+          autoSaveReports: prefsData.pref_auto_save_reports,
+          emailFrequency: prefsData.pref_email_frequency,
+        },
+      };
+    }
+
+    sendSuccess(res, 'Preferences retrieved successfully', { preferences });
+  } catch (err) {
+    console.error('Get preferences error:', err);
+    sendError(res, 'Failed to retrieve preferences', err.message, 500);
+  }
+});
+
+app.put('/api/user/preferences', authenticateToken, async (req, res) => {
+  try {
+    const { preferences } = req.body;
+    
+    if (!preferences || typeof preferences !== 'object') {
+      return sendError(res, 'Invalid preferences data', null, 400);
+    }
+
+    const updateData = {};
+    
+    if (preferences.notifications) {
+      Object.assign(updateData, {
+        notification_scan_completed: preferences.notifications.scanCompleted,
+        notification_critical_findings: preferences.notifications.criticalFindings,
+        notification_weekly_report: preferences.notifications.weeklyReport,
+        notification_product_updates: preferences.notifications.productUpdates,
+        notification_email_digest: preferences.notifications.emailDigest,
+        notification_sms_alerts: preferences.notifications.smsAlerts,
+      });
+    }
+
+    if (preferences.security) {
+      Object.assign(updateData, {
+        security_two_factor_auth: preferences.security.twoFactorAuth,
+        security_session_timeout: parseInt(preferences.security.sessionTimeout, 10) || 30,
+        security_login_notifications: preferences.security.loginNotifications,
+      });
+    }
+
+    if (preferences.preferences) {
+      Object.assign(updateData, {
+        pref_theme: preferences.preferences.theme,
+        pref_default_scan_profile: preferences.preferences.defaultScanProfile,
+        pref_auto_save_reports: preferences.preferences.autoSaveReports,
+        pref_email_frequency: preferences.preferences.emailFrequency,
+      });
+    }
+
+    const { error } = await supabase
+      .from('user_preferences')
+      .upsert(
+        { user_id: req.userId, ...updateData },
+        { onConflict: 'user_id' }
+      );
+
+    if (error) {
+      console.error('Preferences update error:', error);
+      return sendError(res, 'Failed to update preferences', error.message, 500);
+    }
+
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: req.userId,
+          action: 'preferences_updated',
+          description: 'User updated their preferences',
+          metadata: { sections: Object.keys(preferences) }
+        }]);
+    } catch (logError) {
+      console.warn('Failed to log activity:', logError);
+    }
+    
+    sendSuccess(res, 'Preferences updated successfully');
+  } catch (err) {
+    console.error('Update preferences error:', err);
+    sendError(res, 'Failed to update preferences', err.message, 500);
+  }
+});
+
+app.get('/api/user/extended-profile', authenticateToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profile_extended')
+      .select('*')
+      .eq('user_id', req.userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      return sendError(res, 'Database error', error.message, 500);
+    }
+
+    const profile = data || {
+      phone: '',
+      company: '',
+      position: '',
+      timezone: 'UTC+02:00',
+      avatar_url: '',
+      bio: '',
+      website_url: '',
+      location: ''
+    };
+
+    sendSuccess(res, 'Extended profile retrieved successfully', { profile });
+  } catch (err) {
+    console.error('Get extended profile error:', err);
+    sendError(res, 'Failed to retrieve extended profile', err.message, 500);
+  }
+});
+
+app.put('/api/user/extended-profile', authenticateToken, async (req, res) => {
+  try {
+    const { phone, company, position, timezone, bio, website_url, location } = req.body;
+
+    const validationErrors = [];
+    
+    if (phone && !/^[\+]?[0-9\s\-\(\)]+$/.test(phone.trim())) {
+      validationErrors.push({ field: 'phone', message: 'Invalid phone number format' });
+    }
+    
+    if (website_url && !/^https?:\/\/.+/.test(website_url.trim())) {
+      validationErrors.push({ field: 'website_url', message: 'Website URL must start with http:// or https://' });
+    }
+    
+    if (bio && bio.length > 500) {
+      validationErrors.push({ field: 'bio', message: 'Bio must be less than 500 characters' });
+    }
+
+    if (validationErrors.length > 0) {
+      return sendError(res, 'Validation failed', validationErrors, 400);
+    }
+
+    const updateData = {
+      user_id: req.userId,
+      phone: phone ? phone.trim() : null,
+      company: company ? company.trim() : null,
+      position: position ? position.trim() : null,
+      timezone: timezone || 'UTC+02:00',
+      bio: bio ? bio.trim() : null,
+      website_url: website_url ? website_url.trim() : null,
+      location: location ? location.trim() : null,
+    };
+
+    const { data, error } = await supabase
+      .from('user_profile_extended')
+      .upsert(updateData, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Extended profile update error:', error);
+      return sendError(res, 'Failed to update extended profile', error.message, 500);
+    }
+
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: req.userId,
+          action: 'extended_profile_updated',
+          description: 'User updated their extended profile',
+          metadata: { fields: Object.keys(updateData) }
+        }]);
+    } catch (logError) {
+      console.warn('Failed to log activity:', logError);
+    }
+
+    sendSuccess(res, 'Extended profile updated successfully', { profile: data });
+  } catch (err) {
+    console.error('Update extended profile error:', err);
+    sendError(res, 'Failed to update extended profile', err.message, 500);
+  }
+});
+
+// ==========================================================
+// EXISTING AUTHENTICATION ROUTES
+// ==========================================================
+
 app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res) => {
   try {
     const { email, password, username, firstName, lastName } = req.body;
@@ -356,7 +939,6 @@ app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res
   }
 });
 
-// Login
 app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -368,7 +950,7 @@ app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res
     if (email) {
       query = query.eq('email', identifier);
     } else if (username) {
-      query = query.ilike('username', identifier); // Use ilike for case-insensitive matching
+      query = query.ilike('username', identifier);
     } else {
       return sendError(res, 'Must provide either username or email', null, 400);
     }
@@ -420,7 +1002,6 @@ app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res
   }
 });
 
-// Logout
 app.post('/api/auth/logout', async (req, res) => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -431,42 +1012,17 @@ app.post('/api/auth/logout', async (req, res) => {
   }
 });
 
-// Profile
-app.get('/api/auth/profile', async (req, res) => {
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer '))
-      return sendError(res, 'Missing or invalid Authorization header', null, 401);
-
-    const token = authHeader.split(' ')[1];
-    if (!process.env.JWT_SECRET)
-      return sendError(res, 'Server misconfigured: JWT secret missing', null, 500);
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return sendError(res, 'Invalid or expired token', err.message, 401);
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', decoded.id)
-      .single();
-
-    if (error || !data)
-      return sendError(res, 'User not found', error?.message || null, 404);
-
     sendSuccess(res, 'Profile retrieved', {
       user: {
-        id: data.id,
-        email: data.email,
-        username: data.username,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        emailConfirmed: data.email_confirmed,
-        createdAt: data.created_at
+        id: req.user.id,
+        email: req.user.email,
+        username: req.user.username,
+        firstName: req.user.first_name,
+        lastName: req.user.last_name,
+        emailConfirmed: req.user.email_confirmed,
+        createdAt: req.user.created_at
       }
     });
   } catch (err) {
@@ -474,282 +1030,9 @@ app.get('/api/auth/profile', async (req, res) => {
   }
 });
 
-// Import API endpoint
-app.post('/api/import', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return sendError(res, 'No file uploaded', null, 400);
-    }
-
-    const fileName = req.file.originalname;
-    const tempPath = req.file.path;
-    
-    // Create Files directory if it doesn't exist
-    const filesDir = path.join(__dirname, 'Files');
-    if (!fs.existsSync(filesDir)) {
-      fs.mkdirSync(filesDir, { recursive: true });
-    }
-    
-    // Move file to Files directory with original name
-    const finalPath = path.join(filesDir, fileName);
-    fs.renameSync(tempPath, finalPath);
-    
-    console.log(`📁 File saved to: ${finalPath}`);
-
-    // Send request to engine
-    const engineRequest = {
-      command: "apis.import_file",
-      data: {
-        file: fileName
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Clean up file after processing
-    try {
-      fs.unlinkSync(finalPath);
-      console.log(`🗑️ Cleaned up file: ${finalPath}`);
-    } catch (cleanupErr) {
-      console.warn(`⚠️ Failed to cleanup file: ${cleanupErr.message}`);
-    }
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'API imported successfully', {
-        api_id: engineResponse.data?.client_id || 'global',
-        filename: fileName
-      });
-    } else {
-      const errorMsg = engineResponse.data || 'Engine processing failed';
-      sendError(res, 'Import failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    // Clean up file on error
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupErr) {
-        console.warn(`⚠️ Failed to cleanup temp file: ${cleanupErr.message}`);
-      }
-    }
-    
-    console.error('Import error:', err.message);
-    sendError(res, 'Import failed', err.message, 500);
-  }
-});
-
-// List API endpoints
-app.post('/api/endpoints', async (req, res) => {
-  try {
-    const { api_id } = req.body;
-    
-    // Send request to engine - for demo, always use empty data since Python uses global API
-    const engineRequest = {
-      command: "endpoints.list",
-      data: {}  // Empty data for demo - Python backend uses global API
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Endpoints retrieved successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to retrieve endpoints';
-      sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('Endpoints error:', err.message);
-    sendError(res, 'Endpoints retrieval failed', err.message, 500);
-  }
-});
-
-// Add endpoint tags
-app.post('/api/endpoints/tags/add', async (req, res) => {
-  try {
-    const { endpoint_id, path, method, tags } = req.body;
-    
-    if (!tags || !Array.isArray(tags)) {
-      return sendError(res, 'Missing tags (must be array)', null, 400);
-    }
-
-    if (!path || !method) {
-      return sendError(res, 'Missing path or method', null, 400);
-    }
-
-    // Send request to engine with parameters Python expects
-    const engineRequest = {
-      command: "endpoints.tags.add",
-      data: {
-        path: path,
-        method: method,
-        tags: tags
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Tags added successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to add tags';
-      sendError(res, 'Add tags failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('Add tags error:', err.message);
-    sendError(res, 'Add tags failed', err.message, 500);
-  }
-});
-
-// Remove endpoint tags
-app.post('/api/endpoints/tags/remove', async (req, res) => {
-  try {
-    const { endpoint_id, path, method, tags } = req.body;
-    
-    if (!tags || !Array.isArray(tags)) {
-      return sendError(res, 'Missing tags (must be array)', null, 400);
-    }
-
-    if (!path || !method) {
-      return sendError(res, 'Missing path or method', null, 400);
-    }
-
-    // Send request to engine with parameters Python expects
-    const engineRequest = {
-      command: "endpoints.tags.remove",
-      data: {
-        path: path,
-        method: method,
-        tags: tags
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Tags removed successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to remove tags';
-      sendError(res, 'Remove tags failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('Remove tags error:', err.message);
-    sendError(res, 'Remove tags failed', err.message, 500);
-  }
-});
-
-// Replace endpoint tags
-app.post('/api/endpoints/tags/replace', async (req, res) => {
-  try {
-    const { endpoint_id, path, method, tags } = req.body;
-    
-    if (!Array.isArray(tags)) {
-      return sendError(res, 'Missing tags (must be array)', null, 400);
-    }
-
-    if (!path || !method) {
-      return sendError(res, 'Missing path or method', null, 400);
-    }
-
-    // Send request to engine with parameters Python expects
-    const engineRequest = {
-      command: "endpoints.tags.replace",
-      data: {
-        path: path,
-        method: method,
-        tags: tags
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Tags replaced successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to replace tags';
-      sendError(res, 'Replace tags failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('Replace tags error:', err.message);
-    sendError(res, 'Replace tags failed', err.message, 500);
-  }
-});
-
-// List all tags
-app.get('/api/tags', async (req, res) => {
-  try {
-    // Send request to engine
-    const engineRequest = {
-      command: "tags.list",
-      data: {}
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Tags retrieved successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to retrieve tags';
-      sendError(res, 'Tags retrieval failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('List tags error:', err.message);
-    sendError(res, 'List tags failed', err.message, 500);
-  }
-});
-
-// Get endpoint details
-app.post('/api/endpoints/details', async (req, res) => {
-  try {
-    const { endpoint_id, path, method } = req.body;
-    
-    if (!endpoint_id) {
-      return sendError(res, 'Missing endpoint_id', null, 400);
-    }
-
-    // Send request to engine with parameters Python expects
-    const engineRequest = {
-      command: "endpoints.details",
-      data: {
-        id: endpoint_id,        // Python expects "id"
-        path: path,             // Python expects "path"  
-        method: method          // Python expects "method"
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
-
-    // Check engine response
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'Endpoint details retrieved successfully', engineResponse.data);
-    } else {
-      const errorMsg = engineResponse.data || 'Failed to retrieve endpoint details';
-      sendError(res, 'Endpoint details retrieval failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    console.error('Endpoint details error:', err.message);
-    sendError(res, 'Endpoint details retrieval failed', err.message, 500);
-  }
-});
-
-
 // ==========================================================
-// NEW ROUTES FROM Commands.MD (Grouped Logically)
+// NEW ENDPOINTS FROM COMMANDS.MD
 // ==========================================================
-
-// --------------- AUTH ROUTES ---------------
 
 // Register new user (auth.register)
 app.post('/api/auth/register', async (req, res) => {
@@ -772,12 +1055,33 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Check User Login (auth.login)
+app.post('/api/auth/check-login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return sendError(res, 'Missing username or password', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'auth.login',
+      data: { username, password }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Login validated successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Login validation failed', null, 400);
+    }
+  } catch (err) {
+    sendError(res, 'Login validation error', err.message, 500);
+  }
+});
+
 // Login with Google (auth.google)
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) {
-      return sendError(res, 'Missing token', null, 400);
+      return sendError(res, 'Missing Google OAuth token', null, 400);
     }
     const engineResponse = await sendToEngine({
       command: 'auth.google',
@@ -786,69 +1090,76 @@ app.post('/api/auth/google', async (req, res) => {
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Google login successful', engineResponse.data);
     } else {
-      sendError(res, 'Google login failed', engineResponse.data, 400);
+      sendError(res, 'Google login failed', null, 400);
     }
   } catch (err) {
     sendError(res, 'Google login error', err.message, 500);
   }
 });
 
-// --------------- DASHBOARD ROUTES ---------------
-
-// Dashboard overview (dashboard.overview)
+// Dashboard Overview (dashboard.overview)
 app.get('/api/dashboard/overview', async (req, res) => {
   try {
-    const engineResponse = await sendToEngine({ command: 'dashboard.overview', data: {} });
+    const engineResponse = await sendToEngine({
+      command: 'dashboard.overview',
+      data: {}
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Dashboard overview retrieved', engineResponse.data);
+      sendSuccess(res, 'Dashboard overview retrieved successfully', engineResponse.data);
     } else {
-      sendError(res, 'Failed to get overview', engineResponse.data, 400);
+      sendError(res, 'Failed to get dashboard overview', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Dashboard overview error', err.message, 500);
   }
 });
 
-// Dashboard metrics (dashboard.metrics)
+// Dashboard Metrics (dashboard.metrics)
 app.get('/api/dashboard/metrics', async (req, res) => {
   try {
-    const engineResponse = await sendToEngine({ command: 'dashboard.metrics', data: {} });
+    const engineResponse = await sendToEngine({
+      command: 'dashboard.metrics',
+      data: {}
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Dashboard metrics retrieved', engineResponse.data);
+      sendSuccess(res, 'Dashboard metrics retrieved successfully', engineResponse.data);
     } else {
-      sendError(res, 'Failed to get metrics', engineResponse.data, 400);
+      sendError(res, 'Failed to get dashboard metrics', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Dashboard metrics error', err.message, 500);
   }
 });
 
-// Dashboard alerts (dashboard.alerts)
+// Dashboard Alerts (dashboard.alerts)
 app.get('/api/dashboard/alerts', async (req, res) => {
   try {
-    const engineResponse = await sendToEngine({ command: 'dashboard.alerts', data: {} });
+    const engineResponse = await sendToEngine({
+      command: 'dashboard.alerts',
+      data: {}
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Dashboard alerts retrieved', engineResponse.data);
+      sendSuccess(res, 'Dashboard alerts retrieved successfully', engineResponse.data);
     } else {
-      sendError(res, 'Failed to get alerts', engineResponse.data, 400);
+      sendError(res, 'Failed to get dashboard alerts', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Dashboard alerts error', err.message, 500);
   }
 });
 
-// --------------- APIS ROUTES ---------------
-
-// Get all APIs (apis.get_all)
-app.post('/api/apis/get_all', async (req, res) => {
+// Get All APIs (apis.get_all)
+app.get('/api/apis', async (req, res) => {
   try {
-    const { user_id } = req.body;
-    if (!user_id) return sendError(res, 'Missing user_id', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.get_all', data: { user_id } });
+    const { user_id } = req.query;
+    const engineResponse = await sendToEngine({
+      command: 'apis.get_all',
+      data: { user_id: user_id || 'default' }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'APIs retrieved', engineResponse.data);
+      sendSuccess(res, 'APIs retrieved successfully', engineResponse.data);
     } else {
-      sendError(res, 'Failed to get APIs', engineResponse.data, 400);
+      sendError(res, 'Failed to retrieve APIs', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Get APIs error', err.message, 500);
@@ -856,57 +1167,62 @@ app.post('/api/apis/get_all', async (req, res) => {
 });
 
 // Create API (apis.create)
-app.post('/api/apis/create', upload.single('file'), async (req, res) => {
+app.post('/api/apis/create', async (req, res) => {
   try {
-    const { name, description } = req.body;
-    if (!name || !description || !req.file) {
-      return sendError(res, 'Missing required fields', null, 400);
+    const { name, description, file } = req.body;
+    if (!name) {
+      return sendError(res, 'API name is required', null, 400);
     }
     const engineResponse = await sendToEngine({
       command: 'apis.create',
-      data: { name, description, file: req.file.originalname }
+      data: { name, description, file }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API created', engineResponse.data);
+      sendSuccess(res, 'API created successfully', engineResponse.data);
     } else {
-      sendError(res, 'Create API failed', engineResponse.data, 400);
+      sendError(res, 'Failed to create API', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Create API error', err.message, 500);
   }
 });
 
-// Get API details (apis.details)
-app.post('/api/apis/details', async (req, res) => {
+// Get API Details (apis.details)
+app.get('/api/apis/details', async (req, res) => {
   try {
-    const { api_id } = req.body;
-    if (!api_id) return sendError(res, 'Missing api_id', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.details', data: { api_id } });
+    const { api_id } = req.query;
+    if (!api_id) {
+      return sendError(res, 'API ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.details',
+      data: { api_id }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API details retrieved', engineResponse.data);
+      sendSuccess(res, 'API details retrieved successfully', engineResponse.data);
     } else {
-      sendError(res, 'Get API details failed', engineResponse.data, 400);
+      sendError(res, 'Failed to get API details', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'API details error', err.message, 500);
+    sendError(res, 'Get API details error', err.message, 500);
   }
 });
 
 // Update API (apis.update)
-app.post('/api/apis/update', async (req, res) => {
+app.put('/api/apis/update', async (req, res) => {
   try {
     const { api_id, name, description } = req.body;
-    if (!api_id || !name || !description) {
-      return sendError(res, 'Missing required fields', null, 400);
+    if (!api_id) {
+      return sendError(res, 'API ID is required', null, 400);
     }
     const engineResponse = await sendToEngine({
       command: 'apis.update',
       data: { api_id, name, description }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API updated');
+      sendSuccess(res, 'API updated successfully');
     } else {
-      sendError(res, 'Update API failed', engineResponse.data, 400);
+      sendError(res, 'Failed to update API', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Update API error', err.message, 500);
@@ -914,121 +1230,761 @@ app.post('/api/apis/update', async (req, res) => {
 });
 
 // Delete API (apis.delete)
-app.post('/api/apis/delete', async (req, res) => {
+app.delete('/api/apis/delete', async (req, res) => {
   try {
     const { api_id } = req.body;
-    if (!api_id) return sendError(res, 'Missing api_id', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.delete', data: { api_id } });
+    if (!api_id) {
+      return sendError(res, 'API ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.delete',
+      data: { api_id }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API deleted');
+      sendSuccess(res, 'API deleted successfully');
     } else {
-      sendError(res, 'Delete API failed', engineResponse.data, 400);
+      sendError(res, 'Failed to delete API', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Delete API error', err.message, 500);
   }
 });
 
-// Validate API key (apis.key.validate)
+// Validate API Key (apis.key.validate)
 app.post('/api/apis/key/validate', async (req, res) => {
   try {
     const { api_key } = req.body;
-    if (!api_key) return sendError(res, 'Missing api_key', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.key.validate', data: { api_key } });
+    if (!api_key) {
+      return sendError(res, 'API key is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.key.validate',
+      data: { api_key }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API key valid');
+      sendSuccess(res, 'API key validated successfully');
     } else {
-      sendError(res, 'Invalid API key', engineResponse.data, 400);
+      sendError(res, 'API key validation failed', engineResponse.data, 400);
     }
   } catch (err) {
-    sendError(res, 'Validate API key error', err.message, 500);
+    sendError(res, 'API key validation error', err.message, 500);
   }
 });
 
-// Set API key (apis.key.set)
+// Set API Key (apis.key.set)
 app.post('/api/apis/key/set', async (req, res) => {
   try {
     const { api_key } = req.body;
-    if (!api_key) return sendError(res, 'Missing api_key', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.key.set', data: { api_key } });
+    if (!api_key) {
+      return sendError(res, 'API key is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.key.set',
+      data: { api_key }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API key set');
+      sendSuccess(res, 'API key set successfully');
     } else {
-      sendError(res, 'Set API key failed', engineResponse.data, 400);
+      sendError(res, 'Failed to set API key', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Set API key error', err.message, 500);
   }
 });
 
+// Import API from File (apis.import_file) - EXISTING ENDPOINT
+app.post('/api/import', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return sendError(res, 'No file uploaded', null, 400);
+    }
+
+    const fileName = req.file.originalname;
+    const tempPath = req.file.path;
+    
+    const filesDir = path.join(__dirname, 'Files');
+    if (!fs.existsSync(filesDir)) {
+      fs.mkdirSync(filesDir, { recursive: true });
+    }
+    
+    const finalPath = path.join(filesDir, fileName);
+    fs.renameSync(tempPath, finalPath);
+    
+    console.log(`📁 File saved to: ${finalPath}`);
+
+    const engineRequest = {
+      command: "apis.import_file",
+      data: {
+        file: fileName
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    try {
+      fs.unlinkSync(finalPath);
+      console.log(`🗑️ Cleaned up file: ${finalPath}`);
+    } catch (cleanupErr) {
+      console.warn(`⚠️ Failed to cleanup file: ${cleanupErr.message}`);
+    }
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'API imported successfully', {
+        api_id: engineResponse.data?.client_id || 'global',
+        filename: fileName
+      });
+    } else {
+      const errorMsg = engineResponse.data || 'Engine processing failed';
+      sendError(res, 'Import failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupErr) {
+        console.warn(`⚠️ Failed to cleanup temp file: ${cleanupErr.message}`);
+      }
+    }
+    
+    console.error('Import error:', err.message);
+    sendError(res, 'Import failed', err.message, 500);
+  }
+});
+
 // Import API from URL (apis.import_url)
-app.post('/api/apis/import_url', async (req, res) => {
+app.post('/api/apis/import/url', async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url) return sendError(res, 'Missing URL', null, 400);
-    const engineResponse = await sendToEngine({ command: 'apis.import_url', data: { url } });
+    if (!url) {
+      return sendError(res, 'URL is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.import_url',
+      data: { url }
+    });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'API imported from URL', engineResponse.data);
+      sendSuccess(res, 'API imported from URL successfully', engineResponse.data);
     } else {
-      sendError(res, 'Import API URL failed', engineResponse.data, 400);
+      sendError(res, 'Failed to import API from URL', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'Import API URL error', err.message, 500);
+    sendError(res, 'Import from URL error', err.message, 500);
   }
 });
 
-// --------------- ENDPOINTS FLAGS ROUTES ---------------
+// List API Endpoints (endpoints.list) - EXISTING ENDPOINT
+app.post('/api/endpoints', async (req, res) => {
+  try {
+    const { api_id } = req.body;
+    
+    const engineRequest = {
+      command: "endpoints.list",
+      data: {}
+    };
 
-// Add endpoint flags (endpoints.flags.add)
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Endpoints retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve endpoints';
+      sendError(res, 'Endpoints retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Endpoints error:', err.message);
+    sendError(res, 'Endpoints retrieval failed', err.message, 500);
+  }
+});
+
+// Get Endpoint Details (endpoints.details) - EXISTING ENDPOINT
+app.post('/api/endpoints/details', async (req, res) => {
+  try {
+    const { endpoint_id, path, method } = req.body;
+    
+    if (!endpoint_id) {
+      return sendError(res, 'Missing endpoint_id', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.details",
+      data: {
+        id: endpoint_id,
+        path: path,
+        method: method
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Endpoint details retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve endpoint details';
+      sendError(res, 'Endpoint details retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Endpoint details error:', err.message);
+    sendError(res, 'Endpoint details retrieval failed', err.message, 500);
+  }
+});
+
+// Add Endpoint Tags (endpoints.tags.add) - EXISTING ENDPOINT
+app.post('/api/endpoints/tags/add', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!tags || !Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.tags.add",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags added successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to add tags';
+      sendError(res, 'Add tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Add tags error:', err.message);
+    sendError(res, 'Add tags failed', err.message, 500);
+  }
+});
+
+// Remove Endpoint Tags (endpoints.tags.remove) - EXISTING ENDPOINT
+app.post('/api/endpoints/tags/remove', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!tags || !Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.tags.remove",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags removed successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to remove tags';
+      sendError(res, 'Remove tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Remove tags error:', err.message);
+    sendError(res, 'Remove tags failed', err.message, 500);
+  }
+});
+
+// Replace Endpoint Tags (endpoints.tags.replace) - EXISTING ENDPOINT
+app.post('/api/endpoints/tags/replace', async (req, res) => {
+  try {
+    const { endpoint_id, path, method, tags } = req.body;
+    
+    if (!Array.isArray(tags)) {
+      return sendError(res, 'Missing tags (must be array)', null, 400);
+    }
+
+    if (!path || !method) {
+      return sendError(res, 'Missing path or method', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.tags.replace",
+      data: {
+        path: path,
+        method: method,
+        tags: tags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags replaced successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to replace tags';
+      sendError(res, 'Replace tags failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('Replace tags error:', err.message);
+    sendError(res, 'Replace tags failed', err.message, 500);
+  }
+});
+
+// List All Tags (tags.list) - EXISTING ENDPOINT
+app.get('/api/tags', async (req, res) => {
+  try {
+    const engineRequest = {
+      command: "tags.list",
+      data: {}
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Tags retrieved successfully', engineResponse.data);
+    } else {
+      const errorMsg = engineResponse.data || 'Failed to retrieve tags';
+      sendError(res, 'Tags retrieval failed', errorMsg, engineResponse.code || 500);
+    }
+
+  } catch (err) {
+    console.error('List tags error:', err.message);
+    sendError(res, 'List tags failed', err.message, 500);
+  }
+});
+
+// Add Endpoint Flags (endpoints.flags.add)
 app.post('/api/endpoints/flags/add', async (req, res) => {
   try {
-    const { endpoint_id, flags } = req.body;
-    if (!endpoint_id || !flags) {
-      return sendError(res, 'Missing endpoint_id or flags', null, 400);
+    const { endpoint_id, path, method, flags } = req.body;
+    
+    if (!flags) {
+      return sendError(res, 'Missing flags', null, 400);
     }
-    const engineResponse = await sendToEngine({
-      command: 'endpoints.flags.add',
-      data: { endpoint_id, flags }
-    });
-    if (engineResponse.code === 200) {
-      sendSuccess(res, 'Flags added');
+
+    if (!endpoint_id && (!path || !method)) {
+      return sendError(res, 'Missing endpoint_id or path/method', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.flags.add",
+      data: {
+        endpoint_id: endpoint_id,
+        path: path,
+        method: method,
+        flags: flags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Flags added successfully', engineResponse.data);
     } else {
-      sendError(res, 'Add flags failed', engineResponse.data, 400);
+      const errorMsg = engineResponse.data || 'Failed to add flags';
+      sendError(res, 'Add flags failed', errorMsg, engineResponse.code || 500);
     }
+
   } catch (err) {
-    sendError(res, 'Add flags error', err.message, 500);
+    console.error('Add flags error:', err.message);
+    sendError(res, 'Add flags failed', err.message, 500);
   }
 });
 
-// Remove endpoint flags (endpoints.flags.remove)
+// Remove Endpoint Flags (endpoints.flags.remove)
 app.post('/api/endpoints/flags/remove', async (req, res) => {
   try {
-    const { endpoint_id, flags } = req.body;
-    if (!endpoint_id || !flags) {
-      return sendError(res, 'Missing endpoint_id or flags', null, 400);
+    const { endpoint_id, path, method, flags } = req.body;
+    
+    if (!flags) {
+      return sendError(res, 'Missing flags', null, 400);
     }
-    const engineResponse = await sendToEngine({
-      command: 'endpoints.flags.remove',
-      data: { endpoint_id, flags }
-    });
-    if (engineResponse.code === 200) {
-      sendSuccess(res, 'Flags removed');
+
+    if (!endpoint_id && (!path || !method)) {
+      return sendError(res, 'Missing endpoint_id or path/method', null, 400);
+    }
+
+    const engineRequest = {
+      command: "endpoints.flags.remove",
+      data: {
+        endpoint_id: endpoint_id,
+        path: path,
+        method: method,
+        flags: flags
+      }
+    };
+
+    const engineResponse = await sendToEngine(engineRequest);
+
+    if (engineResponse.code === 200 || engineResponse.code === '200') {
+      sendSuccess(res, 'Flags removed successfully', engineResponse.data);
     } else {
-      sendError(res, 'Remove flags failed', engineResponse.data, 400);
+      const errorMsg = engineResponse.data || 'Failed to remove flags';
+      sendError(res, 'Remove flags failed', errorMsg, engineResponse.code || 500);
     }
+
   } catch (err) {
-    sendError(res, 'Remove flags error', err.message, 500);
+    console.error('Remove flags error:', err.message);
+    sendError(res, 'Remove flags failed', err.message, 500);
   }
 });
 
-// NOTE: Additional routes for scans, templates, user, reports, and connection would follow in similar style.
-// Due to length limits, these are omitted from this preview but will be included in final file.
+// Create Scan (scan.create)
+app.post('/api/scan/create', async (req, res) => {
+  try {
+    const { client_id, scan_profile } = req.body;
+    if (!client_id) {
+      return sendError(res, 'Client ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scan.create',
+      data: { 
+        client_id, 
+        scan_profile: scan_profile || 'OWASP_API_10' 
+      }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan created successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to create scan', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Create scan error', err.message, 500);
+  }
+});
 
+// Start Scan (scan.start)
+app.post('/api/scan/start', async (req, res) => {
+  try {
+    const { api_name, scan_profile } = req.body;
+    if (!api_name) {
+      return sendError(res, 'API name is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scan.start',
+      data: { api_name, scan_profile }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan started successfully', engineResponse.data);
+    } else if (engineResponse.code === 503) {
+      sendError(res, 'Scan in Progress', engineResponse.data, 503);
+    } else {
+      sendError(res, 'Failed to start scan', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Start scan error', err.message, 500);
+  }
+});
 
+// Check Scan Progress (scan.progress)
+app.get('/api/scan/progress', async (req, res) => {
+  try {
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scan.progress',
+      data: { scan_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan progress retrieved successfully', engineResponse.data);
+    } else if (engineResponse.code === 404) {
+      sendError(res, 'Scan not found', engineResponse.data, 404);
+    } else {
+      sendError(res, 'Failed to get scan progress', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Scan progress error', err.message, 500);
+  }
+});
+
+// Stop Scan (scan.stop)
+app.post('/api/scan/stop', async (req, res) => {
+  try {
+    const { scan_id } = req.body;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scan.stop',
+      data: { scan_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan stopped successfully');
+    } else if (engineResponse.code === 404) {
+      sendError(res, 'Scan not found', engineResponse.data, 404);
+    } else {
+      sendError(res, 'Failed to stop scan', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Stop scan error', err.message, 500);
+  }
+});
+
+// Get Scan Results (scan.results)
+app.get('/api/scan/results', async (req, res) => {
+  try {
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scan.results',
+      data: { scan_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan results retrieved successfully', engineResponse.data);
+    } else if (engineResponse.code === 404) {
+      sendError(res, 'Scan not found', null, 404);
+    } else {
+      sendError(res, 'Failed to get scan results', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Scan results error', err.message, 500);
+  }
+});
+
+// List All Scans (scan.list)
+app.get('/api/scan/list', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'scan.list',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scans retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to retrieve scans', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'List scans error', err.message, 500);
+  }
+});
+
+// List All Templates (templates.list)
+app.get('/api/templates/list', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'templates.list',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Templates retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to retrieve templates', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'List templates error', err.message, 500);
+  }
+});
+
+// Get Template Details (templates.details)
+app.get('/api/templates/details', async (req, res) => {
+  try {
+    const { template_id } = req.query;
+    if (!template_id) {
+      return sendError(res, 'Template ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'templates.details',
+      data: { template_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Template details retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get template details', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Template details error', err.message, 500);
+  }
+});
+
+// Use Template (templates.use)
+app.post('/api/templates/use', async (req, res) => {
+  try {
+    const { template_id, api_id } = req.body;
+    if (!template_id || !api_id) {
+      return sendError(res, 'Template ID and API ID are required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'templates.use',
+      data: { template_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Template used successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to use template', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Use template error', err.message, 500);
+  }
+});
+
+// Get User Profile (user.profile.get)
+app.get('/api/user/profile/get', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'user.profile.get',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'User profile retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get user profile', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'User profile error', err.message, 500);
+  }
+});
+
+// Update User Profile (user.profile.update)
+app.put('/api/user/profile/update', async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    const engineResponse = await sendToEngine({
+      command: 'user.profile.update',
+      data: { username, email }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'User profile updated successfully');
+    } else {
+      sendError(res, 'Failed to update user profile', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Update user profile error', err.message, 500);
+  }
+});
+
+// Get User Settings (user.settings.get)
+app.get('/api/user/settings/get', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'user.settings.get',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'User settings retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get user settings', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'User settings error', err.message, 500);
+  }
+});
+
+// Update User Settings (user.settings.update)
+app.put('/api/user/settings/update', async (req, res) => {
+  try {
+    const { notifications } = req.body;
+    const engineResponse = await sendToEngine({
+      command: 'user.settings.update',
+      data: { notifications }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'User settings updated successfully');
+    } else {
+      sendError(res, 'Failed to update user settings', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Update user settings error', err.message, 500);
+  }
+});
+
+// List All Reports (reports.list)
+app.get('/api/reports/list', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'reports.list',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Reports retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to retrieve reports', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'List reports error', err.message, 500);
+  }
+});
+
+// Get Report Details (reports.details)
+app.get('/api/reports/details', async (req, res) => {
+  try {
+    const { report_id } = req.query;
+    if (!report_id) {
+      return sendError(res, 'Report ID is required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'reports.details',
+      data: { report_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Report details retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get report details', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Report details error', err.message, 500);
+  }
+});
+
+// Download Report (reports.download)
+app.post('/api/reports/download', async (req, res) => {
+  try {
+    const { report_id, report_type } = req.body;
+    if (!report_id || !report_type) {
+      return sendError(res, 'Report ID and report type are required', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'reports.download',
+      data: { report_id, report_type }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Report downloaded successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to download report', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Download report error', err.message, 500);
+  }
+});
+
+// Connection Test (connection.test)
+app.get('/api/connection/test', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'connection.test',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Connection test successful', engineResponse.data);
+    } else {
+      sendError(res, 'Connection test failed', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Connection test error', err.message, 500);
+  }
+});
+
+// 404 handler
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);
 });
 
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   sendError(res, 'Unhandled error', err.message, 500);
@@ -1042,7 +1998,6 @@ const gracefulShutdown = () => {
     console.log('🔌 Terminating engine process...');
     engineProcess.kill('SIGTERM');
     
-    // Force kill if doesn't shut down in 5 seconds
     setTimeout(() => {
       if (engineProcess) {
         console.log('💀 Force killing engine process...');

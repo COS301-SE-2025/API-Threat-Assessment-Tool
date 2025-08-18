@@ -146,18 +146,18 @@ for endpoint in api_client.endpoints:
         if flag == OWASP_FLAGS.URC:
             print(endpoint.path)
 
-# print("=====================================================================")
-# print("==========================\nUABF Testing\n==========================")
-# print("=====================================================================")
-# uabf_scanner = UABF_Scan()
-# print(uabf_scanner.name.value)
-# print("setting flags")
-# uabf_scanner._set_flag(api_client)
-# print("\nEndpoints with the UABF flag:")
-# for endpoint in api_client.endpoints:
-#     for flag in endpoint.flags:
-#         if flag == OWASP_FLAGS.UABF:
-#             print(endpoint.path)
+print("=====================================================================")
+print("==========================\nUABF Testing\n==========================")
+print("=====================================================================")
+uabf_scanner = UABF_Scan()
+print(uabf_scanner.name.value)
+print("setting flags")
+uabf_scanner._set_flag(api_client)
+print("\nEndpoints with the UABF flag:")
+for endpoint in api_client.endpoints:
+    for flag in endpoint.flags:
+        if flag == OWASP_FLAGS.UABF:
+            print(endpoint.path)
 
 # print("=====================================================================")
 # print("==========================\nSEC_MISC Testing\n==========================")

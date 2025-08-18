@@ -172,18 +172,18 @@ for endpoint in api_client.endpoints:
         if flag == OWASP_FLAGS.SEC_MISC:
             print(endpoint.path)
 
-# print("=====================================================================")
-# print("==========================\nUCAPI Testing\n==========================")
-# print("=====================================================================")
-# ucapi_scanner = UCAPI_Scan()
-# print(ucapi_scanner.name.value)
-# print("setting flags")
-# ucapi_scanner._set_flag(api_client)
-# print("\nEndpoints with the UCAPI flag:")
-# for endpoint in api_client.endpoints:
-#     for flag in endpoint.flags:
-#         if flag == OWASP_FLAGS.UCAPI:
-#             print(endpoint.path)
+print("=====================================================================")
+print("==========================\nUCAPI Testing\n==========================")
+print("=====================================================================")
+ucapi_scanner = UCAPI_Scan()
+print(ucapi_scanner.name.value)
+print("setting flags")
+ucapi_scanner._set_flag(api_client)
+print("\nEndpoints with the UCAPI flag:")
+for endpoint in api_client.endpoints:
+    for flag in endpoint.flags:
+        if flag == OWASP_FLAGS.UCAPI:
+            print(endpoint.path)
 
 # ==============================================================================
 print("=====================================================================")

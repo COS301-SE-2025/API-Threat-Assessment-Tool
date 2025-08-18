@@ -133,18 +133,18 @@ for endpoint in api_client.endpoints:
         if flag == OWASP_FLAGS.BKEN_AUTH:
             print(endpoint.path)
 
-# print("=====================================================================")
-# print("==========================\nURC Testing\n==========================")
-# print("=====================================================================")
-# urc_scanner = URC_Scan()
-# print(urc_scanner.name.value)
-# print("setting flags")
-# urc_scanner._set_flag(api_client)
-# print("\nEndpoints with the URC flag:")
-# for endpoint in api_client.endpoints:
-#     for flag in endpoint.flags:
-#         if flag == OWASP_FLAGS.URC:
-#             print(endpoint.path)
+print("=====================================================================")
+print("==========================\nURC Testing\n==========================")
+print("=====================================================================")
+urc_scanner = URC_Scan()
+print(urc_scanner.name.value)
+print("setting flags")
+urc_scanner._set_flag(api_client)
+print("\nEndpoints with the URC flag:")
+for endpoint in api_client.endpoints:
+    for flag in endpoint.flags:
+        if flag == OWASP_FLAGS.URC:
+            print(endpoint.path)
 
 # print("=====================================================================")
 # print("==========================\nUABF Testing\n==========================")

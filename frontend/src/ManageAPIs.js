@@ -2657,8 +2657,8 @@ const ManageAPIs = () => {
                   {importedApis.map((importedApi, index) => (
                     <div key={importedApi.id} className="api-card" style={{
                       animationDelay: `${index * 0.1}s`,
-                      border: '2px solid #8b5cf6',
-                      background: 'linear-gradient(135deg, #8b5cf6, #6366f1)'
+                      border: '2px solid #9e75ffff',
+                      background: 'linear-gradient(135deg, #46264bff, #1b001bff)'
                     }}>
                       <div className="api-card-header">
                         <h4 className="api-name" style={{ color: 'white' }}>{importedApi.filename}</h4>
@@ -2726,9 +2726,9 @@ const ManageAPIs = () => {
                           onClick={() => handleViewEndpoints(importedApi)}
                           className="action-btn endpoints"
                           title="View Endpoints"
-                          style={{ background: "#6366f1", color: "#fff" }}
+                          style={{ background: "#081dd6ff", color: "#fff" }}
                         >
-                          📂 Endpoints
+                          📂 Tags
                         </button>
 
                         <button
@@ -2818,7 +2818,7 @@ const ManageAPIs = () => {
                             title="View Endpoints"
                             style={{ background: "#6366f1", color: "#fff" }}
                           >
-                            📂 Endpoints
+                            📂 Tags
                           </button>
                         </div>
                       </div>
@@ -3129,7 +3129,7 @@ const ManageAPIs = () => {
           <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeEndpointsModal()}>
             <div className="modal-content" style={{ minWidth: 420, maxHeight: 540, overflow: 'auto' }}>
               <div className="modal-header">
-                <h2>📂 Endpoints for "{selectedApiForEndpoints?.name || selectedApiForEndpoints?.filename || ''}"</h2>
+                <h2>📂 Tags for "{selectedApiForEndpoints?.name || selectedApiForEndpoints?.filename || ''}"</h2>
                 <button onClick={closeEndpointsModal} className="close-btn">×</button>
               </div>
               <div style={{ padding: 16 }}>
@@ -3193,7 +3193,7 @@ const ManageAPIs = () => {
           <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDetailModalOpen(false)}>
             <div className="modal-content" style={{ minWidth: 340, maxWidth: 540, maxHeight: 540, overflow: 'auto' }}>
               <div className="modal-header">
-                <h2>📖 Endpoint Details</h2>
+                <h2>📖 Tags Details</h2>
                 <button onClick={() => setDetailModalOpen(false)} className="close-btn">×</button>
               </div>
               <div style={{ padding: 18 }}>

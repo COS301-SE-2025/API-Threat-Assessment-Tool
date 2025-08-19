@@ -51,9 +51,8 @@ jobs:
         working-directory: ./frontend
 
       - name: Run frontend tests
-        run: npm test
+        run: npm test -- --coverage --watchAll=false
         working-directory: ./frontend
-        continue-on-error: true
 
       # Install dependencies and run tests in api
       - name: Install api dependencies

@@ -23,7 +23,7 @@
 #     def generate_PDFReport():
 #         print("do something")
 
-from vulnerability_report import VulnerabilityReport
+from models.vulnerability_report import VulnerabilityReport
 from fpdf import FPDF
 import json
 

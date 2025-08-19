@@ -1,0 +1,59 @@
+name: Engine Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  engine-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      # Start the custom API test server in the background
+      - name: Start Custom Test API Server
+        run: |
+          nohup python backend/testing_servers/custom/main.py > server.log 2>&1 &
+          sleep 5
+          curl --retry 5 --retry-delay 5 --fail http://0.0.0.0:8000/ || (echo "❌ Test API Server did not start"; exit 1)
+
+      # Start the scanning engine in the background
+      - name: Start Scanning Engine
+        run: |
+          nohup python backend/main.py > engine.log 2>&1 &
+          sleep 5
+          netstat -an | grep 9011 || (echo "❌ Scanning Engine not listening on port 9011"; exit 1)
+
+      # Run the automated test suite with pytest
+      - name: Run Engine Tests
+        run: |
+          cd backend
+          pytest -v tests/test_scan_flags.py | tee ../scan_results.log
+
+      # Upload logs and test results as artifacts
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: scan-results
+          path: |
+            server.log
+            engine.log
+            scan_results.log

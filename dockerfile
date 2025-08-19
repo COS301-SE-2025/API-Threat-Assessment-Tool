@@ -54,7 +54,7 @@ RUN chmod +x setup.sh
 
 
 # Expose ports backend api frontend
-EXPOSE 9011 3001 3000
+EXPOSE 9011 3000 3001 3002
 
 # Start all apps
 CMD ["bash", "setup.sh"]

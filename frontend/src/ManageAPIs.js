@@ -1101,10 +1101,14 @@ const ManageAPIs = () => {
     }
   ];
 
-  const [apis, setApis] = useState(() => {
-    const local = loadApisFromLocal();
-    return local.length > 0 ? local : fallbackApis;
-  });
+const [apis, setApis] = useState(() => {
+  const local = loadApisFromLocal();
+  if (Array.isArray(local) && local.length > 0) {
+    return local;
+  }
+  return Array.isArray(fallbackApis) ? fallbackApis : [];
+});
+
 
   useEffect(() => {
     saveApisToLocal(apis);

@@ -34,7 +34,7 @@ jobs:
           nohup python backend/testing_servers/custom/main.py > server.log 2>&1 &
           # Wait for server to become ready
           for i in {1..20}; do
-            if curl -s http://127.0.0.1:8000/ > /dev/null; then
+            if curl -s http://127.0.0.1:8000/ > /dev/null; then  # ← Change to 127.0.0.1
               echo "✅ Test API Server is up!"
               break
             fi
@@ -42,7 +42,7 @@ jobs:
             sleep 2
           done
           # Final check
-          curl --fail http://127.0.0.1:8000/ || (echo "❌ Test API Server did not start"; exit 1)
+          curl --fail http://127.0.0.1:8000/ || (echo "❌ Test API Server did not start"; cat server.log; exit 1)
 
 
       # Start the scanning engine in the background

@@ -1,3 +1,21 @@
+### Connection Test
+```json
+{
+
+"command": "connection.test",
+"data": {}
+}
+```
+
+Response:  
+
+- status = 200  
+- data = { "message": "Connection Established" }
+
+Description:  
+- Used to test whether the daemon is reachable and responsive  
+
+
 ### Register New User
 ```json
 {
@@ -899,21 +917,3 @@ Description:
 - Generates and returns a download of the selected report type  
 
 --- 
-
-
-### Connection Test
-```json
-{
-
-"command": "connection.test",
-"data": {}
-}
-```
-Response:  
-
-- status = 200  
-- data = { "message": "Connection Established" }
-
-Description:  
-- Used to test whether the daemon is reachable and responsive  
-```

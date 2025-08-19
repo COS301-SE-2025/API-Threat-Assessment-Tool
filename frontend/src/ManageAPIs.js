@@ -92,6 +92,31 @@ async function replaceTagsOnEndpoint({ path, method, tags }) {
   return data.data;
 }
 
+// Flag management functions
+async function addFlagsToEndpoint({ endpoint_id, flag }) {
+  const res = await fetch('/api/endpoints/flags/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ endpoint_id, tags: flag }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to add flag");
+  return data.data;
+}
+
+async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
+  const res = await fetch('/api/endpoints/flags/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ endpoint_id, tags: flag }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove flag");
+  return data.data;
+}
+
 // Tag Editor Component
 function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags }) {
   const [tagInput, setTagInput] = React.useState('');
@@ -329,6 +354,140 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
   );
 }
 
+// Flag Editor Component
+function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged }) {
+  const [flagInput, setFlagInput] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState('');
+  const [currentFlags, setCurrentFlags] = useState(endpoint.flags || []);
+
+  useEffect(() => {
+    setCurrentFlags(endpoint.flags || []);
+  }, [endpoint.flags]);
+
+  const handleAddFlag = async () => {
+    const flag = flagInput.trim();
+    if (!flag) {
+      setMessage('Please enter a flag.');
+      return;
+    }
+    
+    if (currentFlags.includes(flag)) {
+      setMessage('Flag already exists.');
+      return;
+    }
+
+    setAdding(true);
+    setMessage('');
+    try {
+      await addFlagsToEndpoint({
+        endpoint_id: endpoint.id,
+        flag,
+      });
+      setMessage('✅ Flag added!');
+      setFlagInput('');
+      
+      const newFlags = [...currentFlags, flag];
+      setCurrentFlags(newFlags);
+      
+      if (onFlagsChanged) onFlagsChanged(newFlags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemoveFlag = async (flagToRemove) => {
+    try {
+      await removeFlagsFromEndpoint({
+        endpoint_id: endpoint.id,
+        flag: flagToRemove,
+      });
+      
+      const newFlags = currentFlags.filter(flag => flag !== flagToRemove);
+      setCurrentFlags(newFlags);
+      
+      if (onFlagsChanged) onFlagsChanged(newFlags);
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 4 }}>
+          Current Flags:
+        </div>
+        {currentFlags && currentFlags.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {currentFlags.map(flag => (
+              <span key={flag} style={{
+                display: 'inline-block', 
+                background: "#3b82f6", 
+                color: "white",
+                borderRadius: 8, 
+                padding: "2px 8px", 
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              onClick={() => handleRemoveFlag(flag)}
+              title="Click to remove flag">
+                {flag} ×
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "#999", fontStyle: 'italic' }}>
+            No flags assigned
+          </div>
+        )}
+      </div>
+
+      {allFlags && allFlags.length > 0 ? (
+        <div style={{ marginBottom: 5, fontSize: 12, color: "#888", whiteSpace: 'pre-line' }}>
+          <strong>Available flags:</strong>{" "}
+          {allFlags.map(flag => (
+            <span key={flag} style={{
+              display: 'inline-block', background: "#f3f4f6", color: "#6366f1",
+              borderRadius: 8, padding: "2px 8px", marginRight: 4, marginBottom: 2, fontWeight: 600
+            }}>{flag}</span>
+          ))}
+        </div>
+      ) : null}
+
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+        <input
+          type="text"
+          placeholder="Add flag"
+          value={flagInput}
+          onChange={e => setFlagInput(e.target.value)}
+          disabled={adding}
+          style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
+        />
+        <button
+          onClick={handleAddFlag}
+          disabled={adding}
+          style={{
+            marginLeft: 6,
+            padding: '4px 12px',
+            borderRadius: 4,
+            background: '#3b82f6',
+            color: 'white',
+            fontWeight: 600,
+            cursor: adding ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {adding ? "Adding..." : "Add Flag"}
+        </button>
+      </div>
+      {message && <div style={{ fontSize: 13, marginTop: 3 }}>{message}</div>}
+    </div>
+  );
+}
+
 // Local Storage functions
 const APIS_LOCAL_STORAGE_KEY = 'apiList';
 const IMPORTED_APIS_LOCAL_STORAGE_KEY = 'importedApiList';
@@ -369,11 +528,15 @@ const SCAN_TYPES = [
   "SQL Injection",
   "Command Injection",
   "Rate Limit Bypass",
-  "OpenAPI Validator",
   "Security Misconfig",
   "XSS Test",
   "SSRF Attempt",
   "Fuzzing Suite"
+];
+
+const AVAILABLE_FLAGS = [
+  "BOLA", "BKEN_AUTH", "BOPLA", "URC", "BFLA", "UABF", "SSRF", 
+  "SEC_MISC", "IIM", "UCAPI", "SKIP"
 ];
 
 // Enhanced scan progress tracking
@@ -398,6 +561,7 @@ class ScanMonitoringService {
   }
 
   async checkScanResults(scanId) {
+    console.log("Fetching results for scanID: ", scanId)
     try {
       const response = await fetch(`/api/scan/results?scan_id=${scanId}`, {
         method: 'GET',
@@ -978,6 +1142,426 @@ const ScanProgressModal = ({ isOpen, onClose, progress, apiName }) => {
   );
 };
 
+// New: Scan Profile Selection Modal
+const ScanProfileModal = ({ 
+  isOpen, 
+  onClose, 
+  api, 
+  onProfileSelected,
+  scanLoading 
+}) => {
+  const [selectedScanType, setSelectedScanType] = useState("OWASP_API_10");
+  const [creatingScan, setCreatingScan] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCreateScan = async () => {
+    if (!api) return;
+    
+    setCreatingScan(true);
+    setError('');
+    try {
+      const clientId = api.api_id || api.id;
+      
+      const response = await fetch("/api/scan/create", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
+        body: JSON.stringify({ 
+          client_id: clientId,
+          scan_profile: selectedScanType
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create scan");
+      }
+
+      // Call the callback with the scan ID and profile
+      onProfileSelected(result.data.scan_id, selectedScanType);
+      onClose();
+    } catch (error) {
+      setError(error.message || "Failed to create scan");
+    } finally {
+      setCreatingScan(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1004 }}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ 
+        minWidth: '500px', 
+        maxWidth: '90vw', 
+        background: 'white'
+      }}>
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          padding: '20px 30px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+              ⚙️ Select Scan Profile
+            </h2>
+            <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>
+              API: {api.name || api.filename}
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '5px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="modal-form">
+          <div style={{ marginBottom: '20px' }}>
+          <h3>Select Scan Profile:</h3>
+            <select
+              value={selectedScanType}
+              onChange={(e) => setSelectedScanType(e.target.value)}
+              disabled={creatingScan}
+              style={{ 
+                padding: '8px 12px', 
+                borderRadius: '4px', 
+                border: '1px solid #ddd',
+                width: '100%',
+                maxWidth: '300px'
+              }}
+            >
+              {SCAN_TYPES.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            
+            <button
+              onClick={handleCreateScan}
+              disabled={creatingScan}
+              style={{
+                marginTop: '15px',
+                padding: '10px 20px',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: creatingScan ? 'not-allowed' : 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              {creatingScan ? 'Creating Scan...' : 'Create Scan & Set Flags'}
+            </button>
+          </div>
+
+          {error && (
+            <div style={{ 
+              padding: '10px', 
+              background: '#fee2e2', 
+              color: '#dc2626', 
+              borderRadius: '4px',
+              marginBottom: '20px'
+            }}>
+              ❌ {error}
+            </div>
+          )}
+
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            <p>This will:</p>
+            <ol style={{ paddingLeft: '20px', marginTop: '10px' }}>
+              <li>Create a new scan with the selected profile</li>
+              <li>Automatically set appropriate flags for each endpoint</li>
+              <li>Allow you to review and modify flags before starting the scan</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// New: Endpoint Flags Modal
+const EndpointFlagsModal = ({ 
+  isOpen, 
+  onClose, 
+  api, 
+  scanId,
+  scanProfile,
+  onScanStart,
+  scanLoading 
+}) => {
+  const [endpoints, setEndpoints] = useState([]);
+  const [endpointsLoading, setEndpointsLoading] = useState(false);
+  const [endpointsError, setEndpointsError] = useState('');
+  const [expandedEndpoint, setExpandedEndpoint] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (isOpen && api) {
+      fetchEndpoints();
+    }
+  }, [isOpen, api]);
+
+  const fetchEndpoints = async () => {
+    setEndpointsLoading(true);
+    setEndpointsError('');
+    try {
+      const id = api.api_id || api.id;
+      const endpointsData = await fetchApiEndpoints(id);
+      
+      let endpoints = endpointsData;
+      if (endpoints && typeof endpoints === 'object' && Array.isArray(endpoints.endpoints)) {
+        endpoints = endpoints.endpoints;
+      } else if (!Array.isArray(endpoints)) {
+        endpoints = [];
+      }
+      
+      // Fetch details for each endpoint to get flags
+      const endpointsWithDetails = await Promise.all(
+        endpoints.map(async endpoint => {
+          try {
+            const details = await fetchEndpointDetails({
+              endpoint_id: endpoint.id,
+              path: endpoint.path,
+              method: endpoint.method
+            });
+            return { ...endpoint, flags: details.flags || [] };
+          } catch (error) {
+            console.error('Error fetching endpoint details:', error);
+            return { ...endpoint, flags: [] };
+          }
+        })
+      );
+      
+      setEndpoints(endpointsWithDetails);
+    } catch (err) {
+      setEndpointsError(err.message || "Failed to load endpoints");
+      setEndpoints([]);
+    } finally {
+      setEndpointsLoading(false);
+    }
+  };
+
+const handleStartScan = () => {
+  console.log("CLICKED START SCAN, scanProfile:", scanProfile);
+  if (scanProfile) {
+    console.log("✅ Calling onScanStart with", scanProfile);
+    onScanStart(scanProfile);
+    onClose();
+  } else {
+    console.warn("⚠️ scanId missing!");
+  }
+};
+
+
+  if (!isOpen) return null;
+
+    return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1005 }}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ 
+        minWidth: '800px', 
+        maxWidth: '90vw', 
+        maxHeight: '90vh', 
+        overflow: 'auto',
+        background: 'white'
+      }}>
+        {/* Header */}
+        <div style={{
+          background: 'var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%))',
+          color: 'white',
+          padding: '20px 30px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+              🚩 Endpoint Flags
+            </h2>
+            <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>
+              API: {api.name || api.filename} | Scan ID: {scanId}
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '5px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ 
+          padding: '20px', 
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)'
+        }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ color: 'var(--text-primary)' }}>Review and Modify Flags</h3>
+            <p style={{ 
+              fontSize: '14px', 
+              color: 'var(--text-secondary)' 
+            }}>
+              Review the automatically assigned flags for each endpoint. You can modify them if needed before starting the scan.
+            </p>
+          </div>
+
+          {endpointsError && (
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(var(--danger-color-rgb), 0.1)', 
+              color: 'var(--danger-color)', 
+              borderRadius: '4px',
+              marginBottom: '20px',
+              border: '1px solid var(--danger-color)'
+            }}>
+              ❌ {endpointsError}
+            </div>
+          )}
+
+          {/* Search Bar */}
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="text"
+              placeholder="Search endpoints..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                width: '100%',
+                maxWidth: '400px'
+              }}
+            />
+          </div>
+
+          {/* Endpoints and Flags */}
+          <div>
+            <div style={{ 
+              maxHeight: '500px', 
+              overflow: 'auto',
+              border: '1px solid var(--secondary-color)',
+              borderRadius: '4px',
+              padding: '10px',
+              background: 'var(--bg-primary)'
+            }}>
+              {endpointsLoading ? (
+                <div style={{ color: 'var(--text-secondary)' }}>Loading endpoints...</div>
+              ) : endpoints.filter(endpoint => 
+                  (endpoint.path || endpoint.url || '').toLowerCase().includes(searchTerm.toLowerCase())
+                ).length === 0 ? (
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  {searchTerm ? `No endpoints found matching "${searchTerm}"` : 'No endpoints found.'}
+                </div>
+              ) : (
+                endpoints
+                  .filter(endpoint => 
+                    (endpoint.path || endpoint.url || '').toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((endpoint, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: '15px', 
+                      padding: '10px',
+                      border: '1px solid var(--secondary-color)',
+                      borderRadius: '4px',
+                      background: 'var(--bg-secondary)'
+                    }}>
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          color: 'var(--text-primary)'
+                        }}
+                        onClick={() => setExpandedEndpoint(expandedEndpoint === index ? null : index)}
+                      >
+                        <div>
+                          <strong style={{ 
+                            padding: '2px 6px', 
+                            borderRadius: '3px', 
+                            background: '#3b82f6', 
+                            color: 'white',
+                            marginRight: '8px',
+                            fontSize: '12px'
+                          }}>
+                            {endpoint.method || 'GET'}
+                          </strong>
+                          <span>{endpoint.path || endpoint.url}</span>
+                        </div>
+                        <span>{expandedEndpoint === index ? '▲' : '▼'}</span>
+                      </div>
+                      
+                      {expandedEndpoint === index && (
+                        <div style={{ marginTop: '10px' }}>
+                          <EndpointFlagEditor 
+                            endpoint={endpoint}
+                            allFlags={AVAILABLE_FLAGS}
+                            onFlagsChanged={(newFlags) => {
+                              const updatedEndpoints = [...endpoints];
+                              updatedEndpoints[index].flags = newFlags;
+                              setEndpoints(updatedEndpoints);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+            
+            <div style={{ 
+              marginTop: '20px', 
+              display: 'flex', 
+              gap: '10px',
+              paddingTop: '20px',
+              borderTop: '1px solid var(--secondary-color)'
+            }}>
+              <button
+                onClick={() => handleStartScan()}
+                disabled={scanLoading}
+                className="save-btn"
+              >
+                {scanLoading ? 'Starting...' : 'Start Scan'}
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="cancel-btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}; // <-- Properly close the EndpointFlagsModal component
 const ManageAPIs = () => {
   // All state variables
   const [formData, setFormData] = useState({
@@ -1001,9 +1585,9 @@ const ManageAPIs = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
-  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isScanProfileModalOpen, setIsScanProfileModalOpen] = useState(false);
+  const [isEndpointFlagsModalOpen, setIsEndpointFlagsModalOpen] = useState(false);
   const [scanTargetApi, setScanTargetApi] = useState(null);
-  const [selectedScanType, setSelectedScanType] = useState("OWASP_API_10");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
@@ -1012,6 +1596,7 @@ const ManageAPIs = () => {
   const [detailedResults, setDetailedResults] = useState(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [scanMonitoringService] = useState(() => new ScanMonitoringService());
+  const [selectedScanProfile, setSelectedScanProfile] = useState(null);
   
   // New enhanced scan progress state
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -1101,14 +1686,13 @@ const ManageAPIs = () => {
     }
   ];
 
-const [apis, setApis] = useState(() => {
-  const local = loadApisFromLocal();
-  if (Array.isArray(local) && local.length > 0) {
-    return local;
-  }
-  return Array.isArray(fallbackApis) ? fallbackApis : [];
-});
-
+  const [apis, setApis] = useState(() => {
+    const local = loadApisFromLocal();
+    if (Array.isArray(local) && local.length > 0) {
+      return local;
+    }
+    return Array.isArray(fallbackApis) ? fallbackApis : [];
+  });
 
   useEffect(() => {
     saveApisToLocal(apis);
@@ -1142,10 +1726,18 @@ const [apis, setApis] = useState(() => {
     refreshAllTags();
   }, [refreshAllTags]);
 
+  // Handler for when a profile is selected and scan is created
+  const handleProfileSelected = (scanId, scanProfile) => {
+    setCurrentScanId(scanId);
+    setSelectedScanProfile(scanProfile);
+    // Close the profile modal and open the flags modal
+    setIsScanProfileModalOpen(false);
+    setIsEndpointFlagsModalOpen(true);
+  };
+
   // ENHANCED API scanning handler with realistic progress
-  const handleScanImportedApi = async (targetApi) => {
+  const handleScanStart = async (scanProfile) => {
     console.log('🚀 === STARTING ENHANCED SCAN WORKFLOW ===');
-    console.log('📋 TargetApi received:', targetApi);
 
     setScanLoading(true);
     setScanResult(null);
@@ -1160,62 +1752,34 @@ const [apis, setApis] = useState(() => {
     });
 
     try {
-      // Validate required fields
-      if (!targetApi) {
-        throw new Error("No API selected for scanning");
-      }
-
       // Determine if this is an imported API or regular API
-      const isImportedApi = importedApis.some(api => api.id === targetApi.id);
-      const isRegularApi = apis.some(api => api.id === targetApi.id);
+      const isImportedApi = importedApis.some(importedApi => importedApi.id === scanTargetApi.id);
+      const isRegularApi = apis.some(api => api.id === scanTargetApi.id);
       
       console.log('🔍 API Type Detection:', { 
         isImportedApi, 
         isRegularApi, 
-        targetApiId: targetApi.id
+        targetApiId: scanTargetApi.id
       });
 
-      // Extract client_id and api_name based on API type
-      let clientId, apiName;
+      // Extract api_name based on API type
+      let apiName;
       
       if (isImportedApi) {
-        clientId = targetApi.api_id || targetApi.apiId || targetApi.client_id || targetApi.id;
-        apiName = targetApi.filename || targetApi.name || targetApi.fileName || `API_${clientId}`;
+        apiName = scanTargetApi.filename || scanTargetApi.name || scanTargetApi.fileName || `API_${scanTargetApi.api_id}`;
       } else if (isRegularApi) {
-        clientId = targetApi.id;
-        apiName = targetApi.name || `API_${clientId}`;
+        apiName = scanTargetApi.name || `API_${scanTargetApi.id}`;
       } else {
-        throw new Error(`API not found in either imported or regular APIs. ID: ${targetApi.id}`);
+        throw new Error(`API not found in either imported or regular APIs. ID: ${scanTargetApi.id}`);
       }
 
-      console.log('🔍 Extracted values:', { clientId, apiName, selectedScanType });
+      console.log('🔍 Extracted values:', { apiName, scanProfile });
 
-      if (!clientId || !apiName) {
-        throw new Error(`Missing required data: clientId=${clientId}, apiName=${apiName}`);
+      if (!apiName) {
+        throw new Error(`Missing required data: apiName=${apiName}`);
       }
 
       showMessage(`🔍 Starting enhanced scan for "${apiName}"...`, "info");
-
-      // 🔨 STEP 1: Create Scan
-      console.log('🔨 Step 1: Creating scan...');
-      const createScanResponse = await fetch("/api/scan/create", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        credentials: "include",
-        body: JSON.stringify({ 
-          client_id: clientId,
-          scan_profile: selectedScanType || "OWASP_API_10"
-        }),
-      });
-
-      const createScanResult = await createScanResponse.json();
-      
-      if (!createScanResponse.ok || !createScanResult.success) {
-        console.error('❌ Create scan failed:', createScanResult);
-        throw new Error(createScanResult.message || "Failed to create scan");
-      }
-
-      console.log('✅ Step 1 Complete - Scan created');
 
       // 🚀 STEP 2: Start Scan  
       console.log('🚀 Step 2: Starting scan...');
@@ -1225,11 +1789,14 @@ const [apis, setApis] = useState(() => {
         credentials: "include",
         body: JSON.stringify({ 
           api_name: apiName,
-          scan_profile: selectedScanType || "OWASP_API_10"
+          scan_profile: scanProfile || "OWASP_API_10",
         }),
       });
 
       const startScanResult = await startScanResponse.json();
+      //const returnedScanId = startScanResult.scan_id || startScanResult.data?.scan_id;
+
+      
       
       if (!startScanResponse.ok || !startScanResult.success) {
         console.error('❌ Start scan failed:', startScanResult);
@@ -1242,39 +1809,41 @@ const [apis, setApis] = useState(() => {
       console.log('✅ Step 2 Complete - Scan started:', startScanResult);
 
       // 💾 STEP 3: Store scan_id and update state
-      const scanId = startScanResult.data?.scan_id;
-      if (!scanId) {
+      const returnedScanId = startScanResult.data?.scan_id || startScanResult.scan_id;
+      let scanId = returnedScanId;
+      console.log('📋 Scan ID received:', scanId);
+      if (!returnedScanId) {
         throw new Error('No scan_id returned from start scan');
       }
 
-      console.log('💾 Step 3: Storing scan_id:', scanId);
-      setCurrentScanId(scanId);
+      console.log('💾 Step 3: Storing scan_id:', returnedScanId);
+      setCurrentScanId(returnedScanId);
       
       // Update the correct state array based on API type
       if (isImportedApi) {
         setImportedApis(prev => prev.map(api => 
-          api.id === targetApi.id ? {
+          api.id === scanTargetApi.id ? {
             ...api,
-            scan_id: scanId,
+            scan_id: returnedScanId,
             scanStatus: 'Running'
           } : api
         ));
       } else if (isRegularApi) {
         setApis(prev => prev.map(api => 
-          api.id === targetApi.id ? {
+          api.id === scanTargetApi.id ? {
             ...api,
-            scan_id: scanId,
+            scan_id: returnedScanId,
             scanStatus: 'Running',
             lastScanned: new Date().toISOString().split('T')[0]
           } : api
         ));
       }
 
-      showMessage(`🔄 Enhanced scan started with ID: ${scanId}. Monitoring with realistic progress...`, "info");
+      showMessage(`🔄 Enhanced scan started with ID: ${returnedScanId}. Monitoring with realistic progress...`, "info");
 
       // 📊 STEP 4: Start enhanced results monitoring with progress simulation
       console.log('📊 Step 4: Starting enhanced results monitoring...');
-      startEnhancedScanMonitoring(scanId, targetApi, isImportedApi, isRegularApi, apiName);
+      startEnhancedScanMonitoring(returnedScanId, scanTargetApi, isImportedApi, isRegularApi, apiName);
 
     } catch (error) {
       console.error("❌ Enhanced scan workflow failed:", error);
@@ -1318,7 +1887,7 @@ const [apis, setApis] = useState(() => {
     
     // Show results modal immediately
     setShowResultsModal(true);
-    setIsScanModalOpen(false);
+    setIsEndpointFlagsModalOpen(false);
     
     // Update the correct state array
     if (isImportedApi) {
@@ -2113,20 +2682,17 @@ const [apis, setApis] = useState(() => {
                           onClick={() => {
                             console.log('Selected imported API for scan:', importedApi);
                             setScanTargetApi(importedApi);
-                            setIsScanModalOpen(true);
-                            setSelectedScanType("OWASP_API_10");
-                            setScanResult(null);
-                            setScanError("");
+                            setIsScanProfileModalOpen(true);
                           }}
                           className="action-btn scan"
-                          title="Start Security Scan"
+                          title="Select Scan Profile"
                           disabled={scanLoading && currentScanId === importedApi.scan_id}
                           style={{
                             background: scanLoading && currentScanId === importedApi.scan_id ? '#fbbf24' : '#10b981',
                             color: 'white'
                           }}
                         >
-                          {scanLoading && currentScanId === importedApi.scan_id ? '🔄 Scanning...' : '🔍 Scan'}
+                          {scanLoading && currentScanId === importedApi.scan_id ? '🔄 Scanning...' : '⚙️ Select Profile'}
                         </button>
 
                         {importedApi.vulnerabilitiesFound > 0 && (
@@ -2216,15 +2782,12 @@ const [apis, setApis] = useState(() => {
                           <button
                             onClick={() => {
                               setScanTargetApi(api);
-                              setIsScanModalOpen(true);
-                              setSelectedScanType("OWASP_API_10");
-                              setScanResult(null);
-                              setScanError("");
+                              setIsScanProfileModalOpen(true);
                             }}
                             className="action-btn scan"
-                            title="Start Security Scan"
+                            title="Select Scan Profile"
                           >
-                            🔍 Scan
+                            ⚙️ Select Profile
                           </button>
 
                           <button 
@@ -2282,6 +2845,26 @@ const [apis, setApis] = useState(() => {
           onClose={() => setShowResultsModal(false)}
           results={detailedResults}
           apiName={scanTargetApi?.name || scanTargetApi?.filename || 'Unknown API'}
+        />
+
+        {/* Scan Profile Selection Modal */}
+        <ScanProfileModal
+          isOpen={isScanProfileModalOpen}
+          onClose={() => setIsScanProfileModalOpen(false)}
+          api={scanTargetApi}
+          onProfileSelected={handleProfileSelected}
+          scanLoading={scanLoading}
+        />
+
+        {/* Endpoint Flags Modal */}
+        <EndpointFlagsModal
+          isOpen={isEndpointFlagsModalOpen}
+          onClose={() => setIsEndpointFlagsModalOpen(false)}
+          api={scanTargetApi}
+          scanId={currentScanId}
+          scanProfile={selectedScanProfile}
+          onScanStart={handleScanStart}
+          scanLoading={scanLoading}
         />
 
         {/* Add/Edit API Modal */}
@@ -2619,189 +3202,6 @@ const [apis, setApis] = useState(() => {
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Scan Modal */}
-        {isScanModalOpen && scanTargetApi && (
-          <div className="modal-overlay" style={{
-            background: "rgba(60, 60, 120, 0.70)",
-            backdropFilter: "blur(3px)",
-            zIndex: 1002,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }} onClick={e => e.target === e.currentTarget && setIsScanModalOpen(false)}>
-            <div className="modal-content"
-              style={{
-                minWidth: 380,
-                maxWidth: 440,
-                background: "var(--bg-secondary)",
-                borderRadius: "var(--border-radius)",
-                boxShadow: "0 8px 32px rgba(107,70,193,0.18)",
-                padding: 0,
-                overflow: "hidden",
-                border: "2px solid var(--primary-color)",
-                animation: "slideInUp 0.3s"
-              }}>
-              <div className="modal-header"
-                style={{
-                  background: "linear-gradient(90deg, var(--primary-color) 0%, var(--primary-light) 100%)",
-                  color: "#fff",
-                  padding: "22px 32px 14px 32px",
-                  borderTopLeftRadius: "var(--border-radius)",
-                  borderTopRightRadius: "var(--border-radius)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between"
-                }}>
-                <h2 style={{
-                  fontWeight: 800,
-                  fontSize: 22,
-                  letterSpacing: 1,
-                  margin: 0
-                }}>
-                  🔍 Scan: <span style={{ color: "#fbbf24" }}>{scanTargetApi.name || scanTargetApi.filename}</span>
-                </h2>
-                <button onClick={() => setIsScanModalOpen(false)}
-                  className="close-btn"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#fff",
-                    fontSize: 28,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    marginLeft: 12
-                  }}
-                  aria-label="Close">×</button>
-              </div>
-              <div style={{ padding: "28px 32px 22px 32px", background: "var(--bg-primary)" }}>
-                <p style={{
-                  fontWeight: 600,
-                  fontSize: 15,
-                  marginBottom: 14,
-                  color: "var(--text-primary)"
-                }}>
-                  Select a scan type to perform:
-                </p>
-                <ul style={{
-                  padding: 0,
-                  margin: 0,
-                  listStyle: 'none',
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px 18px"
-                }}>
-                  {SCAN_TYPES.map(type => (
-                    <li key={type}>
-                      <label style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        cursor: scanLoading ? "not-allowed" : "pointer",
-                        background: selectedScanType === type ? "var(--primary-light)" : "var(--bg-secondary)",
-                        border: selectedScanType === type ? "2px solid var(--primary-color)" : "1px solid var(--secondary-color)",
-                        borderRadius: "var(--border-radius-small)",
-                        padding: "8px 10px",
-                        fontWeight: selectedScanType === type ? 700 : 500,
-                        color: selectedScanType === type ? "#fff" : "var(--text-primary)",
-                        boxShadow: selectedScanType === type ? "0 2px 8px #6366f140" : "none",
-                        transition: "all 0.18s"
-                      }}>
-                        <input
-                          type="radio"
-                          name="scan-type"
-                          value={type}
-                          checked={selectedScanType === type}
-                          onChange={() => setSelectedScanType(type)}
-                          disabled={scanLoading}
-                          style={{
-                            accentColor: "var(--primary-color)",
-                            width: 18,
-                            height: 18,
-                            marginRight: 2
-                          }}
-                        />
-                        {type}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                
-                <button
-                  onClick={() => handleScanImportedApi(scanTargetApi)}
-                  disabled={!selectedScanType || scanLoading}
-                  style={{
-                    marginTop: 22,
-                    background: scanLoading ? "var(--success-color)" : "var(--primary-color)",
-                    color: "#fff",
-                    borderRadius: "var(--border-radius-small)",
-                    padding: "12px 0",
-                    fontWeight: 700,
-                    border: "none",
-                    fontSize: 16,
-                    width: "100%",
-                    boxShadow: scanLoading ? "none" : "0 2px 8px #34d39940",
-                    cursor: !selectedScanType || scanLoading ? "not-allowed" : "pointer",
-                    transition: "background 0.18s"
-                  }}
-                >
-                  {scanLoading ? (
-                    <span>
-                      <span className="spinner" style={{
-                        display: "inline-block",
-                        width: 18,
-                        height: 18,
-                        border: "3px solid #fff",
-                        borderTop: "3px solid var(--success-color)",
-                        borderRadius: "50%",
-                        marginRight: 8,
-                        verticalAlign: "middle",
-                        animation: "spin .8s linear infinite"
-                      }}></span>
-                      Starting scan...
-                    </span>
-                  ) : "🔍 Run Scan"}
-                </button>
-                
-                {scanResult && (
-                  <div style={{
-                    marginTop: 16,
-                    color: "var(--success-color)",
-                    fontWeight: 700,
-                    background: "#d1fae5",
-                    borderRadius: "var(--border-radius-small)",
-                    padding: "10px 14px",
-                    fontSize: 15,
-                    boxShadow: "0 1px 4px #10b98122"
-                  }}>
-                    ✅ {scanResult}
-                  </div>
-                )}
-                
-                {scanError && (
-                  <div style={{
-                    marginTop: 16,
-                    color: "var(--danger-color)",
-                    fontWeight: 700,
-                    background: "#fee2e2",
-                    borderRadius: "var(--border-radius-small)",
-                    padding: "10px 14px",
-                    fontSize: 15,
-                    boxShadow: "0 1px 4px #ef444422"
-                  }}>
-                    ❌ {scanError}
-                  </div>
-                )}
-              </div>
-            </div>
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg);}
-                100% { transform: rotate(360deg);}
-              }
-            `}</style>
           </div>
         )}
 

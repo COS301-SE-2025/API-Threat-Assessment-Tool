@@ -220,7 +220,8 @@ def get_endpoint_details(request):
                 "method": ep.method,
                 "summary": ep.summary,
                 "description": ep.description,
-                "tags": ep.tags
+                "tags": ep.tags,
+                "flags": [flag.name for flag in ep.flags]
             })
 
     return not_found("Endpoint not found")

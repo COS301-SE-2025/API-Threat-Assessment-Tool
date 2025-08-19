@@ -2,52 +2,35 @@ from utils import config
 from utils.db import DatabaseManager
 from input.api_importer import APIImporter
 from core.vulnerability_scanner import VulnerabilityScanner
+from core.vulnerability_test import OWASP_FLAGS
 from core.report_generator import ReportGenerator
-from core.scan_manager import ScanManager
+from core.scan_manager import ScanManager, ScanProfiles
 from core.result_manager import ResultManager
 from utils.query import success, bad_request, not_found, server_error, connection_test, response, HTTPCode
-
+from typing import Dict, Any, List
+from datetime import datetime
 
 import socket
 import json
 import os
+import signal
+import sys
 
 
 HOST = '127.0.0.1'
 PORT = 9011
 
-scan_manager = ScanManager()
-result_manager = ResultManager()
+scan_manager = ""
+result_manager = ""
 CLIENT_STORE = {}
 API_METADATA = {}
 
 # temporary
 # All connected users will share access to the same api that was loaded
-# 
 GLOBAL_API_CLIENT = None  
-GLOBAL_CLIENT_ID = None   
+GLOBAL_CLIENT_ID = None
+GLOBAL_SCAN_MANAGER = None
 
-
-# === Implemented ===
-
-def create_scan(request):
-    client_id = request.get("client_id")
-    profile = request.get("scan_profile", "default")
-    client = CLIENT_STORE.get(client_id)
-
-    if not client:
-        return not_found(f"No APIClient found for ID {client_id}")
-
-    try:
-        scanner = scan_manager.create_scanner(client, profile)
-        results = scanner.run_tests()
-        result_manager.store_results(profile, results)
-        return success({"results_count": len(results)})
-    except Exception as e:
-        return server_error(str(e))
-
-# === Skeletons ===
-# Move skeletons to implemented once done
 
 
 # === Auth ===
@@ -73,15 +56,8 @@ def dashboard_metrics(request):
 def dashboard_alerts(request): 
     return server_error("Not yet implemented")
 
-# === User Api's ===
-CLIENT_STORE = {}
-GLOBAL_API_CLIENT = None
-GLOBAL_CLIENT_ID = None
-
-API_METADATA = {}  # ✅ Add this if not declared
-
 def import_file(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
+    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID, GLOBAL_SCAN_MANAGER
 
     file_name = request.get("data", {}).get("file")
     if not file_name:
@@ -106,6 +82,7 @@ def import_file(request):
 
         GLOBAL_API_CLIENT = api_client
         GLOBAL_CLIENT_ID = client_id
+        GLOBAL_SCAN_MANAGER = ScanManager(api_client)
 
         return response(HTTPCode.SUCCESS, {"client_id": client_id})
     except Exception as e:
@@ -175,7 +152,7 @@ def update_api(request):
             meta[key] = updates[key]
             setattr(client, key, updates[key])
 
-    return success({ "message": "API metadata updated." })  # ✅ Fix: return data
+    return success({ "message": "API metadata updated." }) 
 
 
 def delete_api(request):
@@ -193,7 +170,7 @@ def delete_api(request):
         GLOBAL_CLIENT_ID = None
         GLOBAL_API_CLIENT = None
 
-    return success({ "message": "API deleted." })  # ✅ Fix: return data
+    return success({ "message": "API deleted." })  #Fix: return data
 
 
 def import_url(request): 
@@ -214,7 +191,8 @@ def get_api_endpoints(request):
         "path": ep.path,
         "method": ep.method,
         "summary": ep.summary,
-        "tags": ep.tags
+        "tags": ep.tags,
+        "flags": [flag.name for flag in ep.flags]
     } for ep in client.endpoints]
 
     return response(HTTPCode.SUCCESS, {"endpoints": endpoints})
@@ -318,18 +296,222 @@ def get_all_tags(request):
     return response(HTTPCode.SUCCESS, {"tags": list(all_tags)})
 
 
+#===================================
+# flags
+
+def add_flags(request):
+    global GLOBAL_API_CLIENT
+
+    data = request.get("data", {})
+    endpoint_id = data.get("endpoint_id")
+    flag_str = data.get("flags")
+
+    if not endpoint_id or not flag_str:
+        return bad_request("Missing 'endpoint_id' or 'flags'")
+
+    try:
+        # Convert string to OWASP_FLAGS enum member
+        flag_enum = OWASP_FLAGS[flag_str]
+    except KeyError:
+        valid_flags = [f.name for f in OWASP_FLAGS]
+        return bad_request(f"Invalid flag: {flag_str}. Valid flags: {', '.join(valid_flags)}")
+
+    for ep in GLOBAL_API_CLIENT.endpoints:
+        if ep.id == endpoint_id:
+            # Now using the actual enum member
+            ep.add_flag(flag_enum)
+            
+            # Return flag names to frontend
+            return response(HTTPCode.SUCCESS, {
+                "flags": [f.name for f in ep.flags]
+            })
+
+    return not_found("Endpoint not found")
+
+def remove_flags(request):
+    global GLOBAL_API_CLIENT
+
+    data = request.get("data", {})
+    endpoint_id = data.get("endpoint_id")
+    flag_str = data.get("flags")
+
+    # Validate input
+    if not endpoint_id or not flag_str:
+        return bad_request("Missing 'endpoint_id' or 'flags'")
+
+    try:
+        # Convert frontend string to OWASP_FLAGS enum member
+        flag_enum = OWASP_FLAGS[flag_str]
+    except KeyError:
+        # Provide helpful error with valid options
+        valid_flags = [f.name for f in OWASP_FLAGS]
+        return bad_request(
+            f"Invalid flag: '{flag_str}'. Valid flags are: {', '.join(valid_flags)}"
+        )
+
+    # Find the target endpoint
+    for ep in GLOBAL_API_CLIENT.endpoints:
+        if ep.id == endpoint_id:
+            try:
+                # Remove the enum member (not the string)
+                ep.remove_flag(flag_enum)
+                
+                # Return updated flags as strings for frontend
+                return response(HTTPCode.SUCCESS, {
+                    "flags": [f.name for f in ep.flags],
+                    "message": f"Flag '{flag_str}' removed successfully"
+                })
+            except ValueError as e:
+                # Handle case where flag wasn't present
+                return response(
+                    HTTPCode.CLIENT_ERROR, 
+                    {
+                        "flags": [f.name for f in ep.flags],
+                        "error": str(e)
+                    }
+                )
+
+    return not_found(f"Endpoint with ID '{endpoint_id}' not found")
+
 # === Scans ===
-def get_scan_results(request): 
-    return server_error("Not yet implemented")
+def create_scan(request):
+    client_id = request.get("data", {}).get("client_id")
+    api_name = request.get("data", {}).get("api_name")
+    scan_profile = request.get("scan_profile", "OWASP_API_10")
+    # client = CLIENT_STORE.get(client_id)
+    client = GLOBAL_CLIENT_ID # temp
+
+    if not client:
+        return not_found(f"{client_id} not found")
+
+    try:
+        sm = ScanManager(GLOBAL_API_CLIENT)
+        GLOBAL_SCAN_MANAGER.createScan(scan_profile)
+        return response(HTTPCode.SUCCESS, {"message": "Success"})
+    except Exception as e:
+        return server_error(str(e))
 
 def start_scan(request): 
-    return server_error("Not yet implemented")
+    api_name = request.get("data", {}).get("api_name")
+    scan_profile = request.get("data", {}).get("scan_profile", "OWASP_API_10")
+
+    if not api_name:
+        return not_found(f"{api_name} not found")
+
+    try:
+        scan_id = GLOBAL_SCAN_MANAGER.runScan(ScanProfiles.DEFAULT)
+        return success({"scan_id": scan_id})
+    except Exception as e:
+        return server_error(str(e))
+
+def scan_progress(request):
+    scan_id = request.get("scan_id")
+
+    if not scan_id:
+        return not_found(f"{scan_id} not found")
+
+    return success({"scan_id": scan_id, "endpoints_remaining": 0})
+    
 
 def stop_scan(request): 
-    return server_error("Not yet implemented")
+    scan_id= request.get("scan_id")
 
-def get_all_scans(request): 
-    return server_error("Not yet implemented")
+    if not scan_id:
+        return not_found(f"{scan_id} not found")
+
+    return success({f"{scan_id} stopped"})
+
+def get_scan_results(request):
+    scan_id = request.get("data", {}).get("scan_id")
+
+    if not scan_id:
+        return not_found(f"{scan_id} missing")
+
+    try:
+        scans = GLOBAL_SCAN_MANAGER.get_scan(scan_id)
+
+        if not scans:
+            return not_found(f"{scan_id} not found")
+
+        scan_results = []
+        # Handle nested structure (same as your test code)
+        for scan_group in scans:  # First level
+            for scan in scan_group:  # Second level
+                scan_results.append({
+                    "endpoint_id": scan.endpoint.id,
+                    "vulnerability_name": scan.vulnerability_name,
+                    "severity": scan.severity,
+                    "cvss_score": float(scan.cvss_score),
+                    "description": scan.description,
+                    "recommendation": scan.recommendation,
+                    "evidence": scan.evidence,
+                    "test_name": scan.test_name,
+                    "affected_params": scan.affected_params,
+                    "timestamp": (
+                        scan.timestamp.isoformat()
+                        if isinstance(scan.timestamp, datetime)
+                        else str(scan.timestamp)
+                    ),
+                })
+
+        return success({"result": scan_results})
+
+    except Exception as e:
+        return server_error(str(e))
+
+def get_all_scans(request):
+    try:
+        all_scans = GLOBAL_SCAN_MANAGER.get_all_scans()
+
+        if not all_scans:
+            return not_found("No scans found")
+
+        result_map = {}
+
+        for scan_id, scan_groups in all_scans.items():
+            if not scan_groups:
+                continue
+
+            scan_results = []
+            for scan_group in scan_groups:
+                for scan in scan_group:
+                    try:
+                        scan_results.append({
+                            "endpoint_id": scan.endpoint.id,
+                            "vulnerability_name": scan.vulnerability_name,
+                            "severity": scan.severity,
+                            "cvss_score": float(scan.cvss_score),
+                            "description": scan.description,
+                            "recommendation": scan.recommendation,
+                            "evidence": scan.evidence,
+                            "test_name": scan.test_name,
+                            "affected_params": scan.affected_params,
+                            "timestamp": (
+                                scan.timestamp.isoformat()
+                                if hasattr(scan.timestamp, 'isoformat')
+                                else str(scan.timestamp)
+                            ),
+                        })
+                    except AttributeError as e:
+                        print(f"Skipping malformed scan entry: {e}")
+                        continue
+
+            if scan_results:  # Only add if we found valid scans
+                result_map[scan_id] = scan_results
+
+        if not result_map:
+            return not_found("No valid scan results found")
+
+        return success({"result": result_map})
+
+    except Exception as exc:
+        return server_error(str(exc))
+
+def set_api_key(request):
+    apiKey = request.get("api_key")
+    GLOBAL_API_CLIENT.set_auth_token(apiKey)
+    return response(HTTPCode.SUCCESS, {"message": "api key set"})
+
 
 # === Repots ===
 def get_all_reports(request): 
@@ -366,6 +548,10 @@ def update_settings(request):
 #turning this into a map might be more efficient hmmmmm
 def handle_request(request: dict):
     command = request.get("command")
+
+    if command == "connection.test":
+        response = connection_test()
+        return response
 
     if command == "auth.register":
         response = auth_register(request)
@@ -447,6 +633,13 @@ def handle_request(request: dict):
         response = get_all_tags(request)
         return response
 
+    elif command == "endpoints.flags.add":
+        response = add_flags(request)
+        return response
+
+    elif command == "endpoints.flags.remove":
+        response = remove_flags(request)
+
     elif command == "scan.create":
         response = create_scan(request)
         return response
@@ -507,8 +700,8 @@ def handle_request(request: dict):
         response = download_report(request)
         return response
 
-    elif command == "connection.test":
-        response = connection_test()
+    elif command == "apis.key.set":
+        response = set_api_key(request)
         return response
 
     else:
@@ -517,41 +710,78 @@ def handle_request(request: dict):
 def run_server():
     print(f"[ATAT] Listening on {HOST}:{PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((HOST, PORT))
-        s.listen()
-        while True:
-            conn, addr = s.accept()
-            with conn:
-                print("New connection")
-                data = b""
-                
-                # Read until we have a complete JSON message
-                while True:
-                    chunk = conn.recv(4096)
-                    if not chunk:
-                        break
-                    data += chunk
+        s.listen(5)
+        
+        running = True
+        
+        def signal_handler(sig, frame):
+            nonlocal running
+            print("\n[ATAT] Shutting down server gracefully...")
+            running = False
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as dummy:
+                    dummy.connect((HOST, PORT))
+            except:
+                pass
+        
+        signal.signal(signal.SIGINT, signal_handler)
+        
+        while running:
+            try:
+                s.settimeout(1)
+                conn, addr = s.accept()
+                print(f"Connection from: {addr}")
+                s.settimeout(None)
+                with conn:
+                    print("New connection")
+                    data = b""
                     
-                    # Try to parse JSON - if successful, we have complete message
-                    try:
-                        request = json.loads(data.decode())
-                        print(f"[RECV] {request}")
+                    # Remove timeout for client socket
+                    # conn.settimeout(None)
+                    
+                    while True:
+                        chunk = conn.recv(4096)
+                        print(f'Received {len(chunk)} bytes')
+                        if not chunk:
+                            break
+                        data += chunk
                         
-                        # Process immediately when we have valid JSON
-                        response = handle_request(request)
-                        response_bytes = json.dumps(response).encode()
-                        conn.sendall(response_bytes)
-                        print(f"[SEND] {response}")
-                        break  # Exit the reading loop
-                        
-                    except json.JSONDecodeError:
-                        # Not complete JSON yet, continue reading
-                        continue
-                    except Exception as e:
-                        response = server_error(str(e))
-                        response_bytes = json.dumps(response).encode()
-                        conn.sendall(response_bytes)
-                        break
+                        try:
+                            # Attempt to parse JSON
+                            request = json.loads(data.decode())
+                            print(f"[RECV] {request}")
+                            
+                            # Process request
+                            response = handle_request(request)
+                            response_bytes = json.dumps(response).encode()
+                            conn.sendall(response_bytes)
+                            print(f"[SEND] {response}")
+                            break
+                            
+                        except json.JSONDecodeError:
+                            # Incomplete JSON - continue reading
+                            print("Incomplete JSON, waiting for more data")
+                            continue
+                        except Exception as e:
+                            print(f"Error processing request: {e}")
+                            response = server_error(str(e))
+                            response_bytes = json.dumps(response).encode()
+                            conn.sendall(response_bytes)
+                            break
+            except socket.timeout:
+                continue
+            except OSError as e:
+                if running:
+                    print(f"[ERROR] {e}")
+                break
+            except Exception as e:
+                if running:
+                    print(f"[UNEXPECTED ERROR] {e}")
+    
+    print("[ATAT] Server has shut down")
+
 
 if __name__ == "__main__":
     run_server()

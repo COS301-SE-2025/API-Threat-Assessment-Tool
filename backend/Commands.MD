@@ -1,4 +1,4 @@
-### Rehister New User
+### Register New User
 ```json
 {
 
@@ -258,6 +258,51 @@ Description:
 --- 
 
 
+
+### Validate API Key
+```json
+{
+
+"command": "apis.key.validate",
+"data": {
+    "api_key": "string"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = none
+
+- status = 400
+- data = message
+
+Description:  
+- validates the api key
+---
+
+
+### Set API Key
+```json
+{
+
+"command": "apis.key.set",
+"data": {
+    "api_key": "string"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = none  
+
+Description:  
+- Sets the api key
+---
+
+
+
 ### Import API from File
 ```json
 {
@@ -427,6 +472,76 @@ Description:
 --- 
 
 
+### Add Endpoint Flags
+```json
+{
+
+"command": "endpoints.flags.add",
+"data": {
+    "endpoint_id": "string",
+    "tags": "single_flag"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = none  
+
+Description:  
+- Adds flags to an endpoint  
+
+Flags:
+    BOLA = "1. Broken Object Level Authorization"
+    BKEN_AUTH = "2. Broken Authentication"
+    BOPLA = "3. Broken Object Property Level Authorization"
+    URC = "4. Unrestricted Resource Consumption"
+    BFLA = "5. Broken Function Level Authorization"
+    UABF = "6. Unrestricted Access to Sensitive Business Flows"
+    SSRF = "7. Server Side Request Forgery"
+    SEC_MISC = "8. Security Misconfiguration"
+    IIM = "9. Improper Inventory Management"
+    UCAPI = "10. Unsafe Consumption of APIs"
+    SKIP = "Don't scan this endpoint"
+
+
+--- 
+
+
+### Remove Endpoint Flags
+```json
+{
+
+"command": "endpoints.flags.remove",
+"data": {
+    "endpoint_id": "string",
+    "flags": "single_flag"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = none  
+
+Description:  
+- Removes specific flags from an endpoint  
+
+--- 
+
+Flags:
+    BOLA = "1. Broken Object Level Authorization"
+    BKEN_AUTH = "2. Broken Authentication"
+    BOPLA = "3. Broken Object Property Level Authorization"
+    URC = "4. Unrestricted Resource Consumption"
+    BFLA = "5. Broken Function Level Authorization"
+    UABF = "6. Unrestricted Access to Sensitive Business Flows"
+    SSRF = "7. Server Side Request Forgery"
+    SEC_MISC = "8. Security Misconfiguration"
+    IIM = "9. Improper Inventory Management"
+    UCAPI = "10. Unsafe Consumption of APIs"
+    SKIP = "Don't scan this endpoint"
+
 ### Create Scan
 ```json
 {
@@ -434,9 +549,19 @@ Description:
 "command": "scan.create",
 "data": {
     "client_id": "string",
-    "scan_profile": "string"
+    "scan_profile": "string" // Default should be OWASP_API_10
     }
 }
+
+
+Scan Profiles Possibilites:
+- Default
+    "scan_profile": "OWASP_API_10"
+- Mix
+    List of numbers in string format
+    Each number represents the scan you want to run
+    Example, running OWASP 1,3,5 only
+    "scan_profile": "1,3,5"
 ```
 Response:  
 
@@ -452,33 +577,37 @@ Description:
 --- 
 
 
-### Get Scan Results
-```json
-{
-
-"command": "scan.results",
-"data": {
-    "scan_id": "string"
-}
-}
-```
-Response:  
-
-- status = 200  
-- data = [ { "endpoint": "string", "result": { ... } }, ... ]
-
-Description:  
-- Retrieves the results of a completed scan  
-
---- 
-
-
 ### Start Scan
 ```json
 {
 
 "command": "scan.start",
 "data": {
+    "api_name": "string",
+    "scan_profile": "string"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = scan_id 
+
+- status = 503
+- data = Scan in Progress 
+
+Description:  
+- Starts an existing paused/pending scan  
+
+---
+
+
+### Check Scan Progress
+```json
+{
+
+"command": "scan.progress",
+"data": {
     "scan_id": "string"
 }
 }
@@ -486,10 +615,13 @@ Description:
 Response:  
 
 - status = 200  
-- data = none  
+- data = progress details
+
+- status = 404
+- data = scan not found
 
 Description:  
-- Starts an existing paused/pending scan  
+- View progress of ongoing scan 
 
 --- 
 
@@ -507,12 +639,42 @@ Description:
 Response:  
 
 - status = 200  
-- data = none  
+- data = none
+
+- status = 404
+- data = scan not found
 
 Description:  
 - Stops a running scan  
 
 --- 
+
+
+### Get Scan Results
+```json
+{
+
+"command": "scan.results",
+"data": {
+    "scan_id": "string"
+}
+}
+```
+Response:  
+
+- status = 200  
+- data = [ScanResult]
+
+- status = 404
+- data = none
+
+Description:  
+- Retrieves the results of a completed scan
+- Returns array of Scan result objects
+- Each ScanResult object has the endpoint details included with it
+
+--- 
+
 
 
 ### List All Scans
@@ -529,7 +691,7 @@ Response:
 - data = [ { "scan_id": "string", "status": "running|completed", ... } ]
 
 Description:  
-- Lists all scans run or scheduled  
+- Lists all scans ran or ongoing
 
 --- 
 

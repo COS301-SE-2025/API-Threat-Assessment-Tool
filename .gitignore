@@ -10,3 +10,6 @@ package-lock.json
 # OS junk files
 .DS_Store
 Thumbs.db
+
+# Python virtual environment
+venv/

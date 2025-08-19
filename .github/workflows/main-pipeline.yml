@@ -8,6 +8,8 @@ on:
 
 jobs:
   test-and-build:
+    # Only run this job if the Engine Test workflow completed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -79,10 +81,7 @@ jobs:
         run: echo "Success"
         continue-on-error: true
 
-
       # Build the Docker image
       - name: Build Docker image
         run: docker build -t atat .
         continue-on-error: true
-
-

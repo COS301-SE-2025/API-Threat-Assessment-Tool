@@ -9,3 +9,4 @@ pytest
 fpdf
 fastapi
 httpx
+uvicorn

@@ -5,6 +5,8 @@ import { useAuth } from './AuthContext';
 import YAML from 'js-yaml';
 import Logo from './components/Logo';
 import './ManageAPIs.css';
+import logoImage from './img/logo-blue.png';
+import logoImageW from './img/logo-white.png';
 
 export {
   fetchAllTags,
@@ -780,10 +782,13 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>🔒 Security Scan Report</h1>
-            <h2>API: ${apiName}</h2>
-            <p>Generated: ${new Date().toLocaleString()}</p>
+          <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1>🔒 Security Scan Report</h1>
+              <h2>API: ${apiName}</h2>
+              <p>Generated: ${new Date().toLocaleString()}</p>
+            </div>
+            <img src="${logoImage}" alt="Company Logo" style="height: 150px; width: auto;" />
           </div>
           
           <div class="summary">
@@ -833,6 +838,7 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
               🔒 Security Scan Report
@@ -841,6 +847,8 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
               API: {apiName}
             </p>
           </div>
+<img src={logoImageW} alt="Company Logo" style={{ height: '80px', width: 'auto', marginLeft: '-20px' }} />
+        </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               onClick={exportToPDF}

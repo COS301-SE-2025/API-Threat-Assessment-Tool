@@ -336,43 +336,33 @@ def remove_flags(request):
     endpoint_id = data.get("endpoint_id")
     flag_str = data.get("flags")
 
-    # Validate input
     if not endpoint_id or not flag_str:
         return bad_request("Missing 'endpoint_id' or 'flags'")
 
     try:
-        # Convert frontend string to OWASP_FLAGS enum member
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
-        # Provide helpful error with valid options
         valid_flags = [f.name for f in OWASP_FLAGS]
         return bad_request(
             f"Invalid flag: '{flag_str}'. Valid flags are: {', '.join(valid_flags)}"
         )
 
-    # Find the target endpoint
     for ep in GLOBAL_API_CLIENT.endpoints:
         if ep.id == endpoint_id:
-            try:
-                # Remove the enum member (not the string)
+            if flag_enum in ep.flags:
                 ep.remove_flag(flag_enum)
-                
-                # Return updated flags as strings for frontend
                 return response(HTTPCode.SUCCESS, {
                     "flags": [f.name for f in ep.flags],
                     "message": f"Flag '{flag_str}' removed successfully"
                 })
-            except ValueError as e:
-                # Handle case where flag wasn't present
-                return response(
-                    HTTPCode.CLIENT_ERROR, 
-                    {
-                        "flags": [f.name for f in ep.flags],
-                        "error": str(e)
-                    }
-                )
+            else:
+                return response(HTTPCode.BAD_REQUEST, {
+                    "flags": [f.name for f in ep.flags],
+                    "error": f"Flag '{flag_str}' not set on endpoint"
+                })
 
     return not_found(f"Endpoint with ID '{endpoint_id}' not found")
+
 
 # === Scans ===
 def create_scan(request):
@@ -640,6 +630,7 @@ def handle_request(request: dict):
 
     elif command == "endpoints.flags.remove":
         response = remove_flags(request)
+        return response 
 
     elif command == "scan.create":
         response = create_scan(request)

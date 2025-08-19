@@ -1,0 +1,29 @@
+name: Deploy_ATAT
+
+on:
+  workflow_run:
+    workflows: ["Pipeline"]  
+    types:
+      - completed
+
+jobs:
+  deploy-to-prod:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    name: Imperial Deployment Protocol
+
+    steps:
+      - name: Activate Central Command
+        run: echo "All systems operational. The Emperor approves this deployment."
+
+      - name: Initialize AT-AT Walkers
+        run: echo "Imperial walkers have entered the atmosphere. Shield generator targeted."
+
+      - name: Deploy to Docker cloud
+        run: echo "The Force is strong with this container. Deploying to Cloud City."
+
+      - name: Deploy to Dedicated server
+        run: echo "The Death Star is operational. Establishing connection to Scarif base."
+
+      - name: Complete Imperial Occupation
+        run: echo "The Empire's reign continues. Deployment successful. May the Force serve you."

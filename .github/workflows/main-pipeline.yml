@@ -1,10 +1,10 @@
 name: Pipeline
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["Engine Test"]   # Name of the engine-test workflow
+    types:
+      - completed
 
 jobs:
   test-and-build:

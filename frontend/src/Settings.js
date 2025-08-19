@@ -664,9 +664,7 @@ const Settings = () => {
           <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>
             Dashboard
           </Link>
-          <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>
-            Public Templates
-          </Link>
+          <Link to="/manage-apis" className={location.pathname === '/manage-apis' ? 'active' : ''}>API Management</Link>
           <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>
             Settings
           </Link>

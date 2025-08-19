@@ -56,7 +56,7 @@ jobs:
       - name: Run Engine Tests
         run: |
           cd backend
-          pytest -v tests/test_scan_flags.py | tee ../scan_results.log
+          pytest -v tests/test_scanning.py | tee ../scan_results.log
 
       # Upload logs and test results as artifacts
       - name: Upload Scan Results

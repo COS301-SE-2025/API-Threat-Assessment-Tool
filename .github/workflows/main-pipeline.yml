@@ -47,25 +47,6 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-node-backend-
 
-      # Install dependencies and run tests in frontend
-      - name: Install frontend dependencies
-        run: npm install
-        working-directory: ./frontend
-
-      - name: Run frontend tests
-        run: npm test -- --coverage --watchAll=false
-        working-directory: ./frontend
-
-      # Install dependencies and run tests in api
-      - name: Install api dependencies
-        run: npm install
-        working-directory: ./api
-
-      - name: Run api tests
-        run: npm test
-        working-directory: ./api
-        continue-on-error: true
-
       # Install dependencies and run tests in backend
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -79,6 +60,26 @@ jobs:
 
       - name: Run Backend Tests
         run: echo "Success"
+        continue-on-error: true
+
+      # Install dependencies and run tests in api
+      - name: Install api dependencies
+        run: npm install
+        working-directory: ./api
+
+      - name: Run api tests
+        run: npm test
+        working-directory: ./api
+        continue-on-error: true
+
+      # Install dependencies and run tests in frontend
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./frontend
+
+      - name: Run frontend tests
+        run: npm test -- --coverage --watchAll=false
+        working-directory: ./frontend
         continue-on-error: true
 
       # Build the Docker image

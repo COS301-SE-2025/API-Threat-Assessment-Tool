@@ -6,3 +6,6 @@ PyJWT
 psycopg2
 python-dotenv
 pytest
+unittest
+jwt
+fpdf

@@ -1568,8 +1568,7 @@ app.get('/api/tags', async (req, res) => {
 // Add Endpoint Flags (endpoints.flags.add)
 app.post('/api/endpoints/flags/add', async (req, res) => {
   try {
-    const { endpoint_id, path, method, flags } = req.body;
-    
+    let { endpoint_id, path, method, flags } = req.body;
     if (!flags) {
       return sendError(res, 'Missing flags', null, 400);
     }
@@ -1606,8 +1605,7 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
 // Remove Endpoint Flags (endpoints.flags.remove)
 app.post('/api/endpoints/flags/remove', async (req, res) => {
   try {
-    const { endpoint_id, path, method, flags } = req.body;
-    
+    let { endpoint_id, path, method, flags } = req.body;
     if (!flags) {
       return sendError(res, 'Missing flags', null, 400);
     }

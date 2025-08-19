@@ -98,7 +98,7 @@ async function addFlagsToEndpoint({ endpoint_id, flag }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, tags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add flag");
@@ -110,7 +110,7 @@ async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, tags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove flag");

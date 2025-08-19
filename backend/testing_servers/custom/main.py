@@ -145,7 +145,7 @@ def get_ticket(id: int):
 # 2. BROKEN AUTHENTICATION (BKEN_AUTH)
 # =============================================================================
 
-@app.post("/api/BKEN_AUTH/login")
+@app.post("/api/BKEN_AUTH/login", openapi_extra={"security": []})
 def login(username: str, password: str):
     """Vulnerable: Weak authentication, no rate limiting"""
     # Accept any username/password combination
@@ -155,26 +155,26 @@ def login(username: str, password: str):
         return {"token": token, "message": "Login successful"}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@app.post("/api/BKEN_AUTH/reset-password")
+@app.post("/api/BKEN_AUTH/reset-password", openapi_extra={"security": []})
 def reset_password(email: str):
     """Vulnerable: No verification, accepts any email"""
     return {"message": f"Password reset link sent to {email}", "reset_token": "predictable_token_123"}
 
-@app.post("/api/BKEN_AUTH/verify-token")
+@app.post("/api/BKEN_AUTH/verify-token", openapi_extra={"security": []})
 def verify_token(token: str):
     """Vulnerable: Accepts weak tokens"""
     if token == "predictable_token_123":
         return {"valid": True, "user_id": 1}
     return {"valid": False}
 
-@app.get("/api/BKEN_AUTH/session/{session_id}")
+@app.get("/api/BKEN_AUTH/session/{session_id}", openapi_extra={"security": []})
 def get_session(session_id: str):
     """Vulnerable: Predictable session IDs"""
     if session_id.isdigit():
         return {"session_id": session_id, "user_id": int(session_id), "active": True}
     return {"error": "Invalid session"}
 
-app.get("/api/BKEN_AUTH/admin/info")
+app.get("/api/BKEN_AUTH/admin/info", openapi_extra={"security": []})
 def get_admin_info():
     """Vulnerable endpoint - no authentication at all"""
     return {"message": "Sensitive admin information"}

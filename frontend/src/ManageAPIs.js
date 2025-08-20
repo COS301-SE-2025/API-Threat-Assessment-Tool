@@ -129,6 +129,9 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
   const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [currentTags, setCurrentTags] = React.useState(endpoint.tags || []);
+  // ADD near other useState calls
+const [scanSelectionApi, setScanSelectionApi] = useState(null);
+
 
   React.useEffect(() => {
     setCurrentTags(endpoint.tags || []);
@@ -362,6 +365,9 @@ function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged }) {
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
   const [currentFlags, setCurrentFlags] = useState(endpoint.flags || []);
+  // ADD near other useState calls
+const [scanSelectionApi, setScanSelectionApi] = useState(null);
+
 
   useEffect(() => {
     setCurrentFlags(endpoint.flags || []);
@@ -1103,11 +1109,11 @@ const ScanProgressModal = ({ isOpen, onClose, progress, apiName }) => {
               color: '#374151',
               marginBottom: '8px'
             }}>
-              {progress.currentStepLabel || 'Initializing...'}
+              {progress.currentStepLabel || 'ATAT deployed - API scan underway...'}
             </div>
-            <div style={{ color: '#6b7280', fontSize: '14px' }}>
+            {/* <div style={{ color: '#6b7280', fontSize: '14px' }}>
               Step {progress.currentStep || 0} of {progress.totalSteps || 1}
-            </div>
+            </div> */}
           </div>
 
           {/* Animated Scanning Icon */}
@@ -1159,6 +1165,9 @@ const ScanProfileModal = ({
   scanLoading 
 }) => {
   const [selectedScanType, setSelectedScanType] = useState("OWASP_API_10");
+  // ADD near other useState calls
+const [scanSelectionApi, setScanSelectionApi] = useState(null);
+
   const [creatingScan, setCreatingScan] = useState(false);
   const [error, setError] = useState('');
 
@@ -1317,6 +1326,9 @@ const EndpointFlagsModal = ({
   const [endpointsError, setEndpointsError] = useState('');
   const [expandedEndpoint, setExpandedEndpoint] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // ADD near other useState calls
+const [scanSelectionApi, setScanSelectionApi] = useState(null);
+
 
   useEffect(() => {
     if (isOpen && api) {
@@ -1606,12 +1618,13 @@ const ManageAPIs = () => {
   const [scanMonitoringService] = useState(() => new ScanMonitoringService());
   const [selectedScanProfile, setSelectedScanProfile] = useState(null);
   
+  
   // New enhanced scan progress state
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [scanProgress, setScanProgress] = useState({
     currentStep: 0,
     totalSteps: 1,
-    currentStepLabel: 'Initializing...',
+    currentStepLabel: 'Deploying ATAT...',
     progress: 0
   });
   
@@ -1715,6 +1728,86 @@ const ManageAPIs = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState(null);
+  // --- ADD: state for past scan selection modal ---
+const [pastScans, setPastScans] = useState(null); // array of { scanId, results, firstTimestamp }
+const [showScanSelectionModal, setShowScanSelectionModal] = useState(false);
+const [selectedScanId, setSelectedScanId] = useState(null);
+const [scanSelectionApi, setScanSelectionApi] = useState(null);
+
+// REPLACE your existing fetchPastScans with this
+const fetchPastScans = async (api) => {
+  console.log('[DEBUG] fetchPastScans called for api:', api);
+  setScanSelectionApi(api); // remember caller so modal can use it later
+
+  try {
+    const res = await fetch('http://localhost:3001/api/scan/list', { method: 'GET' });
+    console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
+    const body = await res.json();
+    console.log('[DEBUG] /api/scan/list response body:', body);
+
+    if (!body || !body.success || !body.data || !body.data.result) {
+      showMessage('No past scans found.', 'info');
+      return;
+    }
+
+    const resultObj = body.data.result || {};
+
+    // helper: safe JSON parse
+    const safeParseJSON = (maybeJson) => {
+      if (maybeJson == null) return maybeJson;
+      if (typeof maybeJson === 'object') return maybeJson;
+      if (typeof maybeJson !== 'string') return maybeJson;
+      try { return JSON.parse(maybeJson); } catch (e) { return maybeJson; }
+    };
+
+    // Normalize each scan entry robustly (unwrap stringified entries and nested wrappers)
+    const scans = Object.entries(resultObj).map(([scanId, rawResults]) => {
+      let normalized = Array.isArray(rawResults)
+        ? rawResults.map(r => safeParseJSON(r)).filter(Boolean)
+        : [];
+
+      // If the array contains a single wrapper object that itself has a `.result` or `.vulnerabilities` array, unwrap it.
+      if (normalized.length === 1) {
+        const first = normalized[0];
+        if (first && Array.isArray(first.result)) normalized = first.result;
+        else if (first && Array.isArray(first.vulnerabilities)) normalized = first.vulnerabilities;
+      }
+
+      // If each item is an object and some items are nested wrappers, map again defensively:
+      normalized = normalized.map(item => {
+        if (item && item.result && Array.isArray(item.result)) return item.result;
+        if (item && item.vulnerabilities && Array.isArray(item.vulnerabilities)) return item.vulnerabilities;
+        return item;
+      }).flat(); // flatten any nested arrays produced above
+
+      // find first timestamp if available
+      const firstTsItem = normalized.find(r => r && (r.timestamp || r.date));
+      const firstTs = firstTsItem && firstTsItem.timestamp ? new Date(firstTsItem.timestamp).getTime() : 0;
+
+      return { scanId, results: normalized, firstTimestamp: firstTs };
+    });
+
+    console.log('[DEBUG] normalized scans:', scans);
+
+    if (!scans.length) {
+      showMessage('No past scans found.', 'info');
+      return;
+    }
+
+    // Sort most-recent-first by timestamp
+    scans.sort((a, b) => b.firstTimestamp - a.firstTimestamp);
+
+    setPastScans(scans);
+    setShowScanSelectionModal(true);
+    setSelectedScanId(scans[0].scanId);
+  } catch (err) {
+    console.error('[DEBUG] Error fetching past scans:', err);
+    showMessage('Failed to fetch past scans.', 'error');
+  }
+};
+
+
+
 
   // Refresh tags function
   const refreshAllTags = useCallback(async () => {
@@ -1755,7 +1848,7 @@ const ManageAPIs = () => {
     setScanProgress({
       currentStep: 0,
       totalSteps: SCAN_STEPS.length,
-      currentStepLabel: 'Initializing scan...',
+      currentStepLabel: 'Deploying ATAT...',
       progress: 0
     });
 
@@ -2355,6 +2448,22 @@ const ManageAPIs = () => {
     }
   };
 
+
+  // --- ADD: safe JSON parser to normalise stored scan entries (some APIs return stringified objects)
+const safeParseJSON = (maybeJson) => {
+  if (maybeJson == null) return maybeJson;
+  if (typeof maybeJson === 'object') return maybeJson; // already parsed
+  if (typeof maybeJson !== 'string') return maybeJson;
+  try {
+    return JSON.parse(maybeJson);
+  } catch (e) {
+    // not JSON — return original string (ScanResultsModal will ignore if structure wrong)
+    return maybeJson;
+  }
+};
+
+
+
   const handleSaveApi = useCallback(async () => {
     try {
       if (!currentApi) return;
@@ -2642,6 +2751,8 @@ const ManageAPIs = () => {
             </div>
           </section>
 
+          
+
           {/* Imported APIs Section */}
           {importedApis.length > 0 && (
             <section 
@@ -2704,22 +2815,18 @@ const ManageAPIs = () => {
                         </button>
 
                         {importedApi.vulnerabilitiesFound > 0 && (
-                          <button
-                            onClick={() => {
-                              if (importedApi.scanResults) {
-                                setDetailedResults(importedApi.scanResults);
-                                setScanTargetApi(importedApi);
-                                setShowResultsModal(true);
-                              } else {
-                                showMessage('No detailed results available yet.', 'info');
-                              }
-                            }}
-                            className="action-btn"
-                            title="View Scan Results"
-                            style={{ background: "#f59e0b", color: "white" }}
-                          >
-                            📊 Results
-                          </button>
+                        <button
+                          onClick={() => {
+                            // fetch list of past scans and show selection modal
+                            fetchPastScans(importedApi);
+                          }}
+                          className="action-btn"
+                          title="View Scan Results"
+                          style={{ background: "#f59e0b", color: "white" }}
+                        >
+                          📊 Results
+                        </button>
+
                         )}
 
                         <button
@@ -2863,6 +2970,234 @@ const ManageAPIs = () => {
           onProfileSelected={handleProfileSelected}
           scanLoading={scanLoading}
         />
+
+        {showScanSelectionModal && pastScans && (
+  <div
+    className="modal-overlay"
+    style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2000
+    }}
+  >
+    {/* NOTE: background is transparent so the modal matches site background.
+        The listing area uses a subtle panel feel but NOT a pure white card. */}
+    <div
+      className="modal-card"
+style={{
+  width: 'min(820px, 96%)',
+  // opaque themed panel that matches the app (keeps a subtle depth)
+  background: 'linear-gradient(135deg, rgba(70,38,75,0.96), rgba(27,0,27,0.96))',
+  borderRadius: 10,
+  padding: 20,
+  boxShadow: '0 12px 40px rgba(2,6,23,0.6)',
+  border: '1px solid rgba(255,255,255,0.06)',
+  color: 'var(--text-on-dark, #e6eef8)'
+}}
+
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h3 style={{ margin: 0, color: 'inherit' }}>Select a past scan</h3>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="action-btn"
+            onClick={() => {
+              setShowScanSelectionModal(false);
+              setPastScans(null);
+            }}
+            title="Close"
+            style={{ background: '#ef4444', color: 'white' }}
+          >
+            ✖ Close
+          </button>
+        </div>
+      </div>
+
+      {/* listing panel — slightly contrasted but not pure white */}
+      <div
+        style={{
+          maxHeight: '52vh',
+          overflowY: 'auto',
+          padding: 12,
+          borderRadius: 6,
+          background: 'rgba(255,255,255,0.03)', // subtle panel that blends with site bg
+          border: '1px solid rgba(255,255,255,0.02)'
+        }}
+      >
+        {pastScans.length === 0 && (
+          <div style={{ padding: 12, color: '#cbd5e1' }}>No past scans found.</div>
+        )}
+
+        {pastScans.map((scan) => (
+          <div
+            key={scan.scanId}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 6px',
+              borderBottom: '1px solid rgba(255,255,255,0.03)'
+            }}
+          >
+            <div>
+              <div style={{ fontFamily: 'monospace', color: 'var(--text-muted, #e6eef8)' }}>{scan.scanId}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af' }}>
+                {scan.results && scan.results.length
+                  ? `Results: ${scan.results.length} • First: ${new Date(scan.firstTimestamp).toLocaleString()}`
+                  : 'No results'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* <button
+                className="action-btn"
+                onClick={() => {
+                  // mark as selected (for the footer "View selected" button)
+                  setSelectedScanId(scan.scanId);
+                  showMessage(`Selected scan ${scan.scanId}`, 'info');
+                }}
+                title="Select scan"
+                style={{
+                  background: selectedScanId === scan.scanId ? '#10b981' : '#e5e7eb',
+                  color: selectedScanId === scan.scanId ? 'white' : '#111'
+                }}
+              >
+                {selectedScanId === scan.scanId ? 'Selected' : 'Select'}
+              </button> */}
+
+              <button
+                className="action-btn"
+onClick={() => {
+  console.log('[DEBUG] per-row View Result clicked for scan:', scan);
+  // show which API is driving this modal
+  console.log('[DEBUG] scanSelectionApi at time of View Result:', scanSelectionApi);
+
+  if (!scan.results || !scan.results.length) {
+    showMessage('No detailed results available for that scan.', 'info');
+    return;
+  }
+
+  // Defensive: ensure each entry is an object (may be strings)
+  const safeParseJSON = (maybeJson) => {
+    if (maybeJson == null) return maybeJson;
+    if (typeof maybeJson === 'object') return maybeJson;
+    try { return JSON.parse(maybeJson); } catch (e) { return maybeJson; }
+  };
+
+  const parsed = scan.results.map(r => safeParseJSON(r)).filter(Boolean);
+
+  // Provide multiple keys / shapes for compatibility:
+  const payload = {
+    result: parsed,
+    vulnerabilities: parsed,
+    [scan.scanId]: parsed
+  };
+
+  console.log('[DEBUG] payload passed to ScanResultsModal (per-row):', payload);
+  console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
+
+  setDetailedResults(payload);
+  setScanTargetApi(scanSelectionApi); // use saved API object (not local importedApi variable)
+  // clear selection context now that we're navigating to results
+  setShowScanSelectionModal(false);
+  setScanSelectionApi(null);
+  setPastScans(null);
+  setShowResultsModal(true);
+}}
+
+
+
+
+                title="View Result"
+                style={{ background: "#f59e0b", color: "white" }}
+              >
+                View Result
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* footer — includes "View selected" which opens whatever was chosen via Select */}
+      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ color: '#9ca3af', fontSize: 13 }}>
+          {selectedScanId ? `Selected: ${selectedScanId}` : 'No scan selected.'}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* <button
+            className="action-btn"
+            onClick={() => {
+              setShowScanSelectionModal(false);
+              setPastScans(null);
+            }}
+            style={{ background: '#6b7280', color: 'white' }}
+          >
+            Close
+          </button> */}
+
+          {/* <button
+            className="action-btn"
+onClick={() => {
+  console.log('[DEBUG] footer View selected clicked, selectedScanId:', selectedScanId);
+  console.log('[DEBUG] scanSelectionApi at time of footer View:', scanSelectionApi);
+
+  if (!selectedScanId) {
+    showMessage('Please select a scan first.', 'info');
+    return;
+  }
+
+  const chosen = pastScans.find(s => s.scanId === selectedScanId);
+  console.log('[DEBUG] chosen scan object from pastScans:', chosen);
+
+  if (!chosen || !chosen.results || !chosen.results.length) {
+    showMessage('No detailed results available for that scan.', 'info');
+    return;
+  }
+
+  const safeParseJSON = (maybeJson) => {
+    if (maybeJson == null) return maybeJson;
+    if (typeof maybeJson === 'object') return maybeJson;
+    try { return JSON.parse(maybeJson); } catch (e) { return maybeJson; }
+  };
+
+  const parsed = chosen.results.map(r => safeParseJSON(r)).filter(Boolean);
+
+  const payload = {
+    result: parsed,
+    vulnerabilities: parsed,
+    [chosen.scanId]: parsed
+  };
+
+  console.log('[DEBUG] payload passed to ScanResultsModal (footer):', payload);
+  console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
+
+  setDetailedResults(payload);
+  setScanTargetApi(scanSelectionApi);
+  // clear selection context
+  setShowScanSelectionModal(false);
+  setScanSelectionApi(null);
+  setPastScans(null);
+  setShowResultsModal(true);
+}}
+
+
+
+
+            style={{ background: "#f59e0b", color: "white" }}
+          >
+            View selected
+          </button> */}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 
         {/* Endpoint Flags Modal */}
         <EndpointFlagsModal

@@ -10,7 +10,7 @@ This document serves as a blueprint of Skill Issue's approach in defining the ar
 
 ### Architectural Design Strategy
 
-We used a decomposition-based strategy focused on modular separation of concerns. Each major functionality in the system is divided into distinct services, such as the Node.js scanning engine, the FastAPI backend, and the React frontend.
+We used a decomposition-based strategy focused on modular separation of concerns. Each major functionality in the system is divided into distinct services, such as the Node.js scanning engine, the Python backend, and the React frontend.
 
 - The backend is responsible for authentication, user session control, and routing between services.
 - The scanning logic is isolated in a separate service (written in Node.js), communicating with the backend via a socket protocol.
@@ -50,11 +50,11 @@ These quality requirements were not abstract ideals; they directly informed our 
 
 ### Client-Server Architecture
 
-AT-AT adopts a traditional Client–Server model where responsibilities are cleanly split between a React-based frontend and a Python FastAPI backend. The frontend is responsible for presenting the UI and initiating user actions (e.g., initiating scans, uploading specs), while the backend handles all business logic, authentication, and database operations.
+AT-AT adopts a traditional Client–Server model where responsibilities are cleanly split between a React-based frontend and a Python  backend. The frontend is responsible for presenting the UI and initiating user actions (e.g., initiating scans, uploading specs), while the backend handles all business logic, authentication, and database operations.
 
 This separation allows independent development, testing, and deployment of the frontend and backend systems.
 - Client: React (browser-based UI)
-- Server: FastAPI (REST API)
+- Server: Python (REST API)
 - Benefits: Decoupled development, scalability, clear role separation
 
 ### Rest API
@@ -74,12 +74,12 @@ While React is not strictly bound to MVC, AT-AT’s implementation applies the M
 This logical separation improves maintainability and reusability, especially in complex UI flows.
 - Benefits: Clear state management, modularity, separation of concerns
 ### Layered (n-Tier) Architecture
-AT-AT is organized into a 3-tier architecture, where each layer is responsible for a specific concern. This is a natural consequence of combining a React frontend with a FastAPI backend and PostgreSQL database.
+AT-AT is organized into a 3-tier architecture, where each layer is responsible for a specific concern. This is a natural consequence of combining a React frontend with a Python backend and PostgreSQL database.
 
 |Layer | Description |
 |-|-|
 |Presentation Layer |	The React frontend (UI) where users interact |
-|Business Logic Layer |	The FastAPI service layer handling validation, auth, scan orchestration |
+|Business Logic Layer |	The Python service layer handling validation, auth, scan orchestration |
 |Persistence Layer |	PostgreSQL storing users, scan history, specs, reports |
 
 These layers are loosely coupled but highly cohesive internally, improving maintainability and scalability. The client-server model sits atop this architecture as a deployment pattern.
@@ -145,23 +145,23 @@ React is a powerful and widely adopted JavaScript library for building user inte
 
 ### Backend Framework
 
-**Final Choice:** FastAPI (Python)
+**Final Choice:** Python + Node.js 
 
-FastAPI is a modern web framework built on Python 3.7+ with full support for async programming. It allows the creation of robust and type-safe REST APIs and generates OpenAPI documentation automatically.
+ The main API handling logic and system control live in **Python**, while the vulnerability scanning engine operates as a **Node.js** service connected via sockets. This two-layer backend enables flexible task delegation and aligns well with our plugin-style architecture.
 
 - **Advantages:**
-  - Native async support enables high-performance request handling.
-  - Automatic validation and OpenAPI documentation via Pydantic.
-  - Lightweight and flexible — allows fine-grained control over routes, middleware, and error handling.
-  - Pairs well with testing tools like `pytest`.
+  - **Python** is well-suited for orchestration, authentication handling, and parsing structured data like OpenAPI specs.
+  - **Node.js** provides non-blocking I/O and rapid JSON stream processing, making it ideal for scan command execution and vulnerability detection.
+  - This separation of concerns improves maintainability and supports concurrent development.
+  - Simplifies testability of services by decoupling scan logic from HTTP routing logic.
 
 - **Disadvantages:**
-  - Smaller community and ecosystem compared to older frameworks like Django.
-  - Requires third-party libraries for some common use cases (e.g., ORM, admin panel).
+  - Introduces inter-process communication complexity (Python ↔ Node.js socket handling).
+  - Harder to standardize documentation across two languages unless abstracted clearly.
+  - Requires extra care to handle errors consistently across services.
 
 - **Justification (Fit):**
-  FastAPI is ideal for our **service decomposition** strategy. It provides a fast, lightweight API layer between the frontend and scan engine. Its OpenAPI-first nature directly supports our requirement for importing API specs and dynamically routing to scanning commands. FastAPI integrates smoothly with our test infrastructure and CI/CD pipeline via GitHub Actions and `pytest`.
-
+  This dual-service setup fits our **microkernel-inspired plugin architecture**. Python handles user session control, RESTful communication with the frontend, and data coordination with Supabase. Node.js powers the scan engine as a separately running process, triggered via structured command packets. This mirrors our decomposition design strategy and improves scalability by enabling independent updates to the scanning engine and API layer. It also reduces the risk of full-system failure due to isolated crashes and aligns with our architectural constraint of offline scanning without external APIs.
 **Alternative 1:** Express.js (Node.js)  
 - **Advantages:**
   - Minimal and flexible.
@@ -189,7 +189,7 @@ Our scan engine is implemented as a standalone Node.js service that listens to c
 - **Advantages:**
   - Event-driven I/O makes it ideal for socket communication.
   - Native JSON handling simplifies input parsing and response formatting.
-  - Supports modular "command" execution (`endpoints.list`, `tags.replace`) with minimal overhead.
+  - Supports modular "command" execution with minimal overhead.
   - High performance for concurrent scan job handling.
 
 - **Disadvantages:**
@@ -215,28 +215,6 @@ Our scan engine is implemented as a standalone Node.js service that listens to c
   - High learning curve.
   - Slower development cycles for prototyping.
 
-### Database
-
-We use **PostgreSQL** hosted via Supabase for our structured, relational data storage.
-
-- **Final Choice:** PostgreSQL (Supabase)
-
-- **Alternatives Considered:**
-  - **MongoDB**: A document-based NoSQL solution.
-  - **MySQL**: A traditional relational database.
-
-- **Advantages of PostgreSQL:**
-  - Full SQL support with joins, foreign keys, and constraints.
-  - JSON column support for storing scan metadata flexibly.
-  - Row-level security and role-based permissions.
-
-- **Disadvantages:**
-  - Slightly more difficult to scale horizontally.
-  - Schema migrations require discipline and planning.
-
-- **Justification & Fit:**
-  PostgreSQL complements our **relational model** of users, API specs, tags, and reports. It serves as the **data layer** in our layered architecture and aligns well with Supabase’s role-based access controls and real-time updates.
-
 ### Authentication
 
 **Final Choice:** Supabase Auth (Email/Password with JWT) + OAuth 2.0 (Google/GitHub)
@@ -254,7 +232,7 @@ Authentication is handled through Supabase's built-in authentication service, wh
   - No built-in support for multi-factor authentication.
 
 - **Justification (Fit):**
-  Supabase Auth is seamlessly tied to our database layer and fits cleanly within the **client-server** and **layered architecture** of the system. It offloads low-level session logic while still allowing token inspection and role validation within FastAPI. This supports our **security** quality requirement (RBAC + JWT) and simplifies login logic on the frontend.
+  Supabase Auth is seamlessly tied to our database layer and fits cleanly within the **client-server** and **layered architecture** of the system. It offloads low-level session logic while still allowing token inspection and role validation within Python. This supports our **security** quality requirement (RBAC + JWT) and simplifies login logic on the frontend.
 
 **Alternative 1:** Auth0  
 - **Advantages:**
@@ -363,7 +341,7 @@ We use Docker to containerize our frontend, backend, and scan engine services. D
   - Learning curve for custom networks and volumes.
 
 - **Justification (Fit):**
-  Docker fits naturally into our **microkernel** and **layered** architecture. Each major component (React, FastAPI, Node.js engine) lives in its own container and communicates via localhost networking. This deployment also satisfies our constraint of **offline demo readiness** — everything runs locally in containers without cloud dependencies.
+  Docker fits naturally into our **microkernel** and **layered** architecture. Each major component (React, Python, Node.js engine) lives in its own container and communicates via localhost networking. This deployment also satisfies our constraint of **offline demo readiness** — everything runs locally in containers without cloud dependencies.
 
 **Alternative 1:** Heroku  
 - **Advantages:**

@@ -73,6 +73,12 @@ Mocked vs. Live:
 - Heuristic scan tests use mocked domain responses
 - Auth and DB tests run against seeded containers
 
+### Proof of Testing
+![Testing](/images/test1.jpg)
+
+![Testing](/images/test2.jpg)
+
+
 ## Automation and CI Pipeline
 All tests are run on GitHub Actions:
 

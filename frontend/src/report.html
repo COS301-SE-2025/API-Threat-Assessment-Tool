@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Scan Report - AT-AT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Lightest gray for report background */
+        }
+        .print-container {
+            max-width: 1000px; /* Optimal width for A4-like printing */
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .report-header {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            @apply text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200;
+        }
+        .metric-card {
+            @apply bg-gray-50 p-4 rounded-lg text-center shadow;
+        }
+        .metric-card-value {
+            @apply block text-3xl font-bold;
+        }
+        .metric-card-label {
+            @apply text-sm text-gray-600;
+        }
+        .vulnerability-card {
+            @apply bg-white border border-gray-200 rounded-lg p-5 mb-4 shadow-sm;
+        }
+        .severity-critical {
+            @apply bg-red-500 text-white;
+        }
+        .severity-high {
+            @apply bg-orange-500 text-white;
+        }
+        .severity-medium {
+            @apply bg-yellow-400 text-gray-800;
+        }
+        .severity-low {
+            @apply bg-blue-500 text-white;
+        }
+        .severity-info {
+            @apply bg-gray-400 text-white;
+        }
+        .severity-badge {
+            @apply px-3 py-1 text-xs font-semibold rounded-full inline-block;
+        }
+        .recommendation {
+            @apply bg-gray-50 p-3 mt-3 rounded border border-gray-200 text-sm;
+        }
+        .code-snippet {
+            @apply bg-gray-800 text-gray-200 p-3 rounded-md text-xs overflow-x-auto my-2;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+                -webkit-print-color-adjust: exact; /* Chrome, Safari */
+                color-adjust: exact; /* Firefox */
+            }
+            .print-container {
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .vulnerability-card {
+                page-break-inside: avoid;
+            }
+            .report-header, .section-title {
+                border-color: #ccc;
+            }
+        }
+        .btn {
+            @apply px-6 py-3 rounded-lg font-semibold shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-opacity-50;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        <header class="report-header">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                <div>
+                    <h1 class="text-4xl font-bold text-indigo-600">AT-AT Scan Report</h1>
+                    <p class="text-gray-600">API Threat Assessment Tool</p>
+                </div>
+                <div class="text-right mt-4 sm:mt-0">
+                    <button onclick="window.print()" class="no-print btn btn-primary text-sm py-2 px-4 inline-flex items-center">
+                        <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Report
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <strong class="text-gray-700">API Assessed:</strong>
+                    <p class="text-gray-600">My E-commerce Site API (api.mystore.com)</p>
+                </div>
+                <div>
+                    <strong class="text-gray-700">Scan Date:</strong>
+                    <p class="text-gray-600">May 15, 2025, 04:30 PM</p>
+                </div>
+                <div>
+                    <strong class="text-gray-700">Testing Profile:</strong>
+                    <p class="text-gray-600">OWASP Top 10 Quick Scan</p>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <p class="text-gray-700 text-lg">Overall Security Score:</p>
+                <p class="text-6xl font-bold text-red-600">C+</p>
+                <p class="text-sm text-gray-500">(Based on weighted severity of findings)</p>
+            </div>
+        </header>
+
+        <section class="mb-8">
+            <h2 class="section-title">Scan Summary</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <span class="metric-card-value text-red-600">2</span>
+                    <span class="metric-card-label">Critical</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-card-value text-orange-500">5</span>
+                    <span class="metric-card-label">High</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-card-value text-yellow-500">8</span>
+                    <span class="metric-card-label">Medium</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-card-value text-blue-500">12</span>
+                    <span class="metric-card-label">Low</span>
+                </div>
+                <div class="metric-card col-span-2 sm:col-span-1 lg:col-span-1">
+                    <span class="metric-card-value text-gray-700">27</span>
+                    <span class="metric-card-label">Total Findings</span>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Detailed Findings</h2>
+
+            <div class="vulnerability-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-semibold text-gray-800">API1:2023 - Broken Object Level Authorization (BOLA)</h3>
+                    <span class="severity-badge severity-critical">Critical</span>
+                </div>
+                <p class="text-sm text-gray-500 mb-1"><strong>Endpoint:</strong> <code class="text-xs bg-gray-100 p-1 rounded">/api/v1/orders/{orderId}</code> (GET, PUT)</p>
+                <p class="text-sm text-gray-500 mb-3"><strong>OWASP Category:</strong> API1:2023 Broken Object Level Authorization</p>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Description:</h4>
+                <p class="text-gray-600 text-sm">
+                    The endpoint allows users to access or modify order details belonging to other users by manipulating the `orderId` parameter in the request.
+                    User A was able to retrieve and modify an order belonging to User B.
+                </p>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Evidence (Simplified):</h4>
+                <pre class="code-snippet"><code>REQUEST: GET /api/v1/orders/ORDER_ID_OF_OTHER_USER
+Authorization: Bearer USER_A_TOKEN
+
+RESPONSE: 200 OK
+{
+  "orderId": "ORDER_ID_OF_OTHER_USER",
+  "customer": "Other User",
+  "items": [...]
+}</code></pre>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Recommendation:</h4>
+                <div class="recommendation">
+                    Implement strict access control checks on every request that accesses a data resource. Verify that the authenticated user has the necessary permissions to access or modify the specific `orderId` requested. Do not rely solely on IDs sent from the client.
+                    <br><strong>Reference:</strong> <a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/" target="_blank" class="text-indigo-600 hover:underline">OWASP BOLA Guidance</a>
+                </div>
+            </div>
+
+            <div class="vulnerability-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-semibold text-gray-800">API3:2023 - Broken Object Property Level Authorization</h3>
+                    <span class="severity-badge severity-high">High</span>
+                </div>
+                <p class="text-sm text-gray-500 mb-1"><strong>Endpoint:</strong> <code class="text-xs bg-gray-100 p-1 rounded">/api/v1/users/{userId}/profile</code> (PUT)</p>
+                <p class="text-sm text-gray-500 mb-3"><strong>OWASP Category:</strong> API3:2023 Broken Object Property Level Authorization (Excessive Data Exposure / Mass Assignment)</p>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Description:</h4>
+                <p class="text-gray-600 text-sm">
+                    The API endpoint allows users to update their profile. However, it does not properly filter input fields, allowing a user to update sensitive fields like `isAdmin` or `accountBalance` by including them in the JSON payload, even if these fields are not intended to be user-modifiable.
+                </p>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Evidence (Simplified):</h4>
+                <pre class="code-snippet"><code>REQUEST: PUT /api/v1/users/USER_A_ID/profile
+Authorization: Bearer USER_A_TOKEN
+{
+  "email": "user.a.new@example.com",
+  "isAdmin": true  // Maliciously added
+}
+
+RESPONSE: 200 OK
+{
+  "userId": "USER_A_ID",
+  "email": "user.a.new@example.com",
+  "isAdmin": true, // Property was successfully updated
+  ...
+}</code></pre>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Recommendation:</h4>
+                <div class="recommendation">
+                    Only allow updates to properties that the user is explicitly permitted to change. Implement a schema-based validation on the request payload to ensure only whitelisted properties are accepted. Avoid binding incoming data directly to internal objects without filtering.
+                    <br><strong>Reference:</strong> <a href="https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/" target="_blank" class="text-indigo-600 hover:underline">OWASP BOPLA Guidance</a>
+                </div>
+            </div>
+
+            <div class="vulnerability-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-semibold text-gray-800">API4:2023 - Unrestricted Resource Consumption</h3>
+                    <span class="severity-badge severity-medium">Medium</span>
+                </div>
+                <p class="text-sm text-gray-500 mb-1"><strong>Endpoint:</strong> <code class="text-xs bg-gray-100 p-1 rounded">/api/v1/products/search</code> (GET)</p>
+                <p class="text-sm text-gray-500 mb-3"><strong>OWASP Category:</strong> API4:2023 Unrestricted Resource Consumption</p>
+
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Description:</h4>
+                <p class="text-gray-600 text-sm">
+                    The product search endpoint does not implement adequate rate limiting or pagination limits. An attacker could potentially cause a denial of service or degrade performance by sending a large number of requests or requesting an extremely large number of results per page.
+                </p>
+                <h4 class="font-medium text-gray-700 mt-3 mb-1">Recommendation:</h4>
+                <div class="recommendation">
+                    Implement rate limiting on API endpoints to prevent abuse. For endpoints returning lists of resources, enforce pagination with reasonable default and maximum page sizes. Monitor resource consumption.
+                    <br><strong>Reference:</strong> <a href="https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/" target="_blank" class="text-indigo-600 hover:underline">OWASP URC Guidance</a>
+                </div>
+            </div>
+
+            </section>
+
+        <footer class="mt-12 pt-6 border-t border-gray-300 text-center text-sm text-gray-500">
+            <p>This report was generated by AT-AT (API Threat Assessment Tool) on May 15, 2025.</p>
+            <p>COS301 Capstone Project - [Your Team Name]</p>
+            <p class="mt-2 no-print">
+                <a href="#" class="text-indigo-600 hover:underline">Back to Dashboard</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
+```
+
+**Key Features of this Sample Report:**
+
+1.  **Clear Header:**
+    * Report title, tool name.
+    * Details: API Assessed, Scan Date, Testing Profile.
+    * Prominent **Overall Security Score** (color-coded for impact).
+    * A "Print Report" button (uses `window.print()`).
+2.  **Scan Summary:**
+    * Uses "metric cards" to show the count of vulnerabilities by severity (Critical, High, Medium, Low) and a total count.
+3.  **Detailed Findings:**
+    * Each vulnerability is presented in a "vulnerability card."
+    * **Severity Badge:** Color-coded for quick visual identification.
+    * **Vulnerability Name:** Clear and descriptive.
+    * **Endpoint & OWASP Category:** Provides context.
+    * **Description:** Explains the vulnerability.
+    * **Evidence (Simplified):** Includes a `<pre>` block for showing sample request/response snippets. This is simplified; real evidence might be more complex.
+    * **Recommendation:** Actionable advice on how to fix the vulnerability, including a link to the relevant OWASP guidance.
+4.  **Styling:**
+    * Uses Tailwind CSS and the Inter font for consistency.
+    * Designed to be relatively clean and readable.
+    * Includes basic print-specific styles (`@media print`) to optimize for printing (hiding the print button, adjusting margins, etc.).
+5.  **Content:**
+    * Includes examples for Critical, High, and Medium severity findings based on the OWASP API Security Top 10 2023 list.
+6.  **Report Footer:**
+    * Generation date and team information.
+    * A "Back to Dashboard" link (hidden on print).
+
+**How to Use and Build Upon This:**
+
+* **Dynamic Data:** You will need to replace all the static text (API names, dates, vulnerability details, scores) with dynamic data fetched from your backend when a report is generated or viewed.
+* **Looping Through Vulnerabilities:** In your backend or frontend templating engine, you'll loop through the list of found vulnerabilities to generate the "vulnerability-card" sections dynamically.
+* **Conditional Styling:** The color of the "Overall Security Score" and the severity badges can be changed dynamically based on the actual score/severity.
+* **Evidence:** The "Evidence" section is very basic. You might want to expand this to include more detailed request/response headers and bodies, or even screenshots if applicable (though that's harder for a web report).
+* **Recommendations:** You mentioned asking the client about a database for recommendations. You could fetch these recommendations dynamically based on the vulnerability type.
+* **Interactivity (Optional):** You could add JavaScript for features like expanding/collapsing vulnerability details, filtering findings, etc., if desired for the web view.
+
+This sample should give you a strong visual and structural starting point for your report generation featu

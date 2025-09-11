@@ -37,7 +37,7 @@ class Endpoint:
             self.flags.append(flag)
 
     def remove_flag(self, flag):
-        if flag and flag not in self.flags:
+        if flag and flag in self.flags:
             self.flags.remove(flag)
 
     def get_flags(self):

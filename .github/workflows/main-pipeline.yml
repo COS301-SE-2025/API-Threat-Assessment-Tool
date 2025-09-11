@@ -1,13 +1,15 @@
 name: Pipeline
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["Engine Test"]   # Name of the engine-test workflow
+    types:
+      - completed
 
 jobs:
   test-and-build:
+    # Only run this job if the Engine Test workflow completed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -45,26 +47,6 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-node-backend-
 
-      # Install dependencies and run tests in frontend
-      - name: Install frontend dependencies
-        run: npm install
-        working-directory: ./frontend
-
-      - name: Run frontend tests
-        run: npm test
-        working-directory: ./frontend
-        continue-on-error: true
-
-      # Install dependencies and run tests in api
-      - name: Install api dependencies
-        run: npm install
-        working-directory: ./api
-
-      - name: Run api tests
-        run: npm test
-        working-directory: ./api
-        continue-on-error: true
-
       # Install dependencies and run tests in backend
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -80,10 +62,27 @@ jobs:
         run: echo "Success"
         continue-on-error: true
 
+      # Install dependencies and run tests in api
+      - name: Install api dependencies
+        run: npm install
+        working-directory: ./api
+
+      - name: Run api tests
+        run: npm test
+        working-directory: ./api
+        continue-on-error: true
+
+      # Install dependencies and run tests in frontend
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./frontend
+
+      - name: Run frontend tests
+        run: npm test -- --coverage --watchAll=false
+        working-directory: ./frontend
+        continue-on-error: true
 
       # Build the Docker image
       - name: Build Docker image
         run: docker build -t atat .
         continue-on-error: true
-
-

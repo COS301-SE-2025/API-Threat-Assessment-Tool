@@ -21,6 +21,7 @@
   --danger-color: #dc3545;
   --info-color: #17a2b8;
   --gradient-bg: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 .api-card-actions {
   display: flex;
@@ -44,6 +45,7 @@
   --danger-color: #ef5350;
   --info-color: #29b6f6;
   --gradient-bg: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  --primary-gradient: linear-gradient(135deg, #4c5696 0%, #5d3c7c 100%);
 }
 
 .manage-apis-container {
@@ -798,8 +800,74 @@
   background: rgba(239, 83, 80, 0.15);
 }
 
+/* Add these styles to your existing CSS file */
+
+/* Modal content styles */
 .modal-form {
-  padding: 30px 40px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 20px;
+}
+
+.modal-form h3 {
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.modal-form p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Select dropdown styles */
+.modal-form select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--secondary-color);
+  border-radius: var(--border-radius-small);
+  padding: 10px;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.modal-form select:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Button styles */
+.modal-form button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius-small);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.modal-form button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.modal-form button:disabled {
+  background: var(--secondary-color);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Error message styles */
+.modal-form .error-message {
+  background: rgba(220, 53, 69, 0.1);
+  color: var(--danger-color);
+  padding: 10px;
+  border-radius: var(--border-radius-small);
+  margin: 15px 0;
+  border-left: 4px solid var(--danger-color);
 }
 
 .form-group {

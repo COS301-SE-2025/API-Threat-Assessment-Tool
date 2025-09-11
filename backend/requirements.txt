@@ -3,6 +3,10 @@ requests
 openapi-spec-validator
 PyYAML
 PyJWT
-psycopg2
+psycopg2-binary
 python-dotenv
 pytest
+fpdf
+fastapi
+httpx
+uvicorn

@@ -1664,55 +1664,14 @@ const ManageAPIs = () => {
     };
   }, [scanMonitoringService]);
 
-  const fallbackApis = [
-    {
-      id: 1,
-      name: 'E-commerce API',
-      baseUrl: 'https://api.ecommerce.com/v1',
-      description: 'Main API for the e-commerce platform with user authentication and product management',
-      lastScanned: '2025-06-20',
-      status: 'Active',
-      scanCount: 12,
-      lastScanResult: 'Clean'
-    },
-    {
-      id: 2,
-      name: 'Payment Gateway API',
-      baseUrl: 'https://api.payments.com/v2',
-      description: 'Secure payment processing API with PCI compliance',
-      lastScanned: '2025-06-18',
-      status: 'Active',
-      scanCount: 8,
-      lastScanResult: 'Issues Found'
-    },
-    {
-      id: 3,
-      name: 'User Management Service',
-      baseUrl: 'https://api.users.internal/v1',
-      description: 'Internal user authentication and profile management service',
-      lastScanned: '2025-06-15',
-      status: 'Inactive',
-      scanCount: 5,
-      lastScanResult: 'Pending'
-    },
-    {
-      id: 4,
-      name: 'Analytics API',
-      baseUrl: 'https://api.analytics.com/v3',
-      description: 'Data analytics and reporting API for business intelligence',
-      lastScanned: '2025-06-22',
-      status: 'Active',
-      scanCount: 15,
-      lastScanResult: 'Clean'
-    }
-  ];
+
 
   const [apis, setApis] = useState(() => {
     const local = loadApisFromLocal();
     if (Array.isArray(local) && local.length > 0) {
       return local;
     }
-    return Array.isArray(fallbackApis) ? fallbackApis : [];
+    return[];
   });
 
   useEffect(() => {
@@ -1907,20 +1866,17 @@ const fetchPastScans = async (api) => {
         throw new Error(startScanResult.message || "Failed to start scan");
       }
 
-      //console.log('✅ Step 2 Complete - Scan started:', startScanResult);
 
-      // 💾 STEP 3: Store scan_id and update state
       const returnedScanId = startScanResult.data?.scan_id || startScanResult.scan_id;
       let scanId = returnedScanId;
-      //console.log('📋 Scan ID received:', scanId);
+
       if (!returnedScanId) {
         throw new Error('No scan_id returned from start scan');
       }
 
-      //console.log('💾 Step 3: Storing scan_id:', returnedScanId);
       setCurrentScanId(returnedScanId);
       
-      // Update the correct state array based on API type
+
       if (isImportedApi) {
         setImportedApis(prev => prev.map(api => 
           api.id === scanTargetApi.id ? {
@@ -2464,96 +2420,42 @@ const safeParseJSON = (maybeJson) => {
 
 
 
-  const handleSaveApi = useCallback(async () => {
-    try {
-      if (!currentApi) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      if (!currentApi.name?.trim()) {
-        setError('API name is required');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!currentApi.baseUrl?.trim()) {
-        setError('Base URL is required');
-        setIsLoading(false);
-        return;
-      }
+const handleSaveApi = () => {
+  if (!currentApi || !currentApi.name || !currentApi.baseUrl) {
+    alert("Please fill out Name and Base URL before saving.");
+    return;
+  }
 
-      let apiToSave = { ...currentApi };
-
-      if (pendingFile) {
-        try {
-          showMessage(`📤 Uploading file "${pendingFile.name}"...`, 'info');
-          
-          const formData = new FormData();
-          formData.append("file", pendingFile);
-
-          const res = await fetch("/api/import", {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-          });
-          
-          const result = await res.json();
-          
-          if (!res.ok || !result.success) {
-            throw new Error(result.message || "Upload failed");
-          }
-
-          const { filename, api_id } = result.data;
-          
-          apiToSave = {
-            ...apiToSave,
-            api_id: api_id,
-            filename: filename
-          };
-
-          showMessage(`✅ File "${filename}" uploaded successfully!`, "success");
-        } catch (uploadError) {
-          setError(`File upload failed: ${uploadError.message}`);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (apiToSave.id) {
-        setApis(prevApis => 
-          prevApis.map(api => 
-            api.id === apiToSave.id ? { 
-              ...apiToSave, 
-              lastScanned: api.lastScanned || 'Never' 
-            } : api
-          )
-        );
-        showMessage(`✅ API "${apiToSave.name}" updated successfully!`, 'success');
-      } else {
-        const newApi = {
-          ...apiToSave,
-          id: Math.max(...apis.map(a => a.id), 0) + 1,
-          lastScanned: 'Never',
-          scanCount: 0,
-          lastScanResult: 'Pending'
-        };
-        setApis(prevApis => [...prevApis, newApi]);
-        showMessage(`✅ API "${apiToSave.name}" added successfully!`, 'success');
-      }
-      
-      setIsModalOpen(false);
-      setCurrentApi(null);
-      setPendingFile(null);
-    } catch (error) {
-      console.error('Error saving API:', error);
-      setError('Failed to save API. Please try again.');
-    } finally {
-      setIsLoading(false);
+  setImportedApis(prev => {
+    
+    if (currentApi.id) {
+      return prev.map(api =>
+        api.id === currentApi.id ? { ...api, ...currentApi } : api
+      );
     }
-  }, [currentApi, apis, showMessage, pendingFile]);
+   
+    return [
+      ...prev,
+      {
+        id: Date.now(),
+        filename: currentApi.name || `api_${Date.now()}.json`,
+        api_id: `api_${Date.now()}`,
+        baseUrl: currentApi.baseUrl,
+        description: currentApi.description,
+        uploadDate: new Date().toLocaleDateString(),
+        lastScanned: "Never",
+        scanStatus: "Not Scanned",
+        vulnerabilitiesFound: 0,
+        status: currentApi.status || "Active"
+      }
+    ];
+  });
+
+  setIsModalOpen(false);
+  setCurrentApi(null);
+};
+
+
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -2839,6 +2741,17 @@ const safeParseJSON = (maybeJson) => {
                         </button>
 
                         <button
+                          onClick={() => {
+                            setCurrentApi(importedApi); 
+                            setIsModalOpen(true);         
+                          }}
+                          className="action-btn edit"
+                          title="Edit API"
+                          style={{ background: "#3b82f6", color: "white" }}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
                           onClick={() => handleDeleteImportedApi(importedApi)}
                           className="action-btn delete"
                           title="Delete Imported API"
@@ -2854,96 +2767,7 @@ const safeParseJSON = (maybeJson) => {
             </section>
           )}
 
-          <section className="manage-apis-top">
-            <h2 className="section-title">Your APIs</h2>
-            <button onClick={handleAddApi} className="add-api-btn">
-              ➕ Add API
-            </button>
-          </section>
-
-          <section 
-            id="apis-list" 
-            className={`apis-list-section animate-on-scroll ${isVisible['apis-list'] ? 'visible' : ''}`}
-          >
-            <div className="apis-list">
-              {apis.length > 0 ? (
-                <>
-                  <div className="apis-list-header">
-                    <h3 className="list-title">🔗 API Endpoints</h3>
-                    <p className="list-description">Manage and monitor your API security</p>
-                  </div>
-                  <div className="apis-grid">
-                    {apis.map((api, index) => (
-                      <div key={api.id} className="api-card" style={{animationDelay: `${index * 0.1}s`}}>
-                        <div className="api-card-header">
-                          <h4 className="api-name">{api.name}</h4>
-                          <span className={`api-status ${api.status.toLowerCase()}`}>
-                            {api.status}
-                          </span>
-                        </div>
-                        
-                        <div className="api-url">{api.baseUrl}</div>
-                        
-                        {api.description && (
-                          <p className="api-description">{api.description}</p>
-                        )}
-                        
-                        <div className="api-meta">
-                          <span>Last scanned: {api.lastScanned}</span>
-                          <span>Scans: {api.scanCount}</span>
-                        </div>
-
-                        <div className="api-card-actions">
-                          <button
-                            onClick={() => {
-                              setScanTargetApi(api);
-                              setIsScanProfileModalOpen(true);
-                            }}
-                            className="action-btn scan"
-                            title="Select Scan Profile"
-                          >
-                            ⚙️ Select Profile
-                          </button>
-
-                          <button 
-                            onClick={() => handleEditApi(api)} 
-                            className="action-btn edit"
-                            title="Edit API"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteApi(api)} 
-                            className="action-btn delete"
-                            title="Delete API"
-                          >
-                            🗑️ Delete
-                          </button>
-                          <button
-                            onClick={() => handleViewEndpoints(api)}
-                            className="action-btn endpoints"
-                            title="View Endpoints"
-                            style={{ background: "#6366f1", color: "#fff" }}
-                          >
-                            📂 Tags
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="no-apis">
-                  <div className="no-apis-icon">🔗</div>
-                  <h3>No APIs Found</h3>
-                  <p>Get started by adding your first API endpoint to begin security scanning.</p>
-                  <button onClick={handleAddApi} className="add-api-btn">
-                    ➕ Add Your First API
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
+          
         </main>
 
         {/* Enhanced Scan Progress Modal */}

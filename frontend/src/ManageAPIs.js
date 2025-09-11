@@ -513,7 +513,7 @@ function loadApisFromLocal() {
 }
 
 function saveImportedApisToLocal(apis) {
-  console.log('Saving imported APIs to localStorage:', apis);
+  //console.log('Saving imported APIs to localStorage:', apis);
   localStorage.setItem(IMPORTED_APIS_LOCAL_STORAGE_KEY, JSON.stringify(apis));
 }
 
@@ -521,10 +521,10 @@ function loadImportedApisFromLocal() {
   try {
     const stored = localStorage.getItem(IMPORTED_APIS_LOCAL_STORAGE_KEY);
     const parsed = JSON.parse(stored) || [];
-    console.log('Loaded imported APIs from localStorage:', parsed);
+    //console.log('Loaded imported APIs from localStorage:', parsed);
     return parsed;
   } catch {
-    console.log('Failed to load imported APIs from localStorage, returning empty array');
+    //console.log('Failed to load imported APIs from localStorage, returning empty array');
     return [];
   }
 }
@@ -569,7 +569,7 @@ class ScanMonitoringService {
   }
 
   async checkScanResults(scanId) {
-    console.log("Fetching results for scanID: ", scanId)
+    //console.log("Fetching results for scanID: ", scanId)
     try {
       const response = await fetch(`/api/scan/results?scan_id=${scanId}`, {
         method: 'GET',
@@ -624,19 +624,19 @@ class ScanMonitoringService {
       progress: 0
     });
 
-    console.log(`🔄 Starting enhanced scan monitoring for ${scanId}`);
+    //console.log(`🔄 Starting enhanced scan monitoring for ${scanId}`);
 
     // Start realistic progress simulation
     this.simulateProgress(scanId, onProgress, onStepComplete);
 
     const poll = async () => {
       attempts++;
-      console.log(`📊 Checking scan results (attempt ${attempts}/${maxAttempts})`);
+      //console.log(`📊 Checking scan results (attempt ${attempts}/${maxAttempts})`);
       
       const result = await this.checkScanResults(scanId);
       
       if (result.hasResults && result.isComplete) {
-        console.log('✅ Scan completed with results');
+        //console.log('✅ Scan completed with results');
         this.stopMonitoring(scanId);
         if (onComplete) {
           onComplete(result.results);
@@ -649,7 +649,7 @@ class ScanMonitoringService {
       }
       
       if (attempts >= maxAttempts) {
-        console.log('⏰ Maximum polling attempts reached');
+        //console.log('⏰ Maximum polling attempts reached');
         this.stopMonitoring(scanId);
         if (onError) {
           onError(new Error('Scan timeout - results not available after maximum attempts'));
@@ -717,7 +717,7 @@ class ScanMonitoringService {
       clearTimeout(intervalId);
       this.activeScanIntervals.delete(scanId);
       this.scanProgress.delete(scanId);
-      console.log(`🛑 Stopped monitoring scan ${scanId}`);
+      //console.log(`🛑 Stopped monitoring scan ${scanId}`);
     }
   }
 
@@ -1377,9 +1377,9 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
 const handleStartScan = () => {
-  console.log("CLICKED START SCAN, scanProfile:", scanProfile);
+  //console.log("CLICKED START SCAN, scanProfile:", scanProfile);
   if (scanProfile) {
-    console.log("✅ Calling onScanStart with", scanProfile);
+    //console.log("✅ Calling onScanStart with", scanProfile);
     onScanStart(scanProfile);
     onClose();
   } else {
@@ -1736,14 +1736,14 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
 // REPLACE your existing fetchPastScans with this
 const fetchPastScans = async (api) => {
-  console.log('[DEBUG] fetchPastScans called for api:', api);
+  //('[DEBUG] fetchPastScans called for api:', api);
   setScanSelectionApi(api); // remember caller so modal can use it later
 
   try {
     const res = await fetch('http://localhost:3001/api/scan/list', { method: 'GET' });
-    console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
+    //console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
     const body = await res.json();
-    console.log('[DEBUG] /api/scan/list response body:', body);
+    //console.log('[DEBUG] /api/scan/list response body:', body);
 
     if (!body || !body.success || !body.data || !body.data.result) {
       showMessage('No past scans found.', 'info');
@@ -1787,7 +1787,7 @@ const fetchPastScans = async (api) => {
       return { scanId, results: normalized, firstTimestamp: firstTs };
     });
 
-    console.log('[DEBUG] normalized scans:', scans);
+    //console.log('[DEBUG] normalized scans:', scans);
 
     if (!scans.length) {
       showMessage('No past scans found.', 'info');
@@ -1838,7 +1838,7 @@ const fetchPastScans = async (api) => {
 
   // ENHANCED API scanning handler with realistic progress
   const handleScanStart = async (scanProfile) => {
-    console.log('🚀 === STARTING ENHANCED SCAN WORKFLOW ===');
+    //console.log('🚀 === STARTING ENHANCED SCAN WORKFLOW ===');
 
     setScanLoading(true);
     setScanResult(null);
@@ -1857,11 +1857,11 @@ const fetchPastScans = async (api) => {
       const isImportedApi = importedApis.some(importedApi => importedApi.id === scanTargetApi.id);
       const isRegularApi = apis.some(api => api.id === scanTargetApi.id);
       
-      console.log('🔍 API Type Detection:', { 
-        isImportedApi, 
-        isRegularApi, 
-        targetApiId: scanTargetApi.id
-      });
+      // console.log('🔍 API Type Detection:', { 
+      //   isImportedApi, 
+      //   isRegularApi, 
+      //   targetApiId: scanTargetApi.id
+      // });
 
       // Extract api_name based on API type
       let apiName;
@@ -1874,7 +1874,7 @@ const fetchPastScans = async (api) => {
         throw new Error(`API not found in either imported or regular APIs. ID: ${scanTargetApi.id}`);
       }
 
-      console.log('🔍 Extracted values:', { apiName, scanProfile });
+      //console.log('🔍 Extracted values:', { apiName, scanProfile });
 
       if (!apiName) {
         throw new Error(`Missing required data: apiName=${apiName}`);
@@ -1883,7 +1883,7 @@ const fetchPastScans = async (api) => {
       showMessage(`🔍 Starting enhanced scan for "${apiName}"...`, "info");
 
       // 🚀 STEP 2: Start Scan  
-      console.log('🚀 Step 2: Starting scan...');
+      //console.log('🚀 Step 2: Starting scan...');
       const startScanResponse = await fetch("/api/scan/start", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
@@ -1907,17 +1907,17 @@ const fetchPastScans = async (api) => {
         throw new Error(startScanResult.message || "Failed to start scan");
       }
 
-      console.log('✅ Step 2 Complete - Scan started:', startScanResult);
+      //console.log('✅ Step 2 Complete - Scan started:', startScanResult);
 
       // 💾 STEP 3: Store scan_id and update state
       const returnedScanId = startScanResult.data?.scan_id || startScanResult.scan_id;
       let scanId = returnedScanId;
-      console.log('📋 Scan ID received:', scanId);
+      //console.log('📋 Scan ID received:', scanId);
       if (!returnedScanId) {
         throw new Error('No scan_id returned from start scan');
       }
 
-      console.log('💾 Step 3: Storing scan_id:', returnedScanId);
+      //console.log('💾 Step 3: Storing scan_id:', returnedScanId);
       setCurrentScanId(returnedScanId);
       
       // Update the correct state array based on API type
@@ -1943,11 +1943,11 @@ const fetchPastScans = async (api) => {
       showMessage(`🔄 Enhanced scan started with ID: ${returnedScanId}. Monitoring with realistic progress...`, "info");
 
       // 📊 STEP 4: Start enhanced results monitoring with progress simulation
-      console.log('📊 Step 4: Starting enhanced results monitoring...');
+      //console.log('📊 Step 4: Starting enhanced results monitoring...');
       startEnhancedScanMonitoring(returnedScanId, scanTargetApi, isImportedApi, isRegularApi, apiName);
 
     } catch (error) {
-      console.error("❌ Enhanced scan workflow failed:", error);
+      //console.error("❌ Enhanced scan workflow failed:", error);
       setScanError(error.message || "Scan failed");
       showMessage(`❌ Scan failed: ${error.message}`, "error");
       setScanLoading(false);
@@ -1965,7 +1965,7 @@ const fetchPastScans = async (api) => {
         showMessage(`🔄 ${progressInfo.stepLabel} (${progressInfo.progress}%)`, "info");
       },
       onStepComplete: (step) => {
-        console.log(`✅ Completed: ${step.label}`);
+        //console.log(`✅ Completed: ${step.label}`); 
       },
       onComplete: (results) => {
         handleEnhancedScanComplete(scanId, results, targetApi, isImportedApi, isRegularApi, apiName);
@@ -1977,7 +1977,7 @@ const fetchPastScans = async (api) => {
   };
 
   const handleEnhancedScanComplete = (scanId, results, targetApi, isImportedApi, isRegularApi, apiName) => {
-    console.log('✅ Enhanced scan completed with results:', results);
+    //console.log('✅ Enhanced scan completed with results:', results);
     
     setDetailedResults(results);
     const vulnCount = results?.result?.length || results?.vulnerabilities?.length || 0;
@@ -2415,7 +2415,7 @@ const fetchPastScans = async (api) => {
         throw new Error("Import response missing API ID");
       }
 
-      console.log('Import successful:', { filename, api_id });
+      //console.log('Import successful:', { filename, api_id });
       
       // Add to imported APIs list instead of regular APIs
       const newImportedApi = {
@@ -2431,7 +2431,7 @@ const fetchPastScans = async (api) => {
         vulnerabilitiesFound: 0
       };
       
-      console.log('Adding new imported API:', newImportedApi);
+      //console.log('Adding new imported API:', newImportedApi);
       
       setImportedApis(prev => [...prev, newImportedApi]);
       showMessage(`✅ Imported API "${filename}" successfully! You can now scan it.`, "success");
@@ -2799,7 +2799,7 @@ const safeParseJSON = (maybeJson) => {
                       <div className="api-card-actions">
                         <button
                           onClick={() => {
-                            console.log('Selected imported API for scan:', importedApi);
+                            //console.log('Selected imported API for scan:', importedApi);
                             setScanTargetApi(importedApi);
                             setIsScanProfileModalOpen(true);
                           }}
@@ -3072,9 +3072,9 @@ style={{
               <button
                 className="action-btn"
 onClick={() => {
-  console.log('[DEBUG] per-row View Result clicked for scan:', scan);
+  //console.log('[DEBUG] per-row View Result clicked for scan:', scan);
   // show which API is driving this modal
-  console.log('[DEBUG] scanSelectionApi at time of View Result:', scanSelectionApi);
+  //console.log('[DEBUG] scanSelectionApi at time of View Result:', scanSelectionApi);
 
   if (!scan.results || !scan.results.length) {
     showMessage('No detailed results available for that scan.', 'info');
@@ -3097,8 +3097,8 @@ onClick={() => {
     [scan.scanId]: parsed
   };
 
-  console.log('[DEBUG] payload passed to ScanResultsModal (per-row):', payload);
-  console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
+  // console.log('[DEBUG] payload passed to ScanResultsModal (per-row):', payload);
+  // console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
 
   setDetailedResults(payload);
   setScanTargetApi(scanSelectionApi); // use saved API object (not local importedApi variable)

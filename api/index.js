@@ -2019,7 +2019,41 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {
+try {
+    const { token, password } = req.body || {};
+    if (!token || !password) {
+      return sendError(res, 'token_and_password_required', null, 400);
+    }
 
+    const rec = consumeResetToken(token);
+    if (!rec) return sendError(res, 'invalid_or_expired_token', null, 400);
+
+    // Verify user still exists
+    const { data: user, error: uerr } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', rec.userId)
+      .single();
+
+    if (uerr || !user) return sendError(res, 'invalid_or_expired_token', null, 400);
+
+ const hash = await bcrypt.hash(password, 12); 
+
+    const { error: upErr } = await supabase
+      .from('users')
+      .update({ password: hash, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (upErr) {
+      console.error('reset-password update:', upErr);
+      return sendError(res, 'Password reset failed', upErr.message, 500);
+    }
+
+    return sendSuccess(res, 'password_reset_success');
+  } catch (err) {
+    console.error('reset-password error:', err);
+    return sendError(res, 'Internal server error', err.message, 500);
+  }
 });
 // 404 handler
 app.use('*', (req, res) => {

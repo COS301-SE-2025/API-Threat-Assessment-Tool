@@ -14,20 +14,6 @@ require('dotenv').config();
 
 const app = express();
 
-// Supabase config
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
-  process.exit(1);
-}
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: false,
-    detectSessionInUrl: false
-  }
-});
 
 // Engine config
 const ENGINE_HOST = '127.0.0.1';

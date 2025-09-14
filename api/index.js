@@ -2004,9 +2004,47 @@ app.get('/api/connection/test', async (req, res) => {
 //////////////
 // POST /api/auth/forgot-password
 
+// POST /api/auth/forgot-password
+// POST /api/auth/forgot-password
 app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
+  const generic = 'If that account exists, we sent a reset link.';
+  try {
+    const { email } = req.body || {};
+    if (!email) return sendSuccess(res, generic);
 
+    const identifier = String(email).trim().toLowerCase();
+
+    // Look up user in YOUR users table (not Supabase Auth)
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', identifier)
+      .single();
+
+    if (!error && user) {
+      // Create one-time token and store it (hashed in-memory; you already have saveResetToken)
+      const token = newToken();
+      saveResetToken(user.id, token);
+
+      // Build link to the frontend /recover page (strip trailing slashes)
+      const origin = (req.get('origin') || 'http://localhost:3002').replace(/\/+$/, '');
+      const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
+
+      // Dev "send": log the link (or swap to SMTP later)
+      sendResetLinkDev(user.email, resetUrl);
+    } else if (error) {
+      console.warn('forgot-password lookup:', error.message);
+    }
+
+    // Always generic to avoid user enumeration
+    return sendSuccess(res, generic);
+  } catch (err) {
+    console.error('forgot-password error:', err);
+    return sendSuccess(res, generic);
+  }
 });
+
+
 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {

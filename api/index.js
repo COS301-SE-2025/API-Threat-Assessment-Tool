@@ -2004,8 +2004,6 @@ app.get('/api/connection/test', async (req, res) => {
 //////////////
 // POST /api/auth/forgot-password
 
-// POST /api/auth/forgot-password
-// POST /api/auth/forgot-password
 app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
   const generic = 'If that account exists, we sent a reset link.';
   try {
@@ -2014,7 +2012,7 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
 
     const identifier = String(email).trim().toLowerCase();
 
-    // Look up user in YOUR users table (not Supabase Auth)
+
     const { data: user, error } = await supabase
       .from('users')
       .select('id, email')
@@ -2022,11 +2020,9 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
       .single();
 
     if (!error && user) {
-      // Create one-time token and store it (hashed in-memory; you already have saveResetToken)
       const token = newToken();
       saveResetToken(user.id, token);
 
-      // Build link to the frontend /recover page (strip trailing slashes)
       const origin = (req.get('origin') || 'http://localhost:3002').replace(/\/+$/, '');
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
 

@@ -18,6 +18,7 @@ import PublicTemplates from "./PublicTemplates";
 import ScanReport from "./ScanReport";
 import ImportAPI from "./ImportAPI";
 import ForgotPassword from "./ForgotPassword";
+import Recover from "./Recover";
 // Import the scan simulation module
 import { ScanSimulation } from "./scanSimulation";
 
@@ -154,7 +155,7 @@ function App() {
                 <Route
                  path="/recover"
                   element={
-                  <ForgotPassword />
+                  <Recover />
                   } 
                   />
                 {/* Scan-related routes - Protected */}

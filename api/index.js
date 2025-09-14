@@ -235,6 +235,11 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
   res.status(statusCode).json(payload);
 };
 // Forget Password
+// --- Minimal mailer for dev: logs the link (no SMTP needed) ---
+function sendResetLinkDev(to, resetUrl) {
+  console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
+}
+
 const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
 const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 

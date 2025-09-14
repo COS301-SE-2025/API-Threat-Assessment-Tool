@@ -410,6 +410,9 @@ app.get('/', (req, res) => {
       authRegister: 'POST /api/auth/register',
       authCheckLogin: 'POST /api/auth/check-login',
       authGoogle: 'POST /api/auth/google',
+      // Forget password
+      forgotPassword: 'POST /api/auth/forgot-password',
+      resetPassword: 'POST /api/auth/reset-password',
       dashboardOverview: 'GET /api/dashboard/overview',
       dashboardMetrics: 'GET /api/dashboard/metrics',
       dashboardAlerts: 'GET /api/dashboard/alerts',

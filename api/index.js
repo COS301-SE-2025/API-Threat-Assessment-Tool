@@ -234,7 +234,36 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
   if (errors) payload.errors = errors;
   res.status(statusCode).json(payload);
 };
+// Forget Password
+const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
+const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 
+function newToken() {
+  return crypto.randomBytes(32).toString('hex'); // opaque token
+}
+function sha256Hex(s) {
+  return crypto.createHash('sha256').update(s).digest('hex');
+}
+function saveResetToken(userId, token) {
+  const h = sha256Hex(token);
+  const exp = Date.now() + RESET_TTL_MS;
+  pwdResetStore.set(h, { userId, exp });
+  return exp;
+}
+function consumeResetToken(token) {
+  const h = sha256Hex(token);
+  const rec = pwdResetStore.get(h);
+  if (!rec) return null;
+  if (Date.now() > rec.exp) { pwdResetStore.delete(h); return null; }
+  pwdResetStore.delete(h); // one-time use
+  return rec;
+}
+// Optional background cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
+}, 60 * 1000);
+// -----------------------------------------------------
 // Engine management functions
 const isEngineRunning = () => {
   return new Promise((resolve) => {

@@ -2008,7 +2008,19 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
+//////////////
+//Forget Password
+//////////////
+// POST /api/auth/forgot-password
 
+app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
+
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+
+});
 // 404 handler
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);

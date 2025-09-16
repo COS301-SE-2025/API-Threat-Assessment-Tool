@@ -11,10 +11,22 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 require('dotenv').config();
-
+const supabaseCfg = require('./config/supabase');         // uses your existing file
 const app = express();
-
-
+// Supabase config
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
+  process.exit(1);
+}
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: false,
+    detectSessionInUrl: false
+  }
+});
 // Engine config
 const ENGINE_HOST = '127.0.0.1';
 const ENGINE_PORT = process.env.ENGINE_PORT || 9011;
@@ -222,10 +234,105 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
 };
 // Forget Password
 // --- Minimal mailer for dev: logs the link (no SMTP needed) ---
-function sendResetLinkDev(to, resetUrl) {
-  console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
+const nodemailer = require('nodemailer');
+let _tx = null;
+const RESEND_API_KEY_HARDCODED= 're_iurpVFFD_HM3ySLXSwpiVSCv68ku8UUcJ';
+function getFrom() {
+  // Works without DNS: provider-owned address
+  return 'AT-AT <onboarding@resend.dev>';
+}
+function getSiteName() {
+  return 'API Threat Assessment Tool';
 }
 
+async function pickDevTransport() {
+  if (_tx) return _tx;
+  // Dev SMTP first (MailDev/MailHog at 127.0.0.1:1025)
+  try {
+    _tx = nodemailer.createTransport({
+      host: '127.0.0.1',
+      port: 1025,
+      secure: false,
+      tls: { rejectUnauthorized: false },
+    });
+    await _tx.verify();
+    console.log('📧 using transport: dev1025');
+    return _tx;
+  } catch {
+    _tx = null;
+  }
+  return null;
+}
+async function sendResetEmail(to, resetUrl, ttlMins = 60) {
+  const from = getFrom();
+  const site = getSiteName();
+
+  const subject = `${site}: Reset your password`;
+  const html = `
+    <div style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5">
+      <h2>${site}: Reset your password</h2>
+      <p>Click the button below to set a new password. This link expires in ${ttlMins} minutes.</p>
+      <p>
+        <a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">
+          Reset password
+        </a>
+      </p>
+      <p>Or copy this link:</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <hr>
+      <p>If you didn’t request this, you can safely ignore this email.</p>
+    </div>
+  `;
+  const text = `${site} password reset
+
+Click this link to set a new password (expires in ${ttlMins} minutes):
+${resetUrl}
+
+If you didn’t request this, you can ignore this email.`;
+
+  // 1) Try Resend API (no env; uses hardcoded key)
+  if (RESEND_API_KEY_HARDCODED && RESEND_API_KEY_HARDCODED !== '') {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY_HARDCODED}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from,
+          to: [to],
+          subject,
+          html,
+          text,
+        }),
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        console.error('Resend send failed:', res.status, body);
+      } else {
+        console.log('Resend sent:', body);
+        return;
+      }
+    } catch (e) {
+      console.error('Resend network error:', e.message);
+    }
+  }
+
+  // 2) Try dev SMTP (MailDev/MailHog) if running on 127.0.0.1:1025
+  try {
+    const tx = await pickDevTransport();
+    if (tx) {
+      await tx.sendMail({ from, to, subject, html, text });
+      return;
+    }
+  } catch (e) {
+    console.error('SMTP(1025) send failed:', e.message);
+  }
+
+  // 3) Final fallback — still works without any infra changes
+  console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
+}
 const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
 const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 
@@ -2025,9 +2132,8 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
 
       const origin = (req.get('origin') || 'http://localhost:3002').replace(/\/+$/, '');
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
-
       // Dev "send": log the link (or swap to SMTP later)
-      sendResetLinkDev(user.email, resetUrl);
+   await sendResetEmail(user.email, resetUrl);
     } else if (error) {
       console.warn('forgot-password lookup:', error.message);
     }

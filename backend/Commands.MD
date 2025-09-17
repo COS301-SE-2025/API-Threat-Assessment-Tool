@@ -217,6 +217,7 @@ Description:
 
 "command": "apis.details",
 "data": {
+    "user_id": "string",
     "api_id": "string"
 }
 }
@@ -238,6 +239,7 @@ Description:
 
 "command": "apis.update",
 "data": {
+    "user_id": "string",
     "api_id": "string",
     "name": "string",
     "description": "string"
@@ -261,6 +263,7 @@ Description:
 
 "command": "apis.delete",
 "data": {
+    "user_id": "string",
     "api_id": "string"
 }
 }
@@ -283,6 +286,8 @@ Description:
 
 "command": "apis.key.validate",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "api_key": "string"
 }
 }
@@ -306,6 +311,8 @@ Description:
 
 "command": "apis.key.set",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "api_key": "string"
 }
 }
@@ -327,6 +334,7 @@ Description:
 
 "command": "apis.import_file",
 "data": {
+    "user_id": "string",
     "file": "file"
 }
 }
@@ -369,6 +377,7 @@ Description:
 
 "command": "endpoints.list",
 "data": {
+    "user_id": "string",
     "api_id": "string"
 }
 }
@@ -390,6 +399,7 @@ Description:
 
 "command": "endpoints.details",
 "data": {
+    "user_id": "string",
     "endpoint_id": "string"
 }
 }
@@ -411,6 +421,8 @@ Description:
 
 "command": "endpoints.tags.add",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "endpoint_id": "string",
     "tags": ["string", ...]
 }
@@ -433,6 +445,8 @@ Description:
 
 "command": "endpoints.tags.remove",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "endpoint_id": "string",
     "tags": ["string", ...]
 }
@@ -455,6 +469,8 @@ Description:
 
 "command": "endpoints.tags.replace",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "endpoint_id": "string",
     "tags": ["string", ...]
 }
@@ -476,7 +492,10 @@ Description:
 {
 
 "command": "tags.list",
-"data": {}
+"data": {    
+    "user_id": "string",
+    "api_id": "string",
+    }
 }
 ```
 Response:  
@@ -496,6 +515,8 @@ Description:
 
 "command": "endpoints.flags.add",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "endpoint_id": "string",
     "tags": "single_flag"
 }
@@ -532,6 +553,8 @@ Flags:
 
 "command": "endpoints.flags.remove",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "endpoint_id": "string",
     "flags": "single_flag"
 }
@@ -566,7 +589,8 @@ Flags:
 
 "command": "scan.create",
 "data": {
-    "client_id": "string",
+    "user_id": "string", //renamed from client_id
+    "api_id": "string",
     "scan_profile": "string" // Default should be OWASP_API_10
     }
 }
@@ -601,7 +625,8 @@ Description:
 
 "command": "scan.start",
 "data": {
-    "api_name": "string",
+    "user_id": "string",
+    "api_id": "string", //renamed from api_name
     "scan_profile": "string"
 }
 }
@@ -674,6 +699,8 @@ Description:
 
 "command": "scan.results",
 "data": {
+    "user_id": "string",
+    "api_id": "string",
     "scan_id": "string"
 }
 }
@@ -700,7 +727,10 @@ Description:
 {
 
 "command": "scan.list",
-"data": {}
+"data": {
+    "user_id": "string",
+    "api_id": "string",
+    }
 }
 ```
 Response:  

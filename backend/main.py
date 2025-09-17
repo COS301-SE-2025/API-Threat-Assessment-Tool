@@ -22,29 +22,10 @@ PORT = 9011
 
 scan_manager = ""
 result_manager = ""
-CLIENT_STORE = {}
-API_METADATA = {}
+USER_STORE = {}
+# USER_STORE[user_id][api_id] = API Client object
+# USER_STORE[user_id][scan_id] = Scan manager object'
 
-# temporary
-# All connected users will share access to the same api that was loaded
-GLOBAL_API_CLIENT = None  
-GLOBAL_CLIENT_ID = None
-GLOBAL_SCAN_MANAGER = None
-
-
-
-# === Auth ===
-def auth_register(request): 
-    return server_error("Not yet implemented")
-
-def auth_login(request): 
-    return server_error("Not yet implemented")
-
-def auth_google(request): 
-    return server_error("Not yet implemented")
-
-def auth_logout(request): 
-    return server_error("Not yet implemented")
 
 # === Dashboard ===
 def dashboard_overview(request): 
@@ -57,7 +38,9 @@ def dashboard_alerts(request):
     return server_error("Not yet implemented")
 
 def import_file(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID, GLOBAL_SCAN_MANAGER
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
     file_name = request.get("data", {}).get("file")
     if not file_name:
@@ -73,16 +56,11 @@ def import_file(request):
         api_client = importer.import_openapi(file_path)
 
         client_id = str(id(api_client))
-        CLIENT_STORE[client_id] = api_client
-        API_METADATA[client_id] = {
-            "title": api_client.title,
-            "version": api_client.version,
-            "base_url": api_client.base_url
-        }
-
-        GLOBAL_API_CLIENT = api_client
-        GLOBAL_CLIENT_ID = client_id
-        GLOBAL_SCAN_MANAGER = ScanManager(api_client)
+        
+        if user_id not in USER_STORE:
+            USER_STORE[user_id] = {"apis": {}, "scans": {}}
+        
+        USER_STORE[user_id]["apis"][client_id] = api_client
 
         return response(HTTPCode.SUCCESS, {"client_id": client_id})
     except Exception as e:
@@ -91,45 +69,40 @@ def import_file(request):
 
 
 def get_all_apis(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
+    if user_id not in USER_STORE or not USER_STORE[user_id]["apis"]:
+        return not_found("No APIs found for user.")
 
-    return response(HTTPCode.SUCCESS, {
-        "apis": [{
-            "client_id": GLOBAL_CLIENT_ID,
-            "title": GLOBAL_API_CLIENT.title,
-            "version": GLOBAL_API_CLIENT.version
-        }]
-    })
+    apis = []
+    for client_id, api_client in USER_STORE[user_id]["apis"].items():
+        apis.append({
+            "client_id": client_id,
+            "title": api_client.title,
+            "version": api_client.version
+        })
+
+    return response(HTTPCode.SUCCESS, {"apis": apis})
 
 
 def create_api(request): 
     return server_error("Not yet implemented")
 
-def get_all_apis(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
-
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
-
-    return response(HTTPCode.SUCCESS, {
-        "apis": [{
-            "client_id": GLOBAL_CLIENT_ID,
-            "title": GLOBAL_API_CLIENT.title,
-            "version": GLOBAL_API_CLIENT.version
-        }]
-    })
-
 def get_api_details(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
     client_id = request.get("data", {}).get("client_id")
-    client = CLIENT_STORE.get(client_id) if client_id else GLOBAL_API_CLIENT
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
-    if not client:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
         return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     return response(HTTPCode.SUCCESS, {
         "title": client.title,
@@ -139,38 +112,39 @@ def get_api_details(request):
     })
 
 def update_api(request):
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
     client_id = request.get("data", {}).get("client_id")
     updates = request.get("data", {}).get("updates", {})
 
-    meta = API_METADATA.get(client_id)
-    client = CLIENT_STORE.get(client_id)
-    if not meta or not client:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
         return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     for key in ["title", "version", "base_url"]:
         if key in updates:
-            meta[key] = updates[key]
             setattr(client, key, updates[key])
 
     return success({ "message": "API metadata updated." }) 
 
 
 def delete_api(request):
-    client_id = request.get("data", {}).get("client_id")
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    if client_id not in CLIENT_STORE:
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
         return not_found("API not found.")
 
-    CLIENT_STORE.pop(client_id)
-    API_METADATA.pop(client_id, None)
-
-    # Optional cleanup
-    global GLOBAL_CLIENT_ID, GLOBAL_API_CLIENT
-    if client_id == GLOBAL_CLIENT_ID:
-        GLOBAL_CLIENT_ID = None
-        GLOBAL_API_CLIENT = None
-
-    return success({ "message": "API deleted." })  #Fix: return data
+    USER_STORE[user_id]["apis"].pop(client_id)
+    return success({ "message": "API deleted." })
 
 
 def import_url(request): 
@@ -178,13 +152,18 @@ def import_url(request):
 
 # === API endpoints ===
 def get_api_endpoints(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
     client_id = request.get("data", {}).get("client_id")
-    client = CLIENT_STORE.get(client_id) if client_id else GLOBAL_API_CLIENT
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
-    if not client:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
         return not_found("API not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     endpoints = [{
         "id": ep.id,
@@ -200,19 +179,24 @@ def get_api_endpoints(request):
 
 
 def get_endpoint_details(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    path = request.get("data", {}).get("path")
-    method = request.get("data", {}).get("method")
-
-    if not path or not method:
-        return bad_request("Missing 'path' or 'method'")
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     endpoint_id = request.get("data", {}).get("id")
     if not endpoint_id:
         return bad_request("Missing 'id'")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
             return response(HTTPCode.SUCCESS, {
                 "id": ep.id,
@@ -229,7 +213,13 @@ def get_endpoint_details(request):
 
 
 def add_tags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
@@ -238,7 +228,12 @@ def add_tags(request):
     if not path or not method or not tags:
         return bad_request("Missing 'path', 'method', or 'tags'")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = list(set(ep.tags + tags))
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
@@ -248,7 +243,13 @@ def add_tags(request):
 
 
 def remove_tags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
@@ -257,7 +258,12 @@ def remove_tags(request):
     if not path or not method or not tags:
         return bad_request("Missing 'path', 'method', or 'tags'")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = [t for t in ep.tags if t not in tags]
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
@@ -267,7 +273,13 @@ def remove_tags(request):
 
 
 def replace_tags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
@@ -276,7 +288,12 @@ def replace_tags(request):
     if not path or not method or tags is None:
         return bad_request("Missing 'path', 'method', or 'tags'")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = tags
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
@@ -285,13 +302,21 @@ def replace_tags(request):
 
 
 def get_all_tags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     all_tags = set()
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         all_tags.update(ep.tags)
 
     return response(HTTPCode.SUCCESS, {"tags": list(all_tags)})
@@ -301,7 +326,13 @@ def get_all_tags(request):
 # flags
 
 def add_flags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     data = request.get("data", {})
     endpoint_id = data.get("endpoint_id")
@@ -310,19 +341,21 @@ def add_flags(request):
     if not endpoint_id or not flag_str:
         return bad_request("Missing 'endpoint_id' or 'flags'")
 
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+
     try:
-        # Convert string to OWASP_FLAGS enum member
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
         valid_flags = [f.name for f in OWASP_FLAGS]
         return bad_request(f"Invalid flag: {flag_str}. Valid flags: {', '.join(valid_flags)}")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
-            # Now using the actual enum member
             ep.add_flag(flag_enum)
             
-            # Return flag names to frontend
             return response(HTTPCode.SUCCESS, {
                 "flags": [f.name for f in ep.flags]
             })
@@ -330,7 +363,13 @@ def add_flags(request):
     return not_found("Endpoint not found")
 
 def remove_flags(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
 
     data = request.get("data", {})
     endpoint_id = data.get("endpoint_id")
@@ -338,6 +377,11 @@ def remove_flags(request):
 
     if not endpoint_id or not flag_str:
         return bad_request("Missing 'endpoint_id' or 'flags'")
+
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     try:
         flag_enum = OWASP_FLAGS[flag_str]
@@ -347,7 +391,7 @@ def remove_flags(request):
             f"Invalid flag: '{flag_str}'. Valid flags are: {', '.join(valid_flags)}"
         )
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
             if flag_enum in ep.flags:
                 ep.remove_flag(flag_enum)
@@ -366,31 +410,50 @@ def remove_flags(request):
 
 # === Scans ===
 def create_scan(request):
-    client_id = request.get("data", {}).get("client_id")
-    api_name = request.get("data", {}).get("api_name")
-    scan_profile = request.get("scan_profile", "OWASP_API_10")
-    # client = CLIENT_STORE.get(client_id)
-    client = GLOBAL_CLIENT_ID # temp
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    if not client:
-        return not_found(f"{client_id} not found")
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
+    scan_profile = request.get("scan_profile", "OWASP_API_10")
+
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
 
     try:
-        sm = ScanManager(GLOBAL_API_CLIENT)
-        GLOBAL_SCAN_MANAGER.createScan(scan_profile)
+        if user_id not in USER_STORE:
+            USER_STORE[user_id] = {"apis": {}, "scans": {}}
+        
+        scan_manager = ScanManager(client)
+        USER_STORE[user_id]["scans"][client_id] = scan_manager
+        scan_manager.createScan(scan_profile)
         return response(HTTPCode.SUCCESS, {"message": "Success"})
     except Exception as e:
         return server_error(str(e))
 
 def start_scan(request): 
-    api_name = request.get("data", {}).get("api_name")
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
     scan_profile = request.get("data", {}).get("scan_profile", "OWASP_API_10")
 
-    if not api_name:
-        return not_found(f"{api_name} not found")
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["scans"]:
+        return not_found("Scan manager not found for API.")
+
+    scan_manager = USER_STORE[user_id]["scans"][client_id]
 
     try:
-        scan_id = GLOBAL_SCAN_MANAGER.runScan(ScanProfiles.DEFAULT)
+        scan_id = scan_manager.runScan(ScanProfiles.DEFAULT)
         return success({"scan_id": scan_id})
     except Exception as e:
         return server_error(str(e))
@@ -413,21 +476,32 @@ def stop_scan(request):
     return success({f"{scan_id} stopped"})
 
 def get_scan_results(request):
-    scan_id = request.get("data", {}).get("scan_id")
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
+    scan_id = request.get("data", {}).get("scan_id")
     if not scan_id:
         return not_found(f"{scan_id} missing")
 
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["scans"]:
+        return not_found("Scan manager not found for API.")
+
+    scan_manager = USER_STORE[user_id]["scans"][client_id]
+
     try:
-        scans = GLOBAL_SCAN_MANAGER.get_scan(scan_id)
+        scans = scan_manager.get_scan(scan_id)
 
         if not scans:
             return not_found(f"{scan_id} not found")
 
         scan_results = []
-        # Handle nested structure (same as your test code)
-        for scan_group in scans:  # First level
-            for scan in scan_group:  # Second level
+        for scan_group in scans:
+            for scan in scan_group:
                 scan_results.append({
                     "endpoint_id": scan.endpoint.id,
                     "vulnerability_name": scan.vulnerability_name,
@@ -451,19 +525,22 @@ def get_scan_results(request):
         return server_error(str(e))
 
 def get_all_scans(request):
-    try:
-        all_scans = GLOBAL_SCAN_MANAGER.get_all_scans()
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
+    if user_id not in USER_STORE:
+        return not_found("No scans found")
+
+    result_map = {}
+
+    for client_id, scan_manager in USER_STORE[user_id]["scans"].items():
+        all_scans = scan_manager.get_all_scans()
         if not all_scans:
-            return not_found("No scans found")
+            continue
 
-        result_map = {}
-
+        scan_results = []
         for scan_id, scan_groups in all_scans.items():
-            if not scan_groups:
-                continue
-
-            scan_results = []
             for scan_group in scan_groups:
                 for scan in scan_group:
                     try:
@@ -487,20 +564,30 @@ def get_all_scans(request):
                         print(f"Skipping malformed scan entry: {e}")
                         continue
 
-            if scan_results:  # Only add if we found valid scans
-                result_map[scan_id] = scan_results
+        if scan_results:
+            result_map[client_id] = scan_results
 
-        if not result_map:
-            return not_found("No valid scan results found")
+    if not result_map:
+        return not_found("No valid scan results found")
 
-        return success({"result": result_map})
-
-    except Exception as exc:
-        return server_error(str(exc))
+    return success({"result": result_map})
 
 def set_api_key(request):
+    user_id = request.get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    client_id = request.get("data", {}).get("client_id")
+    if not client_id:
+        return bad_request("Missing 'client_id' field")
+
     apiKey = request.get("api_key")
-    GLOBAL_API_CLIENT.set_auth_token(apiKey)
+
+    if user_id not in USER_STORE or client_id not in USER_STORE[user_id]["apis"]:
+        return not_found("API client not found.")
+
+    client = USER_STORE[user_id]["apis"][client_id]
+    client.set_auth_token(apiKey)
     return response(HTTPCode.SUCCESS, {"message": "api key set"})
 
 

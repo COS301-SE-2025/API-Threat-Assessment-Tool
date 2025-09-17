@@ -1,0 +1,129 @@
+# db_manager.py
+from supabase import create_client, Client
+import os
+from dotenv import load_dotenv
+from typing import List, Dict, Any, Optional
+import logging
+from datetime import datetime
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class DB_Manager:
+    _instance = None
+    _supabase: Client = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DB_Manager, cls).__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+    
+    def _initialize(self):
+        try:
+            load_dotenv()
+            SUPABASE_URL = os.getenv("SUPABASE_URL")
+            SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+            
+            if not SUPABASE_URL or not SUPABASE_KEY:
+                raise ValueError("Supabase URL or KEY not found in environment variables")
+            
+            self._supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+            logger.info("Supabase connection established successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Supabase client: {e}")
+            raise
+    
+    def insert(self, table_name: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        try:
+            result = self._supabase.table(table_name).insert(data).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error(f"Error inserting into {table_name}: {e}")
+            return None
+    
+    def select(self, table_name: str, columns: str = "*", filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        try:
+            query = self._supabase.table(table_name).select(columns)
+            
+            if filters:
+                for key, value in filters.items():
+                    if isinstance(value, list):
+                        query = query.in_(key, value)
+                    else:
+                        query = query.eq(key, value)
+            
+            result = query.execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error selecting from {table_name}: {e}")
+            return []
+    
+    def update(self, table_name: str, data: Dict[str, Any], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        try:
+            query = self._supabase.table(table_name).update(data)
+            
+            for key, value in filters.items():
+                query = query.eq(key, value)
+            
+            result = query.execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error updating {table_name}: {e}")
+            return []
+    
+    def delete(self, table_name: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        try:
+            query = self._supabase.table(table_name).delete()
+            
+            for key, value in filters.items():
+                query = query.eq(key, value)
+            
+            result = query.execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error deleting from {table_name}: {e}")
+            return []
+    
+    def execute_raw(self, query: str) -> List[Dict[str, Any]]:
+        try:
+            result = self._supabase.rpc('execute_sql', {'query': query}).execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error executing raw query: {e}")
+            return []
+
+    def backup(self, output_dir: str = "./backups") -> Optional[str]:
+        """
+        Creates a PostgreSQL dump backup of the Supabase database.
+        Returns the path to the backup file if successful.
+        """
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = os.path.join(output_dir, f"backup_{timestamp}.sql")
+
+            env = os.environ.copy()
+            env["PGPASSWORD"] = self.db_config["password"]
+
+            cmd = [
+                "pg_dump",
+                "-h", self.db_config["host"],
+                "-p", str(self.db_config["port"]),
+                "-U", self.db_config["user"],
+                "-d", self.db_config["dbname"],
+                "-F", "c",  # custom format, compressed
+                "-f", backup_file
+            ]
+
+            subprocess.run(cmd, check=True, env=env)
+            logger.info(f"Backup created at {backup_file}")
+            return backup_file
+        except Exception as e:
+            logger.error(f"Backup failed: {e}")
+            return None
+
+
+#singleton instance
+db_manager = DB_Manager()

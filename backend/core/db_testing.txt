@@ -1,0 +1,174 @@
+Starting Supabase Database Connection Test using DB_Manager...
+Using User ID: 818275c2-c7cc-4ea2-97f3-427f3ef5b591
+
+============================================================
+TESTING APIS TABLE
+============================================================
+
+1. View all apis:
+
+=== APIS DATA ===
+No data found
+==================================================
+
+2. Inserting new api...
+Inserted API ID: 18
+
+3. View all apis after insert:
+
+=== APIS DATA ===
+1. {'id': 18, 'name': 'Test API', 'base_url': 'https://api.example.com', 'imported_on': '2025-09-17T12:12:29.856092', 'user_id': '818275c2-c7cc-4ea2-97f3-427f3ef5b591', 'version': 'v1.0', 'authorization': 'Bearer token'}
+==================================================
+
+4. Deleting api...
+Deleted 1 record(s)
+
+5. View all apis after delete:
+
+=== APIS DATA ===
+No data found
+==================================================
+
+============================================================
+TESTING ENDPOINTS TABLE
+============================================================
+
+1. View all endpoints:
+
+=== ENDPOINTS DATA ===
+No data found
+==================================================
+
+2. Inserting new endpoint...
+Inserted Endpoint ID: 9
+
+3. View all endpoints after insert:
+
+=== ENDPOINTS DATA ===
+1. {'id': 9, 'api_id': 19, 'method': 'GET', 'url': '/users', 'requires_auth': True, 'tags': 'users,profile', 'category': 'user management', 'summary': 'Get user information', 'parameters': '{"limit": 10, "offset": 0}', 'request_body': '{}', 'responses': '{"200": "Success", "401": "Unauthorized"}', 'flags': ['secure', 'rate_limited'], 'endpoint_id': 'get_users_001', 'authorization': False}
+==================================================
+
+4. Deleting endpoint...
+Deleted 1 record(s)
+
+5. View all endpoints after delete:
+
+=== ENDPOINTS DATA ===
+No data found
+==================================================
+
+============================================================
+TESTING SCAN_PROFILES TABLE
+============================================================
+
+1. View all scan_profiles:
+
+=== SCAN_PROFILES DATA ===
+No data found
+==================================================
+
+2. Inserting new scan_profile...
+Inserted Profile ID: 13
+
+3. View all scan_profiles after insert:
+
+=== SCAN_PROFILES DATA ===
+1. {'id': 13, 'name': 'Security Scan Profile', 'description': 'Comprehensive security testing profile', 'created_on': '2025-09-17T12:12:32.918038', 'user_id': '818275c2-c7cc-4ea2-97f3-427f3ef5b591'}
+==================================================
+
+4. Deleting scan_profile...
+Deleted 1 record(s)
+
+5. View all scan_profiles after delete:
+
+=== SCAN_PROFILES DATA ===
+No data found
+==================================================
+
+============================================================
+TESTING SCANS TABLE
+============================================================
+
+1. View all scans:
+
+=== SCANS DATA ===
+No data found
+==================================================
+
+2. Inserting new scan...
+Inserted Scan ID: 10
+
+3. View all scans after insert:
+
+=== SCANS DATA ===
+1. {'id': 10, 'api_id': 20, 'profile_id': 14, 'started_at': '2025-09-17T12:12:34.653687', 'completed_at': '2025-09-17T14:12:27.52763', 'status': 'completed', 'user_id': '818275c2-c7cc-4ea2-97f3-427f3ef5b591'}
+==================================================
+
+4. Deleting scan...
+Deleted 1 record(s)
+
+5. View all scans after delete:
+
+=== SCANS DATA ===
+No data found
+==================================================
+
+============================================================
+TESTING SCAN_RESULTS TABLE
+============================================================
+
+1. View all scan_results:
+
+=== SCAN_RESULTS DATA ===
+No data found
+==================================================
+
+2. Inserting new scan_result...
+Inserted Result ID: 4
+
+3. View all scan_results after insert:
+
+=== SCAN_RESULTS DATA ===
+1. {'id': 4, 'scan_id': 11, 'endpoint_id': 10, 'test_name': 'Authentication Bypass Test', 'severity': 'High', 'cvss_score': 8.5, 'description': 'Authentication mechanism weakness: endpoint does not return 401 status code', 'recommendation': 'Implement proper authentication mechanism', 'evidence': 'Scan evidence details here', 'response_code': 200, 'owasp_category': 'A2: Broken Authentication', 'vulnerability_name': 'Authentication Bypass', 'affected_params': '["password", "token"]', 'timestamp': '2025-09-17T12:12:37.401977'}
+==================================================
+
+4. Deleting scan_result...
+Deleted 1 record(s)
+
+5. View all scan_results after delete:
+
+=== SCAN_RESULTS DATA ===
+No data found
+==================================================
+
+============================================================
+TESTING REPORTS TABLE
+============================================================
+
+1. View all reports:
+
+=== REPORTS DATA ===
+No data found
+==================================================
+
+2. Inserting new report...
+Inserted Report ID: 4
+
+3. View all reports after insert:
+
+=== REPORTS DATA ===
+1. {'id': 4, 'scan_id': 12, 'format': 'PDF', 'file_path': '/reports/scan_001.pdf', 'generated_at': '2025-09-17T12:12:40.329891', 'scan_summary': '{"total_tests": 150, "vulnerabilities_found": 3}', 'recommendations': ['Update authentication', 'Implement rate limiting', 'Sanitize inputs']}
+==================================================
+
+4. Deleting report...
+Deleted 1 record(s)
+
+5. View all reports after delete:
+
+=== REPORTS DATA ===
+No data found
+==================================================
+
+============================================================
+ALL TESTS COMPLETED SUCCESSFULLY!
+============================================================

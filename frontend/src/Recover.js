@@ -15,7 +15,7 @@ export default function Recover() {
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // optional entrance animation like Login
+
   const [animationPhase, setAnimationPhase] = useState("entering");
   useEffect(() => {
     const t = setTimeout(() => setAnimationPhase("entered"), 10);
@@ -58,7 +58,7 @@ export default function Recover() {
   return (
     <div className={`login-page ${darkMode ? "dark-mode" : ""}`}>
       <div className={`login-container ${animationPhase}`}>
-        {/* HEADER — matches Login.js */}
+        {}
         <header className="login-header">
           <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Logo />
@@ -73,7 +73,7 @@ export default function Recover() {
           </div>
         </header>
 
-        {/* MAIN */}
+        {}
         <main className="login-main">
           <section className="login-form-section" ref={formRef}>
             <h1 className="login-title">Set a new password</h1>
@@ -123,7 +123,7 @@ export default function Recover() {
           </section>
         </main>
 
-        {/* FOOTER — matches Login.js */}
+        {}
  <footer className="login-footer">
    <p>© {new Date().getFullYear()} AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
    <div className="footer-links">

@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState, useRef, useEffect } from "react";
+import React, { useContext, useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./App";
 import Logo from "./components/Logo";

@@ -27,6 +27,15 @@ Comprehensive Software Requirements Specification detailing functional and non-f
 ### 📊 [GitHub Project Board](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/projects)
 Track our development progress, sprint planning, and task management through our organized project board.
 
+### 📚 [User Manual](https://drive.google.com/file/d/1nnZuWLJ3689Pkl85kBw2pqISen5tsMIl/view?usp=sharing)
+Detailed guide on how to use the API Threat Assessment Tool (AT-AT), including installation, setup, and usage instructions.
+
+### 📥 [Installation Manual](https://documentation.at-atdocs.pages.dev/reference/install)
+Step-by-step guide for setting up the API Threat Assessment Tool (AT-AT), covering prerequisites, system setup, and deployment instructions.
+
+### 📝 [Coding Standards](https://documentation.at-atdocs.pages.dev/reference/coding-standards)
+Best practices and guidelines for writing clean, maintainable, and secure code for the API Threat Assessment Tool (AT-AT).
+
 ---
 ---
 ## 🎬 Demo Video
@@ -35,7 +44,7 @@ Track our development progress, sprint planning, and task management through our
 Curious how our API Threat Assessment Tool works?  
 Watch our official demo video for a guided walkthrough of all the key features, and powerful security scanning capabilities.
 
-[![Watch the Full Demo on YouTube](https://img.youtube.com/vi/V0At4vOyM9w/hqdefault.jpg)](https://youtu.be/V0At4vOyM9w)
+[![Watch the Full Demo on YouTube](https://img.youtube.com/vi/V0At4vOyM9w/hqdefault.jpg)](https://youtu.be/NYCqXpNh12k)
 
 ---
 
@@ -245,3 +254,5 @@ Our GitHub repository proudly displays real-time badges showcasing project healt
 [![GitHub issues](https://img.shields.io/github/issues/COS301-SE-2025/API-Threat-Assessment-Tool)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/issues)
 
 </div>
+
+

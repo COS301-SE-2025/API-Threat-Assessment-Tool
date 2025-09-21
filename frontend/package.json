@@ -7,6 +7,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "api-threat-assessment-backend": "file:../api",
     "axios": "^1.10.0",
     "js-cookie": "^3.0.5",
     "js-yaml": "^4.1.0",

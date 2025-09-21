@@ -11,9 +11,9 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 require('dotenv').config();
-
+const supabaseCfg = require('./config/supabase');         // uses your existing file
 const app = express();
-
+const nodemailer = require('nodemailer');
 // Supabase config
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -28,7 +28,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     detectSessionInUrl: false
   }
 });
-
 // Engine config
 const ENGINE_HOST = '127.0.0.1';
 const ENGINE_PORT = process.env.ENGINE_PORT || 9011;
@@ -260,7 +259,117 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
   if (errors) payload.errors = errors;
   res.status(statusCode).json(payload);
 };
+//const RESEND_API_KEY_HARDCODED= 're_iurpVFFD_HM3ySLXSwpiVSCv68ku8UUcJ';
 
+// Forget Password
+// --- Minimal mailer for dev: logs the link ( ---
+let _tx = null, _label = 'none';
+function bool(v){ return /^(1|true|yes)$/i.test(String(v||'')); }
+function int(v, d){ const n = parseInt(v,10); return Number.isFinite(n) ? n : d; }
+
+async function pickTransport() {
+  if (_tx) return _tx;
+
+  // Defaults for SendGrid
+  const HOST   =  'smtp.sendgrid.net';
+  const PORT   =  587;
+  const SECURE = PORT === 465;
+  const USER   = 'apikey';        // SendGrid requires literal "apikey"
+  const PASS   = process.env.SMTP_PASS;                     
+  if (PASS) {
+    try {
+      _tx = nodemailer.createTransport({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
+      await _tx.verify();
+      _label = `smtp:${HOST}:${PORT}`;
+      console.log(`📧 using SMTP from .env (${_label})`);
+      return _tx;
+    } catch (e) {
+      console.error('SMTP verify failed:', e.message);
+      _tx = null;
+    }
+  }
+
+  // optional dev fallback incase email fails
+  try {
+    const dev = nodemailer.createTransport({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
+    await dev.verify();
+    _tx = dev; _label = 'dev:1025';
+    console.log('📧 using transport: dev1025');
+    return _tx;
+  } catch {}
+
+  _label = 'none';
+  return null;
+}
+
+const FROM_ADDR = 'AT-AT <at.at.noreply@gmail.com>'; // <-- must match your SendGrid Single Sender exactly
+
+async function sendResetEmail(to, resetUrl, ttlMins = 60) {
+  const subject = 'AT-AT: Reset your password';
+  const text = `Reset your password (expires in ${ttlMins} minutes):\n${resetUrl}\n`;
+  const html = `
+    <div style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5">
+      <h2>Reset your password</h2>
+      <p>This link expires in ${ttlMins} minutes.</p>
+      <p><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Reset password</a></p>
+      <p>Or copy this link:</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <hr><p>If you didn’t request this, ignore this email.</p>
+    </div>`;
+
+  const tx = await pickTransport();
+  if (tx) {
+    try {
+      console.log(`[MAIL] attempting via ${_label} | from=${FROM_ADDR} to=${to}`);
+      const info = await tx.sendMail({ from: FROM_ADDR, to, subject, text, html });
+      // Nodemailer always returns an info object — log the useful bits to see if it sends successfully:
+      console.log('[MAIL] sent', {
+        messageId: info.messageId,
+        accepted: info.accepted,
+        rejected: info.rejected,
+        response: info.response?.slice(0, 200),
+        envelope: info.envelope
+      });
+      return;
+    } catch (e) {
+      console.error('[MAIL] send error:', e.stack || e.message);
+    }
+  } else {
+    console.warn('[MAIL] no transport available; falling back to console link');
+  }
+
+  console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
+}
+
+const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
+const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
+
+function newToken() {
+  return crypto.randomBytes(32).toString('hex'); // opaque token
+}
+function sha256Hex(s) {
+  return crypto.createHash('sha256').update(s).digest('hex');
+}
+function saveResetToken(userId, token) {
+  const h = sha256Hex(token);
+  const exp = Date.now() + RESET_TTL_MS;
+  pwdResetStore.set(h, { userId, exp });
+  return exp;
+}
+function consumeResetToken(token) {
+  const h = sha256Hex(token);
+  const rec = pwdResetStore.get(h);
+  if (!rec) return null;
+  if (Date.now() > rec.exp) { pwdResetStore.delete(h); return null; }
+  pwdResetStore.delete(h); // one-time use
+  return rec;
+}
+// Optional background cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
+}, 60 * 1000);
+// -----------------------------------------------------
 // Engine management functions
 const isEngineRunning = () => {
   return new Promise((resolve) => {
@@ -436,6 +545,9 @@ app.get('/', (req, res) => {
       authRegister: 'POST /api/auth/register',
       authCheckLogin: 'POST /api/auth/check-login',
       authGoogle: 'POST /api/auth/google',
+      // Forget password
+      forgotPassword: 'POST /api/auth/forgot-password',
+      resetPassword: 'POST /api/auth/reset-password',
       dashboardOverview: 'GET /api/dashboard/overview',
       dashboardMetrics: 'GET /api/dashboard/metrics',
       dashboardAlerts: 'GET /api/dashboard/alerts',
@@ -2221,7 +2333,86 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
+//////////////
+//Forget Password
+//////////////
+// POST /api/auth/forgot-password
 
+app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
+  const generic = 'If that account exists, we sent a reset link.';
+  try {
+    const { email } = req.body || {};
+    if (!email) return sendSuccess(res, generic);
+
+    const identifier = String(email).trim().toLowerCase();
+
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', identifier)
+      .single();
+
+    if (!error && user) {
+      const token = newToken();
+      saveResetToken(user.id, token);
+
+      const origin = (req.get('FRONTEND_URL') || 'http://localhost:3002').replace(/\/+$/, '');
+      const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
+      // Dev "send": log the link 
+   await sendResetEmail(user.email, resetUrl);
+    } else if (error) {
+      console.warn('forgot-password lookup:', error.message);
+    }
+
+    // Always generic to avoid user enumeration
+    return sendSuccess(res, generic);
+  } catch (err) {
+    console.error('forgot-password error:', err);
+    return sendSuccess(res, generic);
+  }
+});
+
+
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+try {
+    const { token, password } = req.body || {};
+    if (!token || !password) {
+      return sendError(res, 'token_and_password_required', null, 400);
+    }
+
+    const rec = consumeResetToken(token);
+    if (!rec) return sendError(res, 'invalid_or_expired_token', null, 400);
+
+    // Verify user still exists
+    const { data: user, error: uerr } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', rec.userId)
+      .single();
+
+    if (uerr || !user) return sendError(res, 'invalid_or_expired_token', null, 400);
+
+ const hash = await bcrypt.hash(password, 12); 
+
+    const { error: upErr } = await supabase
+      .from('users')
+      .update({ password: hash, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (upErr) {
+      console.error('reset-password update:', upErr);
+      return sendError(res, 'Password reset failed', upErr.message, 500);
+    }
+
+    return sendSuccess(res, 'password_reset_success');
+  } catch (err) {
+    console.error('reset-password error:', err);
+    return sendError(res, 'Internal server error', err.message, 500);
+  }
+});
 // 404 handler
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);

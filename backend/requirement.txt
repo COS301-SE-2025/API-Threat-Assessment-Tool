@@ -1,7 +1,0 @@
-flask
-unittest
-requests
-openapi-spec-validator
-PyYAML
-jwt
-psycopg2

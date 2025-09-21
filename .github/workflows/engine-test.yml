@@ -32,8 +32,18 @@ jobs:
       - name: Start Custom Test API Server
         run: |
           nohup python backend/testing_servers/custom/main.py > server.log 2>&1 &
-          sleep 5
-          curl --retry 5 --retry-delay 5 --fail http://0.0.0.0:8000/ || (echo "❌ Test API Server did not start"; exit 1)
+          # Wait for server to become ready
+          for i in {1..20}; do
+            if curl -s http://127.0.0.1:8000/ > /dev/null; then  # ← Change to 127.0.0.1
+              echo "✅ Test API Server is up!"
+              break
+            fi
+            echo "Waiting for Test API Server..."
+            sleep 2
+          done
+          # Final check
+          curl --fail http://127.0.0.1:8000/ || (echo "❌ Test API Server did not start"; cat server.log; exit 1)
+
 
       # Start the scanning engine in the background
       - name: Start Scanning Engine
@@ -46,11 +56,11 @@ jobs:
       - name: Run Engine Tests
         run: |
           cd backend
-          pytest -v tests/test_scan_flags.py | tee ../scan_results.log
+          python -m tests.test_scanning | tee ../scan_results.log
 
       # Upload logs and test results as artifacts
       - name: Upload Scan Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: scan-results
           path: |

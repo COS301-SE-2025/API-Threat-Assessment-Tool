@@ -9,21 +9,13 @@ export default function ForgotPassword() {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const formRef = useRef(null);
 
-  // If URL has ?token=..., show reset form; otherwise show forgot form
-  const token = useMemo(() => {
-    try { return new URLSearchParams(window.location.search).get("token") || ""; }
-    catch { return ""; }
-  }, []);
-
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
   // forgot state
   const [email, setEmail] = useState("");
 
-  // reset state
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+
 
   // optional entrance animation like Login
   const [animationPhase, setAnimationPhase] = useState("entering");
@@ -55,38 +47,11 @@ export default function ForgotPassword() {
     }
   }
 
-  async function doReset(e) {
-    e.preventDefault();
-    setMsg(null);
-    if (password !== confirm) { setMsg({ type: "err", text: "Passwords do not match." }); return; }
-    if (!token) { setMsg({ type: "err", text: "Missing or invalid token." }); return; }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setMsg({ type: "ok", text: "Password reset. You can log in now." });
-        setPassword(""); setConfirm("");
-        setTimeout(() => navigate("/login"), 1000);
-      } else {
-        setMsg({ type: "err", text: data?.message || "Reset failed. Link may be invalid or expired." });
-      }
-    } catch {
-      setMsg({ type: "err", text: "Something went wrong. Try again." });
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  // utility classes from Login.css & consistent structure
   return (
     <div className={`login-page ${darkMode ? "dark-mode" : ""}`}>
       <div className={`login-container ${animationPhase}`}>
-        {/* HEADER — matches Login.js */}
+        {}
         <header className="login-header">
           <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Logo />
@@ -101,7 +66,7 @@ export default function ForgotPassword() {
           </div>
         </header>
 
-        {/* MAIN */}
+        {}
         <main className="login-main">
           <section className="login-form-section" ref={formRef}>
             {token ? (
@@ -186,7 +151,7 @@ export default function ForgotPassword() {
           </section>
         </main>
 
-        {/* FOOTER — matches Login.js */}
+        {}
 <footer className="login-footer">
    <p>© {new Date().getFullYear()} AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
    <div className="footer-links">

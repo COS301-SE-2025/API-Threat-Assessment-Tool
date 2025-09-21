@@ -1,11 +1,32 @@
-import React, { useMemo, useState } from "react";
+import React, { useContext, useMemo, useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ThemeContext } from "./App";
+import Logo from "./components/Logo";
+import "./Login.css";
 
 export default function Recover() {
+  const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
+  const formRef = useRef(null);
+
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // optional entrance animation like Login
+  const [animationPhase, setAnimationPhase] = useState("entering");
+  useEffect(() => {
+    const t = setTimeout(() => setAnimationPhase("entered"), 10);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleThemeToggle = () => {
+    document.body.style.transition = "all 0.3s ease";
+    toggleDarkMode();
+    setTimeout(() => { document.body.style.transition = ""; }, 300);
+  };
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -21,11 +42,11 @@ export default function Recover() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setMsg({ type: "err", text: j?.message || "Reset failed." });
+        setMsg({ type: "err", text: j?.message || "Reset failed. Link may be invalid or expired." });
       } else {
         setMsg({ type: "ok", text: "Password reset. You can log in now." });
         setPassword(""); setConfirm("");
-        // optional: setTimeout(() => (window.location.href = "/login"), 1200);
+        setTimeout(() => navigate("/login"), 1000);
       }
     } catch {
       setMsg({ type: "err", text: "Network error. Try again." });
@@ -34,24 +55,83 @@ export default function Recover() {
     }
   }
 
-  const box = { maxWidth: 420, margin: "40px auto", padding: 16, border: "1px solid #ddd", borderRadius: 8 };
-  const input = { width: "100%", padding: "10px 12px", margin: "8px 0", border: "1px solid #ccc", borderRadius: 6 };
-  const btn = { width: "100%", padding: "10px 12px", marginTop: 8, borderRadius: 6, cursor: "pointer" };
-  const ok = { color: "#0a7d2f", marginTop: 8 };
-  const err = { color: "#a31212", marginTop: 8 };
-
   return (
-    <div style={box}>
-      <h2>Set a new password</h2>
-      <form onSubmit={onSubmit}>
-        <input style={input} type="password" placeholder="New password" minLength={8}
-               value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <input style={input} type="password" placeholder="Confirm password" minLength={8}
-               value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-        <button style={btn} disabled={loading || !token}>{loading ? "Saving…" : "Set new password"}</button>
-      </form>
-      {msg && <p style={msg.type === "ok" ? ok : err}>{msg.text}</p>}
-      {!token && <p style={err}>Open this page via the link from your email (or server console).</p>}
+    <div className={`login-page ${darkMode ? "dark-mode" : ""}`}>
+      <div className={`login-container ${animationPhase}`}>
+        {/* HEADER — matches Login.js */}
+        <header className="login-header">
+          <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Logo />
+            <span style={{ fontWeight: 700, fontSize: 24, letterSpacing: 2, color: darkMode ? "#fff" : "#222", userSelect: "none" }}>
+              AT-AT
+            </span>
+          </div>
+          <div className="user-info">
+            <button onClick={handleThemeToggle} className="theme-toggle-btn" aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}>
+              {darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+            </button>
+          </div>
+        </header>
+
+        {/* MAIN */}
+        <main className="login-main">
+          <section className="login-form-section" ref={formRef}>
+            <h1 className="login-title">Set a new password</h1>
+            <p className="login-subtitle">Enter and confirm your new password.</p>
+
+            <form onSubmit={onSubmit} className="login-form">
+              <div className="form-group">
+                <label htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirm-password">Confirm password</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  minLength={8}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                />
+              </div>
+              <button className="login-btn" disabled={loading || !token}>
+                {loading ? "Saving…" : "Set new password"}
+              </button>
+            </form>
+
+            {msg && (
+              <p className={`login-message ${msg.type === "ok" ? "success" : "error"}`}>
+                {msg.text}
+              </p>
+            )}
+            {!token && <p className="login-message error">Open this page via the link from your email (or server console).</p>}
+
+            <div className="login-links" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button type="button" className="google-login-btn" onClick={() => navigate(-1)} aria-label="Go back">
+                ← Back
+              </button>
+              <Link to="/login" className="create-account-link">Go to Login</Link>
+            </div>
+          </section>
+        </main>
+
+        {/* FOOTER — matches Login.js */}
+ <footer className="login-footer">
+   <p>© {new Date().getFullYear()} AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+   <div className="footer-links">
+    <Link to="/" aria-label="Privacy Policy">Privacy Policy</Link>
+     <Link to="/" aria-label="Terms of Service">Terms of Service</Link>
+   </div>
+ </footer>
+      </div>
     </div>
   );
 }

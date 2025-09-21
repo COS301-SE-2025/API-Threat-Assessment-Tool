@@ -14,7 +14,6 @@ require('dotenv').config();
 const supabaseCfg = require('./config/supabase');         // uses your existing file
 const app = express();
 const nodemailer = require('nodemailer');
-//const RESEND_API_KEY_HARDCODED ='re_CThcZuu1_9nyqwG7XcAH1yzqawP1Qe8D6'
 // Supabase config
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -237,7 +236,7 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
 //const RESEND_API_KEY_HARDCODED= 're_iurpVFFD_HM3ySLXSwpiVSCv68ku8UUcJ';
 
 // Forget Password
-// --- Minimal mailer for dev: logs the link (no SMTP needed) ---
+// --- Minimal mailer for dev: logs the link ( ---
 let _tx = null, _label = 'none';
 function bool(v){ return /^(1|true|yes)$/i.test(String(v||'')); }
 function int(v, d){ const n = parseInt(v,10); return Number.isFinite(n) ? n : d; }
@@ -246,12 +245,11 @@ async function pickTransport() {
   if (_tx) return _tx;
 
   // Defaults for SendGrid
-  const HOST   = process.env.SMTP_HOST   || 'smtp.sendgrid.net';
-  const PORT   = int(process.env.SMTP_PORT, 587);
-  const SECURE = (process.env.SMTP_SECURE != null) ? bool(process.env.SMTP_SECURE) : (PORT === 465);
-  const USER   = process.env.SMTP_USER   || 'apikey';        // SendGrid requires literal "apikey"
-  const PASS   = process.env.SMTP_PASS;                       // <-- only truly required
-
+  const HOST   =  'smtp.sendgrid.net';
+  const PORT   =  587;
+  const SECURE = PORT === 465;
+  const USER   = 'apikey';        // SendGrid requires literal "apikey"
+  const PASS   = process.env.SMTP_PASS;                     
   if (PASS) {
     try {
       _tx = nodemailer.createTransport({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
@@ -265,7 +263,7 @@ async function pickTransport() {
     }
   }
 
-  // optional dev fallback (MailHog/MailDev)
+  // optional dev fallback incase email fails
   try {
     const dev = nodemailer.createTransport({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
     await dev.verify();
@@ -298,7 +296,7 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
     try {
       console.log(`[MAIL] attempting via ${_label} | from=${FROM_ADDR} to=${to}`);
       const info = await tx.sendMail({ from: FROM_ADDR, to, subject, text, html });
-      // Nodemailer always returns an info object — log the useful bits:
+      // Nodemailer always returns an info object — log the useful bits to see if it sends successfully:
       console.log('[MAIL] sent', {
         messageId: info.messageId,
         accepted: info.accepted,
@@ -314,7 +312,6 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
     console.warn('[MAIL] no transport available; falling back to console link');
   }
 
-  // Final fallback so your flow still works
   console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
 }
 
@@ -2117,7 +2114,7 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
 
       const origin = (req.get('FRONTEND_URL') || 'http://localhost:3002').replace(/\/+$/, '');
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
-      // Dev "send": log the link (or swap to SMTP later)
+      // Dev "send": log the link 
    await sendResetEmail(user.email, resetUrl);
     } else if (error) {
       console.warn('forgot-password lookup:', error.message);

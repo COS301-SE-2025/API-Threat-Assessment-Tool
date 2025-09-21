@@ -18,7 +18,7 @@ const app = express();
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
+  console.error('⚠ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -154,6 +154,32 @@ const authenticateToken = async (req, res, next) => {
 
 // Input validation functions
 const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const validateUserId = (userId) => {
+  if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    return { isValid: false, error: 'User ID is required and must be a non-empty string' };
+  }
+  if (userId.trim().length > 100) {
+    return { isValid: false, error: 'User ID must be less than 100 characters' };
+  }
+  return { isValid: true };
+};
+
+const validateApiId = (apiId, required = true) => {
+  if (!apiId) {
+    return required ? 
+      { isValid: false, error: 'API ID is required' } : 
+      { isValid: true };
+  }
+  if (typeof apiId !== 'string' || apiId.trim().length === 0) {
+    return { isValid: false, error: 'API ID must be a non-empty string' };
+  }
+  if (apiId.trim().length > 100) {
+    return { isValid: false, error: 'API ID must be less than 100 characters' };
+  }
+  return { isValid: true };
+};
+
 const validateSignupData = data => {
   const { email, password, firstName, lastName } = data;
   const errors = [];
@@ -276,7 +302,7 @@ const startEngine = () => {
       shell: true
     });
     
-    console.log(`📝 Spawned process with PID: ${engineProcess.pid}`);
+    console.log(`📊 Spawned process with PID: ${engineProcess.pid}`);
     
     engineProcess.stdout.on('data', (data) => {
       const output = data.toString();
@@ -291,7 +317,7 @@ const startEngine = () => {
     
     engineProcess.stderr.on('data', (data) => {
       const error = data.toString();
-      console.error(`❌ Engine stderr: ${error.trim()}`);
+      console.error(`⚠ Engine stderr: ${error.trim()}`);
     });
     
     engineProcess.on('spawn', () => {
@@ -305,7 +331,7 @@ const startEngine = () => {
     });
     
     engineProcess.on('error', (err) => {
-      console.error(`❌ Failed to start engine: ${err.message}`);
+      console.error(`⚠ Failed to start engine: ${err.message}`);
       engineStarting = false;
       reject(err);
     });
@@ -340,7 +366,7 @@ const sendToEngine = async (request) => {
     let responseData = '';
     const startTime = Date.now();
 
-    console.log(`📝 Setting socket timeout to 120 seconds`);
+    console.log(`📊 Setting socket timeout to 120 seconds`);
     client.setTimeout(120000);
 
     client.on('connect', () => {
@@ -369,14 +395,14 @@ const sendToEngine = async (request) => {
         
         resolve(response);
       } catch (err) {
-        console.error(`❌ Failed to parse response: ${err.message}`);
+        console.error(`⚠ Failed to parse response: ${err.message}`);
         reject(new Error('Failed to parse engine response'));
       }
     });
 
     client.on('error', (err) => {
       const elapsed = Date.now() - startTime;
-      console.error(`❌ Engine connection error after ${elapsed}ms:`, err.message);
+      console.error(`⚠ Engine connection error after ${elapsed}ms:`, err.message);
       reject(new Error(`Engine connection failed: ${err.message}`));
     });
 
@@ -1031,7 +1057,7 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
 });
 
 // ==========================================================
-// NEW ENDPOINTS FROM COMMANDS.MD
+// NEW ENDPOINTS FROM COMMANDS.MD - UPDATED WITH REQUIRED PARAMETERS
 // ==========================================================
 
 // Register new user (auth.register)
@@ -1148,14 +1174,22 @@ app.get('/api/dashboard/alerts', async (req, res) => {
   }
 });
 
-// Get All APIs (apis.get_all)
+// Get All APIs (apis.get_all) - UPDATED: Now requires user_id
 app.get('/api/apis', async (req, res) => {
   try {
     const { user_id } = req.query;
+    
+    // Validate required user_id parameter
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.get_all',
-      data: { user_id: user_id || 'default' }
+      data: { user_id: user_id.trim() }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'APIs retrieved successfully', engineResponse.data);
     } else {
@@ -1187,17 +1221,29 @@ app.post('/api/apis/create', async (req, res) => {
   }
 });
 
-// Get API Details (apis.details)
+// Get API Details (apis.details) - UPDATED: Now requires user_id
 app.get('/api/apis/details', async (req, res) => {
   try {
-    const { api_id } = req.query;
+    const { api_id, user_id } = req.query;
+    
+    // Validate required parameters
     if (!api_id) {
       return sendError(res, 'API ID is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.details',
-      data: { api_id }
+      data: { 
+        api_id: api_id.trim(),
+        user_id: user_id.trim()
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'API details retrieved successfully', engineResponse.data);
     } else {
@@ -1208,17 +1254,31 @@ app.get('/api/apis/details', async (req, res) => {
   }
 });
 
-// Update API (apis.update)
+// Update API (apis.update) - UPDATED: Now requires user_id
 app.put('/api/apis/update', async (req, res) => {
   try {
-    const { api_id, name, description } = req.body;
+    const { api_id, name, description, user_id } = req.body;
+    
+    // Validate required parameters
     if (!api_id) {
       return sendError(res, 'API ID is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.update',
-      data: { api_id, name, description }
+      data: { 
+        api_id: api_id.trim(),
+        user_id: user_id.trim(),
+        name, 
+        description 
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'API updated successfully');
     } else {
@@ -1229,17 +1289,29 @@ app.put('/api/apis/update', async (req, res) => {
   }
 });
 
-// Delete API (apis.delete)
+// Delete API (apis.delete) - UPDATED: Now requires user_id
 app.delete('/api/apis/delete', async (req, res) => {
   try {
-    const { api_id } = req.body;
+    const { api_id, user_id } = req.body;
+    
+    // Validate required parameters
     if (!api_id) {
       return sendError(res, 'API ID is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.delete',
-      data: { api_id }
+      data: { 
+        api_id: api_id.trim(),
+        user_id: user_id.trim()
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'API deleted successfully');
     } else {
@@ -1250,17 +1322,35 @@ app.delete('/api/apis/delete', async (req, res) => {
   }
 });
 
-// Validate API Key (apis.key.validate)
+// Validate API Key (apis.key.validate) - UPDATED: Now requires user_id and api_id
 app.post('/api/apis/key/validate', async (req, res) => {
   try {
-    const { api_key } = req.body;
+    const { api_key, user_id, api_id } = req.body;
+    
+    // Validate required parameters
     if (!api_key) {
       return sendError(res, 'API key is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.key.validate',
-      data: { api_key }
+      data: { 
+        api_key: api_key.trim(),
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'API key validated successfully');
     } else {
@@ -1271,17 +1361,35 @@ app.post('/api/apis/key/validate', async (req, res) => {
   }
 });
 
-// Set API Key (apis.key.set)
+// Set API Key (apis.key.set) - UPDATED: Now requires user_id and api_id
 app.post('/api/apis/key/set', async (req, res) => {
   try {
-    const { api_key } = req.body;
+    const { api_key, user_id, api_id } = req.body;
+    
+    // Validate required parameters
     if (!api_key) {
       return sendError(res, 'API key is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.key.set',
-      data: { api_key }
+      data: { 
+        api_key: api_key.trim(),
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'API key set successfully');
     } else {
@@ -1292,11 +1400,19 @@ app.post('/api/apis/key/set', async (req, res) => {
   }
 });
 
-// Import API from File (apis.import_file) - EXISTING ENDPOINT
+// Import API from File (apis.import_file) - UPDATED: Now requires user_id
 app.post('/api/import', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return sendError(res, 'No file uploaded', null, 400);
+    }
+
+    const { user_id } = req.body;
+    
+    // Validate required user_id parameter
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
     }
 
     const fileName = req.file.originalname;
@@ -1315,7 +1431,8 @@ app.post('/api/import', upload.single('file'), async (req, res) => {
     const engineRequest = {
       command: "apis.import_file",
       data: {
-        file: fileName
+        file: fileName,
+        user_id: user_id.trim()
       }
     };
 
@@ -1373,7 +1490,7 @@ app.post('/api/apis/import/url', async (req, res) => {
   }
 });
 
-// List API Endpoints (endpoints.list) - EXISTING ENDPOINT
+// List API Endpoints (endpoints.list)
 app.post('/api/endpoints', async (req, res) => {
   try {
     const { api_id } = req.body;
@@ -1398,7 +1515,7 @@ app.post('/api/endpoints', async (req, res) => {
   }
 });
 
-// Get Endpoint Details (endpoints.details) - EXISTING ENDPOINT
+// Get Endpoint Details (endpoints.details)
 app.post('/api/endpoints/details', async (req, res) => {
   try {
     const { endpoint_id, path, method } = req.body;
@@ -1431,11 +1548,12 @@ app.post('/api/endpoints/details', async (req, res) => {
   }
 });
 
-// Add Endpoint Tags (endpoints.tags.add) - EXISTING ENDPOINT
+// Add Endpoint Tags (endpoints.tags.add) - UPDATED: Now requires user_id and api_id
 app.post('/api/endpoints/tags/add', async (req, res) => {
   try {
-    const { endpoint_id, path, method, tags } = req.body;
+    const { endpoint_id, path, method, tags, user_id, api_id } = req.body;
     
+    // Validate required parameters
     if (!tags || !Array.isArray(tags)) {
       return sendError(res, 'Missing tags (must be array)', null, 400);
     }
@@ -1443,13 +1561,25 @@ app.post('/api/endpoints/tags/add', async (req, res) => {
     if (!path || !method) {
       return sendError(res, 'Missing path or method', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
 
     const engineRequest = {
       command: "endpoints.tags.add",
       data: {
         path: path,
         method: method,
-        tags: tags
+        tags: tags,
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
       }
     };
 
@@ -1468,11 +1598,12 @@ app.post('/api/endpoints/tags/add', async (req, res) => {
   }
 });
 
-// Remove Endpoint Tags (endpoints.tags.remove) - EXISTING ENDPOINT
+// Remove Endpoint Tags (endpoints.tags.remove) - UPDATED: Now requires user_id and api_id
 app.post('/api/endpoints/tags/remove', async (req, res) => {
   try {
-    const { endpoint_id, path, method, tags } = req.body;
+    const { endpoint_id, path, method, tags, user_id, api_id } = req.body;
     
+    // Validate required parameters
     if (!tags || !Array.isArray(tags)) {
       return sendError(res, 'Missing tags (must be array)', null, 400);
     }
@@ -1480,13 +1611,25 @@ app.post('/api/endpoints/tags/remove', async (req, res) => {
     if (!path || !method) {
       return sendError(res, 'Missing path or method', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
 
     const engineRequest = {
       command: "endpoints.tags.remove",
       data: {
         path: path,
         method: method,
-        tags: tags
+        tags: tags,
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
       }
     };
 
@@ -1505,7 +1648,7 @@ app.post('/api/endpoints/tags/remove', async (req, res) => {
   }
 });
 
-// Replace Endpoint Tags (endpoints.tags.replace) - EXISTING ENDPOINT
+// Replace Endpoint Tags (endpoints.tags.replace)
 app.post('/api/endpoints/tags/replace', async (req, res) => {
   try {
     const { endpoint_id, path, method, tags } = req.body;
@@ -1542,12 +1685,28 @@ app.post('/api/endpoints/tags/replace', async (req, res) => {
   }
 });
 
-// List All Tags (tags.list) - EXISTING ENDPOINT
+// List All Tags (tags.list) - UPDATED: Now requires user_id and api_id
 app.get('/api/tags', async (req, res) => {
   try {
+    const { user_id, api_id } = req.query;
+    
+    // Validate required parameters
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineRequest = {
       command: "tags.list",
-      data: {}
+      data: {
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
+      }
     };
 
     const engineResponse = await sendToEngine(engineRequest);
@@ -1565,17 +1724,28 @@ app.get('/api/tags', async (req, res) => {
   }
 });
 
-// Add Endpoint Flags (endpoints.flags.add)
+// Add Endpoint Flags (endpoints.flags.add) - UPDATED: Now requires user_id and api_id
 app.post('/api/endpoints/flags/add', async (req, res) => {
   try {
-    const { endpoint_id, path, method, flags } = req.body;
+    const { endpoint_id, path, method, flags, user_id, api_id } = req.body;
     
+    // Validate required parameters
     if (!flags) {
       return sendError(res, 'Missing flags', null, 400);
     }
 
     if (!endpoint_id && (!path || !method)) {
       return sendError(res, 'Missing endpoint_id or path/method', null, 400);
+    }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
     }
 
     const engineRequest = {
@@ -1584,7 +1754,9 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
         endpoint_id: endpoint_id,
         path: path,
         method: method,
-        flags: flags
+        flags: flags,
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
       }
     };
 
@@ -1603,17 +1775,28 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
   }
 });
 
-// Remove Endpoint Flags (endpoints.flags.remove)
+// Remove Endpoint Flags (endpoints.flags.remove) - UPDATED: Now requires user_id and api_id
 app.post('/api/endpoints/flags/remove', async (req, res) => {
   try {
-    const { endpoint_id, path, method, flags } = req.body;
+    const { endpoint_id, path, method, flags, user_id, api_id } = req.body;
     
+    // Validate required parameters
     if (!flags) {
       return sendError(res, 'Missing flags', null, 400);
     }
 
     if (!endpoint_id && (!path || !method)) {
       return sendError(res, 'Missing endpoint_id or path/method', null, 400);
+    }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
     }
 
     const engineRequest = {
@@ -1622,7 +1805,9 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
         endpoint_id: endpoint_id,
         path: path,
         method: method,
-        flags: flags
+        flags: flags,
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
       }
     };
 
@@ -1641,20 +1826,34 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
   }
 });
 
-// Create Scan (scan.create)
+// Create Scan (scan.create) - UPDATED: Now requires user_id (renamed from client_id)
 app.post('/api/scan/create', async (req, res) => {
   try {
-    const { client_id, scan_profile } = req.body;
-    if (!client_id) {
-      return sendError(res, 'Client ID is required', null, 400);
+    const { client_id, user_id, scan_profile, api_id } = req.body;
+    
+    // Use user_id as primary, fall back to client_id for backward compatibility
+    const finalUserId = user_id || client_id;
+    
+    // Validate required parameters
+    const userIdValidation = validateUserId(finalUserId);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
     }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'scan.create',
       data: { 
-        client_id, 
+        user_id: finalUserId.trim(),
+        api_id: api_id.trim(),
         scan_profile: scan_profile || 'OWASP_API_10' 
       }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Scan created successfully', engineResponse.data);
     } else {
@@ -1665,17 +1864,34 @@ app.post('/api/scan/create', async (req, res) => {
   }
 });
 
-// Start Scan (scan.start)
+// Start Scan (scan.start) - UPDATED: Now requires user_id and api_id (renamed from api_name)
 app.post('/api/scan/start', async (req, res) => {
   try {
-    const { api_name, scan_profile } = req.body;
-    if (!api_name) {
-      return sendError(res, 'API name is required', null, 400);
+    const { api_name, api_id, scan_profile, user_id } = req.body;
+    
+    // Use api_id as primary, fall back to api_name for backward compatibility
+    const finalApiId = api_id || api_name;
+    
+    // Validate required parameters
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
     }
+    
+    const apiIdValidation = validateApiId(finalApiId, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'scan.start',
-      data: { api_name, scan_profile }
+      data: { 
+        api_id: finalApiId.trim(),
+        user_id: user_id.trim(),
+        scan_profile 
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Scan started successfully', engineResponse.data);
     } else if (engineResponse.code === 503) {
@@ -1734,17 +1950,35 @@ app.post('/api/scan/stop', async (req, res) => {
   }
 });
 
-// Get Scan Results (scan.results)
+// Get Scan Results (scan.results) - UPDATED: Now requires user_id and api_id
 app.get('/api/scan/results', async (req, res) => {
   try {
-    const { scan_id } = req.query;
+    const { scan_id, user_id, api_id } = req.query;
+    
+    // Validate required parameters
     if (!scan_id) {
       return sendError(res, 'Scan ID is required', null, 400);
     }
+    
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'scan.results',
-      data: { scan_id }
+      data: { 
+        scan_id: scan_id.trim(),
+        user_id: user_id.trim(),
+        api_id: api_id.trim()
+      }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Scan results retrieved successfully', engineResponse.data);
     } else if (engineResponse.code === 404) {
@@ -1757,13 +1991,22 @@ app.get('/api/scan/results', async (req, res) => {
   }
 });
 
-// List All Scans (scan.list)
+// List All Scans (scan.list) - UPDATED: Now requires user_id
 app.get('/api/scan/list', async (req, res) => {
   try {
+    const { user_id } = req.query;
+    
+    // Validate required user_id parameter
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'scan.list',
-      data: {}
+      data: { user_id: user_id.trim() }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Scans retrieved successfully', engineResponse.data);
     } else {

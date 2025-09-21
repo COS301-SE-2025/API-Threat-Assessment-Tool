@@ -12,7 +12,6 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  // forgot state
   const [email, setEmail] = useState("");
 
 
@@ -69,50 +68,8 @@ export default function ForgotPassword() {
         {}
         <main className="login-main">
           <section className="login-form-section" ref={formRef}>
-            {token ? (
-              <>
-                <h1 className="login-title">Set a new password</h1>
-                <p className="login-subtitle">Enter and confirm your new password.</p>
-
-                <form onSubmit={doReset} className="login-form">
-                  <div className="form-group">
-                    <label htmlFor="new-password">New password</label>
-                    <input
-                      id="new-password"
-                      type="password"
-                      minLength={8}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="confirm-password">Confirm password</label>
-                    <input
-                      id="confirm-password"
-                      type="password"
-                      minLength={8}
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <button className="login-btn" disabled={loading || !token}>
-                    {loading ? "Saving…" : "Set new password"}
-                  </button>
-                </form>
-
-                {msg && (
-                  <p className={`login-message ${msg.type === "ok" ? "success" : "error"}`}>
-                    {msg.text}
-                  </p>
-                )}
-
-                <div className="login-links" style={{ marginTop: 12 }}>
-                  <Link to="/login" className="create-account-link">Go to Login</Link>
-                </div>
-              </>
-            ) : (
+            {   
+              (
               <>
                 <h1 className="login-title">Forgot password</h1>
                 <p className="login-subtitle">Enter your account email. If it exists, we’ll send a reset link.</p>

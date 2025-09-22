@@ -15,6 +15,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [animationPhase, setAnimationPhase] = useState('entering');
@@ -49,6 +50,17 @@ const Login = () => {
   };
 
   const getButtonContent = (text) => isSubmitting ? (<><span className="loading-spinner"></span>{text}</>) : text;
+  const getGoogleButtonContent = () => isGoogleLoading ? (<><span className="loading-spinner"></span>Signing in with Google...</>) : (
+    <>
+      <img 
+        src="https://developers.google.com/identity/images/g-logo.png" 
+        alt="Google"
+        width="18"
+        height="18"
+      />
+      Continue with Google
+    </>
+  );
 
   const showError = (message) => {
     setError(message);
@@ -61,6 +73,35 @@ const Login = () => {
   const showSuccessMessage = (message) => {
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const handleGoogleLogin = async () => {
+    if (isGoogleLoading || isSubmitting) return;
+    
+    setIsGoogleLoading(true);
+    setError('');
+
+    try {
+      // For now, this is a placeholder - you'll need to implement actual Google OAuth
+      // You can integrate with Google OAuth using libraries like @google-cloud/oauth2-client
+      // or implement the OAuth flow manually
+      
+      console.log('Google OAuth integration needed');
+      
+      // Simulate API call for demo purposes
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // This is where you'd handle the actual Google OAuth response
+      // Example: const result = await authenticateWithGoogle();
+      
+      showError('Google OAuth integration pending - please use regular login for now');
+      
+    } catch (err) {
+      console.error('Google login error:', err);
+      showError('Google login failed. Please try again or use regular login.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleLogin = async (e) => {
@@ -127,10 +168,21 @@ const Login = () => {
             <h1>Welcome Back</h1>
             <p className="login-subtitle">Sign in to your AT-AT account</p>
 
-            <div className="or-separator"><span>Login</span></div>
-
             {showSuccess && <div className="success-message">✅ Login successful! Redirecting to dashboard...</div>}
             {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
+
+            {/* Google Login Button */}
+            <button
+              type="button"
+              className="google-login-btn"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading || isSubmitting}
+              aria-label="Sign in with Google"
+            >
+              {getGoogleButtonContent()}
+            </button>
+
+            <div className="or-separator"><span>Or</span></div>
 
             <form onSubmit={handleLogin} noValidate>
               <div className={`form-group ${error && !identifier.trim() ? 'error' : ''}`}>
@@ -140,7 +192,7 @@ const Login = () => {
                   id="identifier"
                   value={identifier}
                   onChange={(e) => handleInputChange('identifier', e.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isGoogleLoading}
                   placeholder="Enter your username or email"
                   required
                   autoComplete="username"
@@ -153,7 +205,7 @@ const Login = () => {
                   id="password"
                   value={password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isGoogleLoading}
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
@@ -162,7 +214,7 @@ const Login = () => {
               <button
                 type="submit"
                 className="login-btn"
-                disabled={isSubmitting || isLoading}
+                disabled={isSubmitting || isLoading || isGoogleLoading}
                 ref={submitButtonRef}
                 aria-label={isSubmitting ? 'Signing in...' : 'Sign in'}
               >
@@ -180,8 +232,8 @@ const Login = () => {
         <footer className="login-footer">
           <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
           <div className="footer-links">
-            <a href="#" aria-label="Privacy Policy">Privacy Policy</a>
-            <a href="#" aria-label="Terms of Service">Terms of Service</a>
+            <button type="button" onClick={() => console.log('Privacy Policy')} className="footer-link-btn">Privacy Policy</button>
+            <button type="button" onClick={() => console.log('Terms of Service')} className="footer-link-btn">Terms of Service</button>
           </div>
         </footer>
       </div>

@@ -1,7 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
 
 const AuthContext = createContext();
+
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  });
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -50,6 +66,115 @@ export const AuthProvider = ({ children }) => {
 
     fetchProfile();
   }, [token]);
+
+  // Handle Supabase auth state changes
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Supabase auth event:', event);
+        
+        if (event === 'SIGNED_IN' && session) {
+          // Handle Google OAuth success
+          await handleSupabaseLogin(session);
+        } else if (event === 'SIGNED_OUT') {
+          // Handle logout if needed
+          console.log('Supabase session ended');
+        }
+      }
+    );
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  /**
+   * Handle Supabase Google OAuth login and exchange for JWT
+   */
+  const handleSupabaseLogin = async (supabaseSession) => {
+    try {
+      setIsLoading(true);
+
+      // Extract user info from Supabase session
+      const { user: supabaseUser } = supabaseSession;
+      
+      // Send Supabase user data to your backend to create/login user and get JWT
+      const res = await axios.post(`${API_BASE_URL}/api/auth/google-oauth`, {
+        supabaseUserId: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name,
+        firstName: supabaseUser.user_metadata?.given_name,
+        lastName: supabaseUser.user_metadata?.family_name,
+        profilePicture: supabaseUser.user_metadata?.avatar_url,
+        provider: 'google'
+      });
+
+      if (res.data.success) {
+        const { token: newToken, user } = res.data.data;
+        localStorage.setItem('at_at_token', newToken);
+        setToken(newToken);
+        setCurrentUser(user);
+
+        // Sign out from Supabase since we only needed it for OAuth
+        await supabase.auth.signOut();
+        
+        return { success: true, user };
+      } else {
+        throw new Error(res.data.message || 'OAuth login failed');
+      }
+    } catch (error) {
+      console.error('Supabase login error:', error);
+      // Sign out from Supabase on error
+      if (supabase) await supabase.auth.signOut();
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Google login failed'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Initiate Google OAuth login through Supabase
+   */
+  const loginWithGoogle = async () => {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Google login not configured. Please check Supabase settings.'
+      };
+    }
+
+    try {
+      setIsLoading(true);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // The actual login handling will happen in the onAuthStateChange callback
+      return { success: true, data };
+    } catch (error) {
+      console.error('Google OAuth initiation error:', error);
+      setIsLoading(false);
+      return {
+        success: false,
+        error: error.message || 'Failed to initiate Google login'
+      };
+    }
+  };
 
   const login = async (identifier, password) => {
     setIsLoading(true);
@@ -110,10 +235,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('at_at_token');
     setCurrentUser(null);
     setToken('');
+
+    // Also sign out from Supabase if there's an active session
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.warn('Supabase logout error:', error);
+      }
+    }
   };
 
   const updateProfile = async (updatedData) => {
@@ -311,6 +445,7 @@ export const AuthProvider = ({ children }) => {
 
     // Authentication methods
     login,
+    loginWithGoogle, // New Google OAuth method
     signup,
     logout,
     isAuthenticated,

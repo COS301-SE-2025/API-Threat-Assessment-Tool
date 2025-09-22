@@ -11,6 +11,7 @@
     "axios": "^1.10.0",
     "js-cookie": "^3.0.5",
     "js-yaml": "^4.1.0",
+    "nodemailer": "^7.0.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.28.0",

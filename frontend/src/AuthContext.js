@@ -185,18 +185,30 @@ export const AuthProvider = ({ children }) => {
       console.log('Sending to backend:', userData.email);
 
       // Send to your existing backend Google login endpoint
+      console.log('Making API call to backend...');
       const res = await axios.post(`${API_BASE_URL}/api/auth/google-login`, userData);
+      console.log('Backend response received:', res.status);
 
       if (res.data.success) {
+        console.log('Processing successful response...');
         const { token: newToken, user } = res.data.data;
+        console.log('Extracted token and user, storing...');
+        
         localStorage.setItem('at_at_token', newToken);
         setToken(newToken);
         setCurrentUser(user);
-
-        // Clean up Supabase session after successful backend processing
-        await supabase.auth.signOut();
+        console.log('Token and user state updated');
 
         console.log('Google OAuth successful, user logged in');
+
+        // Clean up Supabase session in background (non-blocking)
+        console.log('Starting non-blocking Supabase cleanup...');
+        supabase.auth.signOut().then(() => {
+          console.log('Supabase cleanup completed');
+        }).catch((cleanupError) => {
+          console.warn('Supabase cleanup failed (non-critical):', cleanupError);
+        });
+
         return { success: true, user };
       } else {
         throw new Error(res.data.message || 'Google login failed');

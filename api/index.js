@@ -1157,6 +1157,8 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       provider = 'google'
     } = req.body;
 
+    console.log('🔍 Google OAuth attempt:', { email, googleId: googleId?.substring(0, 10) + '...' });
+
     // Validate required fields
     if (!email || !googleId) {
       return sendError(res, 'Missing required Google user data', null, 400);
@@ -1167,8 +1169,6 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       return sendError(res, 'Invalid email format', null, 400);
     }
 
-    console.log('Google OAuth login attempt:', { email, googleId: googleId.substring(0, 10) + '...' });
-
     // Check if user exists by email
     const { data: existingUsers, error: searchError } = await supabase
       .from('users')
@@ -1176,7 +1176,7 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       .eq('email', email.trim().toLowerCase());
 
     if (searchError) {
-      console.error('User search error:', searchError);
+      console.error('❌ User search error:', searchError);
       return sendError(res, 'Database error during user lookup', searchError.message, 500);
     }
 
@@ -1186,6 +1186,8 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       // User exists - update Google info and last login
       user = existingUsers[0];
       
+      console.log('👤 Updating existing user:', user.email);
+
       const updateData = {
         google_id: googleId,
         auth_provider: provider,
@@ -1193,8 +1195,8 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
         updated_at: new Date().toISOString()
       };
 
-      // Update profile picture if provided
-      if (profilePicture) {
+      // Update profile picture if provided and not already set
+      if (profilePicture && !user.profile_picture) {
         updateData.profile_picture = profilePicture;
       }
 
@@ -1214,30 +1216,47 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
         .single();
 
       if (updateError) {
-        console.error('User update error:', updateError);
+        console.error('❌ User update error:', updateError);
         return sendError(res, 'Failed to update user', updateError.message, 500);
       }
 
       user = updatedUser;
-      console.log('Updated existing user for Google OAuth');
 
     } else {
       // Create new user from Google data
-      const newUserId = crypto.randomUUID();
+      console.log('✨ Creating new user from Google data');
+      
+      // Generate a unique username from email
+      let baseUsername = email.split('@')[0].toLowerCase();
+      let username = baseUsername;
+      
+      // Check if username already exists and make it unique
+      const { data: existingUsernames } = await supabase
+        .from('users')
+        .select('username')
+        .ilike('username', `${baseUsername}%`);
+
+      if (existingUsernames && existingUsernames.length > 0) {
+        username = `${baseUsername}_${Date.now()}`;
+      }
+
       const userData = {
-        id: newUserId,
+        id: crypto.randomUUID(),
         email: email.trim().toLowerCase(),
         first_name: firstName ? firstName.trim() : '',
         last_name: lastName ? lastName.trim() : '',
-        username: email.split('@')[0], // Generate username from email
+        username: username,
         profile_picture: profilePicture || '',
         google_id: googleId,
         auth_provider: provider,
         email_confirmed: true, // Google emails are verified
-        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Random password
+        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Random secure password
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), // Added this field
         last_login: new Date().toISOString()
       };
+
+      console.log('📝 Inserting user data:', { ...userData, password: '[HIDDEN]' });
 
       const { data: newUser, error: createError } = await supabase
         .from('users')
@@ -1246,23 +1265,31 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
         .single();
 
       if (createError) {
-        console.error('User creation error:', createError);
+        console.error('❌ User creation error:', createError);
         
-        // Handle duplicate username
-        if (createError.code === '23505' && createError.message.includes('username')) {
-          // Try with a unique username
-          userData.username = `${email.split('@')[0]}_${Date.now()}`;
-          
-          const { data: retryUser, error: retryError } = await supabase
-            .from('users')
-            .insert([userData])
-            .select('*')
-            .single();
-
-          if (retryError) {
-            return sendError(res, 'Failed to create user account', retryError.message, 500);
+        // Handle specific errors
+        if (createError.code === '23505') {
+          if (createError.message.includes('email')) {
+            return sendError(res, 'An account with this email already exists', null, 409);
           }
-          user = retryUser;
+          if (createError.message.includes('username')) {
+            // Retry with a more unique username
+            userData.username = `${baseUsername}_${crypto.randomBytes(4).toString('hex')}`;
+            
+            const { data: retryUser, error: retryError } = await supabase
+              .from('users')
+              .insert([userData])
+              .select('*')
+              .single();
+
+            if (retryError) {
+              console.error('❌ Retry user creation error:', retryError);
+              return sendError(res, 'Failed to create user account', retryError.message, 500);
+            }
+            user = retryUser;
+          } else {
+            return sendError(res, 'Duplicate entry error', createError.message, 409);
+          }
         } else {
           return sendError(res, 'Failed to create user account', createError.message, 500);
         }
@@ -1270,12 +1297,12 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
         user = newUser;
       }
 
-      console.log('Created new user for Google OAuth');
+      console.log('✅ User created successfully:', user.email);
     }
 
-    // Generate JWT token (same as regular login)
+    // Generate JWT token
     if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET not configured');
+      console.error('❌ JWT_SECRET not configured');
       return sendError(res, 'Server configuration error', null, 500);
     }
 
@@ -1288,7 +1315,7 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       { expiresIn: '7d' } // Longer expiry for OAuth users
     );
 
-    // Log successful login
+    // Log successful login activity (optional)
     try {
       await supabase
         .from('user_activity_log')
@@ -1296,15 +1323,16 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
           user_id: user.id,
           action: 'google_login',
           description: 'User logged in via Google OAuth',
-          ip_address: req.ip,
-          user_agent: req.get('User-Agent'),
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
           metadata: { provider, googleId: googleId.substring(0, 10) + '...' }
         }]);
     } catch (logError) {
-      console.warn('Failed to log Google login activity:', logError);
+      console.warn('⚠️ Failed to log Google login activity:', logError.message);
+      // Don't fail the login if activity logging fails
     }
 
-    // Return user data (same format as regular login)
+    // Return user data in the format expected by frontend
     const userResponse = {
       id: user.id,
       email: user.email,
@@ -1318,13 +1346,15 @@ app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (r
       lastLogin: user.last_login
     };
 
+    console.log('🎉 Google login successful for:', user.email);
+
     sendSuccess(res, 'Google login successful', {
       token,
       user: userResponse
     });
 
   } catch (error) {
-    console.error('Google login error:', error);
+    console.error('💥 Google login error:', error);
     sendError(res, 'Google login failed', error.message, 500);
   }
 });

@@ -406,6 +406,233 @@ describe('API Unit Tests', () => {
     });
   });
 
+  describe('Scan Endpoints', () => {
+    test('POST /api/scan/start should start a new scan', async () => {
+      const scanData = {
+        api_id: 'test-api-id',
+        template_id: 'test-template-id'
+      };
+
+      const response = await request(app)
+        .post('/api/scan/start')
+        .send(scanData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Scan started successfully',
+        data: {
+          scan_id: expect.any(String)
+        }
+      });
+    });
+
+    test('GET /api/scan/status should return scan status', async () => {
+      const response = await request(app)
+        .get('/api/scan/status')
+        .query({ scan_id: 'test-scan-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Scan status retrieved successfully',
+        data: {
+          status: expect.any(String)
+        }
+      });
+    });
+
+    test('POST /api/scan/stop should stop a scan', async () => {
+      const response = await request(app)
+        .post('/api/scan/stop')
+        .send({ scan_id: 'test-scan-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Scan stopped successfully'
+      });
+    });
+
+    test('GET /api/scan/results should return scan results', async () => {
+      const response = await request(app)
+        .get('/api/scan/results')
+        .query({ scan_id: 'test-scan-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Scan results retrieved successfully',
+        data: expect.any(Object)
+      });
+    });
+
+    test('GET /api/scan/list should list all scans', async () => {
+      const response = await request(app)
+        .get('/api/scan/list')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Scans retrieved successfully',
+        data: expect.any(Array)
+      });
+    });
+  });
+
+  describe('Template Endpoints', () => {
+    test('GET /api/templates/list should list all templates', async () => {
+      const response = await request(app)
+        .get('/api/templates/list')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Templates retrieved successfully',
+        data: expect.any(Array)
+      });
+    });
+
+    test('GET /api/templates/details should return template details', async () => {
+      const response = await request(app)
+        .get('/api/templates/details')
+        .query({ template_id: 'test-template-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Template details retrieved successfully',
+        data: expect.any(Object)
+      });
+    });
+
+    test('POST /api/templates/use should use a template', async () => {
+      const response = await request(app)
+        .post('/api/templates/use')
+        .send({ template_id: 'test-template-id', api_id: 'test-api-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Template used successfully',
+        data: expect.any(Object)
+      });
+    });
+  });
+
+  describe('User Profile and Settings Endpoints', () => {
+    test('GET /api/user/profile/get should return user profile', async () => {
+      const response = await request(app)
+        .get('/api/user/profile/get')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'User profile retrieved successfully',
+        data: expect.any(Object)
+      });
+    });
+
+    test('PUT /api/user/profile/update should update user profile', async () => {
+      const updateData = {
+        username: 'newusername',
+        email: 'newemail@example.com'
+      };
+
+      const response = await request(app)
+        .put('/api/user/profile/update')
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'User profile updated successfully'
+      });
+    });
+
+    test('GET /api/user/settings/get should return user settings', async () => {
+      const response = await request(app)
+        .get('/api/user/settings/get')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'User settings retrieved successfully',
+        data: expect.any(Object)
+      });
+    });
+
+    test('PUT /api/user/settings/update should update user settings', async () => {
+      const updateData = {
+        notifications: true
+      };
+
+      const response = await request(app)
+        .put('/api/user/settings/update')
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'User settings updated successfully'
+      });
+    });
+  });
+
+  describe('Report Endpoints', () => {
+    test('GET /api/reports/list should list all reports', async () => {
+      const response = await request(app)
+        .get('/api/reports/list')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Reports retrieved successfully',
+        data: expect.any(Array)
+      });
+    });
+
+    test('GET /api/reports/details should return report details', async () => {
+      const response = await request(app)
+        .get('/api/reports/details')
+        .query({ report_id: 'test-report-id' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Report details retrieved successfully',
+        data: expect.any(Object)
+      });
+    });
+
+    test('POST /api/reports/download should download report', async () => {
+      const response = await request(app)
+        .post('/api/reports/download')
+        .send({ report_id: 'test-report-id', report_type: 'pdf' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Report downloaded successfully',
+        data: expect.any(Object)
+      });
+    });
+  });
+
+  describe('Connection Test Endpoint', () => {
+    test('GET /api/connection/test should test connection', async () => {
+      const response = await request(app)
+        .get('/api/connection/test')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Connection test successful',
+        data: expect.any(Object)
+      });
+    });
+  });
+
   describe('404 Handler', () => {
     test('should return 404 for unknown routes', async () => {
       const response = await request(app)

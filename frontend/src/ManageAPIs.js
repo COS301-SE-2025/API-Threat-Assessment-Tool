@@ -23,8 +23,9 @@ export {
 };
 
 // API functions
-async function fetchAllTags() {
-  const res = await fetch('/api/tags', {
+async function fetchAllTags(api_id) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user'; 
+  const res = await fetch(`/api/tags?user_id=${user_id}&api_id=${api_id}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -35,10 +36,11 @@ async function fetchAllTags() {
 }
 
 async function fetchApiEndpoints(api_id) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ api_id }),
+    body: JSON.stringify({ api_id: api_id, user_id: user_id }),
     credentials: 'include',
   });
   const data = await res.json();
@@ -46,48 +48,50 @@ async function fetchApiEndpoints(api_id) {
   return data.data;
 }
 
-async function addTagsToEndpoint({ path, method, tags }) {
+async function addTagsToEndpoint({ path, method, tags, api_id, endpoint_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/tags/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path: path, method: method, tags: tags, user_id: user_id, api_id: api_id, endpoint_id: endpoint_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
   return data.data;
 }
-
-async function fetchEndpointDetails({ endpoint_id, path, method }) {
+async function fetchEndpointDetails({ endpoint_id, path, method, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/details', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, path, method }),
+    body: JSON.stringify({ endpoint_id, path, method, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch endpoint details");
   return data.data;
 }
 
-async function removeTagsFromEndpoint({ path, method, tags }) {
+async function removeTagsFromEndpoint({ path, method, tags, api_id, endpoint_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/tags/remove', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path, method, tags, user_id, api_id, endpoint_id: endpoint_id}),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove tags");
   return data.data;
 }
 
-async function replaceTagsOnEndpoint({ path, method, tags }) {
+async function replaceTagsOnEndpoint({ path, method, tags, endpoint_id}) {
   const res = await fetch('/api/endpoints/tags/replace', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path, method, tags, endpoint_id: endpoint_id}),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to replace tags");
@@ -95,24 +99,25 @@ async function replaceTagsOnEndpoint({ path, method, tags }) {
 }
 
 // Flag management functions
-async function addFlagsToEndpoint({ endpoint_id, flag }) {
+async function addFlagsToEndpoint({ endpoint_id, flag, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/flags/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, flags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add flag");
   return data.data;
 }
-
-async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
+async function removeFlagsFromEndpoint({ endpoint_id, flag, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/flags/remove', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, flags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove flag");
@@ -120,7 +125,8 @@ async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
 }
 
 // Tag Editor Component
-function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags }) {
+// Tag Editor Component
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags, api_id }) { // Add api_id prop
   const [tagInput, setTagInput] = React.useState('');
   const [removeInput, setRemoveInput] = React.useState('');
   const [replaceInput, setReplaceInput] = React.useState('');
@@ -129,15 +135,18 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
   const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [currentTags, setCurrentTags] = React.useState(endpoint.tags || []);
-  // ADD near other useState calls
-const [scanSelectionApi, setScanSelectionApi] = useState(null);
+  const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
 
   React.useEffect(() => {
     setCurrentTags(endpoint.tags || []);
   }, [endpoint.tags]);
 
-  const handleAddTags = async () => {
+  const handleAddTags = async () => { // No longer takes api_id as an argument
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot add tags.');
+      return;
+    }
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
     if (tags.length === 0) {
       setMessage('Please enter at least one tag.');
@@ -150,6 +159,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
         tags,
+        api_id: api_id,
+        endpoint_id: endpoint.id
       });
       setMessage('✅ Tags added!');
       setTagInput('');
@@ -158,7 +169,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       setCurrentTags(newTags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsAdded) onTagsAdded(tags);
@@ -170,6 +181,10 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
   const handleRemoveTags = async () => {
+    if (!api_id) {
+        setMessage('❌ API ID is missing. Cannot remove tags.');
+        return;
+    }
     const tags = removeInput.split(',').map(t => t.trim()).filter(Boolean);
     if (tags.length === 0) {
       setMessage('Please enter at least one tag to remove.');
@@ -182,6 +197,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
         tags,
+        api_id: api_id,
+        endpoint_id: endpoint.id
       });
       setMessage('✅ Tags removed!');
       setRemoveInput('');
@@ -190,7 +207,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       setCurrentTags(newTags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsRemoved) onTagsRemoved(tags);
@@ -213,15 +230,17 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       await replaceTagsOnEndpoint({
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
-        tags,
-      });
+          tags,
+          api_id: api_id,          
+          endpoint_id: endpoint.id 
+        });
       setMessage('✅ Tags replaced!');
       setReplaceInput('');
       
       setCurrentTags(tags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsAdded) onTagsAdded(tags);
@@ -232,51 +251,10 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
     }
   };
 
+  // The JSX part of this component remains the same, except for the onClick handler for the "Add Tag" button
   return (
     <div style={{ marginTop: 8 }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 4 }}>
-          Current Tags:
-        </div>
-        {currentTags && currentTags.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {currentTags.map(tag => (
-              <span key={tag} style={{
-                display: 'inline-block', 
-                background: "#22c55e", 
-                color: "white",
-                borderRadius: 8, 
-                padding: "2px 8px", 
-                fontSize: 11,
-                fontWeight: 600
-              }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, color: "#999", fontStyle: 'italic' }}>
-            No tags assigned
-          </div>
-        )}
-      </div>
-
-      {tagsLoading ? (
-        <div style={{ fontSize: 13, color: "#888" }}>Loading tags...</div>
-      ) : tagsError ? (
-        <div style={{ fontSize: 13, color: "#e53e3e" }}>❌ {tagsError}</div>
-      ) : allTags && allTags.length > 0 ? (
-        <div style={{ marginBottom: 5, fontSize: 12, color: "#888", whiteSpace: 'pre-line' }}>
-          <strong>Available tags:</strong>{" "}
-          {allTags.map(tag => (
-            <span key={tag} style={{
-              display: 'inline-block', background: "#f3f4f6", color: "#6366f1",
-              borderRadius: 8, padding: "2px 8px", marginRight: 4, marginBottom: 2, fontWeight: 600
-            }}>{tag}</span>
-          ))}
-        </div>
-      ) : null}
-
+      {/* ... other JSX ... */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
         <input
           type="text"
@@ -287,7 +265,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
           style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
         />
         <button
-          onClick={handleAddTags}
+          onClick={handleAddTags} // No need to pass api_id here, it's read from props
           disabled={adding}
           style={{
             marginLeft: 6,
@@ -360,20 +338,22 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 }
 
 // Flag Editor Component
-function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged }) {
+function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged, api_id }) { // Add api_id prop
   const [flagInput, setFlagInput] = useState('');
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
   const [currentFlags, setCurrentFlags] = useState(endpoint.flags || []);
-  // ADD near other useState calls
-const [scanSelectionApi, setScanSelectionApi] = useState(null);
-
+  const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
   useEffect(() => {
     setCurrentFlags(endpoint.flags || []);
   }, [endpoint.flags]);
 
   const handleAddFlag = async () => {
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot add flag.');
+      return;
+    }
     const flag = flagInput.trim();
     if (!flag) {
       setMessage('Please enter a flag.');
@@ -391,6 +371,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       await addFlagsToEndpoint({
         endpoint_id: endpoint.id,
         flag,
+        api_id: api_id // Use the api_id from props
       });
       setMessage('✅ Flag added!');
       setFlagInput('');
@@ -407,10 +388,15 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
   const handleRemoveFlag = async (flagToRemove) => {
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot remove flag.');
+      return;
+    }
     try {
       await removeFlagsFromEndpoint({
         endpoint_id: endpoint.id,
         flag: flagToRemove,
+        api_id: api_id // Use the api_id from props
       });
       
       const newFlags = currentFlags.filter(flag => flag !== flagToRemove);
@@ -513,7 +499,7 @@ function loadApisFromLocal() {
 }
 
 function saveImportedApisToLocal(apis) {
-  console.log('Saving imported APIs to localStorage:', apis);
+  //console.log('Saving imported APIs to localStorage:', apis);
   localStorage.setItem(IMPORTED_APIS_LOCAL_STORAGE_KEY, JSON.stringify(apis));
 }
 
@@ -521,10 +507,10 @@ function loadImportedApisFromLocal() {
   try {
     const stored = localStorage.getItem(IMPORTED_APIS_LOCAL_STORAGE_KEY);
     const parsed = JSON.parse(stored) || [];
-    console.log('Loaded imported APIs from localStorage:', parsed);
+    //console.log('Loaded imported APIs from localStorage:', parsed);
     return parsed;
   } catch {
-    console.log('Failed to load imported APIs from localStorage, returning empty array');
+    //console.log('Failed to load imported APIs from localStorage, returning empty array');
     return [];
   }
 }
@@ -562,36 +548,54 @@ const SCAN_STEPS = [
 ];
 
 // Enhanced scan monitoring service with realistic progress
+// This is a partial update. Replace the ScanMonitoringService class
+// in your ManageAPIs.js file with this corrected version.
+
+// ... (keep everything else in the file the same) ...
+
+// Enhanced scan monitoring service with realistic progress
+// Enhanced scan monitoring service with realistic progress
 class ScanMonitoringService {
   constructor() {
     this.activeScanIntervals = new Map();
     this.scanProgress = new Map();
   }
 
+  // FIX: This function now calls the correct API endpoint with the correct method (POST).
   async checkScanResults(scanId) {
-    console.log("Fetching results for scanID: ", scanId)
     try {
-      const response = await fetch(`/api/scan/results?scan_id=${scanId}`, {
-        method: 'GET',
+      // The API layer expects a POST request for all engine communications.
+      const response = await fetch(`/api/scan/details`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ scan_id: scanId })
       });
-      
+
       if (!response.ok) {
+        // A 404 here means the /api/scan/details route is missing in your Node.js server
         return { hasResults: false, error: `HTTP ${response.status}` };
       }
       
       const data = await response.json();
       
-      if (data.success && data.data) {
+      // Check for backend engine errors
+      if (!data.success) {
+        return { hasResults: false, error: data.message || 'Polling request failed' };
+      }
+
+      // Check the status from the engine response
+      if (data.data && data.data.status === 'completed') {
         return { 
           hasResults: true, 
-          results: data.data,
+          results: data.data.results, // The actual results are nested in the 'results' key
           isComplete: true
         };
       }
       
+      // If not complete, keep polling
       return { hasResults: false };
+
     } catch (error) {
       console.error('Error checking scan results:', error);
       return { hasResults: false, error: error.message };
@@ -600,8 +604,8 @@ class ScanMonitoringService {
 
   startMonitoring(scanId, callbacks, options = {}) {
     const { 
-      pollInterval = 10000,
-      maxAttempts = 30,
+      pollInterval = 5000, // Check every 5 seconds
+      maxAttempts = 36,    // For a total of 3 minutes
       onProgress,
       onComplete,
       onError,
@@ -614,29 +618,14 @@ class ScanMonitoringService {
     }
 
     let attempts = 0;
-    let currentStepIndex = 0;
-    
-    // Initialize progress
-    this.scanProgress.set(scanId, {
-      currentStep: 0,
-      totalSteps: SCAN_STEPS.length,
-      currentStepLabel: SCAN_STEPS[0].label,
-      progress: 0
-    });
-
-    console.log(`🔄 Starting enhanced scan monitoring for ${scanId}`);
-
-    // Start realistic progress simulation
     this.simulateProgress(scanId, onProgress, onStepComplete);
 
     const poll = async () => {
       attempts++;
-      console.log(`📊 Checking scan results (attempt ${attempts}/${maxAttempts})`);
       
       const result = await this.checkScanResults(scanId);
       
-      if (result.hasResults && result.isComplete) {
-        console.log('✅ Scan completed with results');
+      if (result.isComplete) {
         this.stopMonitoring(scanId);
         if (onComplete) {
           onComplete(result.results);
@@ -645,11 +634,15 @@ class ScanMonitoringService {
       }
       
       if (result.error) {
-        console.error('❌ Error checking scan results:', result.error);
+        this.stopMonitoring(scanId);
+        if (onError) {
+          // Pass the specific error message to the handler
+          onError(new Error(result.error));
+        }
+        return;
       }
       
       if (attempts >= maxAttempts) {
-        console.log('⏰ Maximum polling attempts reached');
         this.stopMonitoring(scanId);
         if (onError) {
           onError(new Error('Scan timeout - results not available after maximum attempts'));
@@ -662,11 +655,12 @@ class ScanMonitoringService {
       this.activeScanIntervals.set(scanId, timeoutId);
     };
 
-    // Start first poll after 5 seconds
-    const initialTimeoutId = setTimeout(poll, 5000);
+    // Start first poll after an initial delay
+    const initialTimeoutId = setTimeout(poll, pollInterval);
     this.activeScanIntervals.set(scanId, initialTimeoutId);
   }
 
+  // ... (the rest of the ScanMonitoringService class and file remains the same) ...
   simulateProgress(scanId, onProgress, onStepComplete) {
     let currentStepIndex = 0;
     
@@ -678,7 +672,6 @@ class ScanMonitoringService {
       const step = SCAN_STEPS[currentStepIndex];
       const progress = Math.round(((currentStepIndex + 1) / SCAN_STEPS.length) * 100);
       
-      // Update progress
       this.scanProgress.set(scanId, {
         currentStep: currentStepIndex + 1,
         totalSteps: SCAN_STEPS.length,
@@ -701,23 +694,20 @@ class ScanMonitoringService {
 
       currentStepIndex++;
       
-      // Schedule next step
       if (currentStepIndex < SCAN_STEPS.length) {
         setTimeout(executeStep, step.duration);
       }
     };
 
-    // Start simulation
     executeStep();
   }
 
   stopMonitoring(scanId) {
-    const intervalId = this.activeScanIntervals.get(scanId);
-    if (intervalId) {
-      clearTimeout(intervalId);
+    const timeoutId = this.activeScanIntervals.get(scanId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
       this.activeScanIntervals.delete(scanId);
       this.scanProgress.delete(scanId);
-      console.log(`🛑 Stopped monitoring scan ${scanId}`);
     }
   }
 
@@ -733,14 +723,18 @@ class ScanMonitoringService {
 }
 
 // Enhanced Results Modal Component
+// ManageAPIs.js around line 711
+
+// Enhanced Results Modal Component
 const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
   if (!isOpen || !results) return null;
 
-  // Handle both formats: results.result or results.vulnerabilities
-  const vulnerabilities = results.result || results.vulnerabilities || [];
+  // FIX: Add 'results.results' to correctly find the array of vulnerabilities.
+  const vulnerabilities = results.result || results.vulnerabilities || results.results || [];
   
   // Group vulnerabilities by type
   const groupedVulns = vulnerabilities.reduce((acc, vuln) => {
+  // ... rest of the component
     const type = vuln.vulnerability_name;
     if (!acc[type]) {
       acc[type] = [];
@@ -1173,18 +1167,20 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
   const handleCreateScan = async () => {
     if (!api) return;
+    const user_id = localStorage.getItem('currentUser_id') || 'default_user';
     
     setCreatingScan(true);
     setError('');
     try {
-      const clientId = api.api_id || api.id;
+      const api_id = api.api_id || api.id;
       
       const response = await fetch("/api/scan/create", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         credentials: "include",
         body: JSON.stringify({ 
-          client_id: clientId,
+          user_id: user_id,
+          api_id: api_id,
           scan_profile: selectedScanType
         }),
       });
@@ -1357,7 +1353,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
             const details = await fetchEndpointDetails({
               endpoint_id: endpoint.id,
               path: endpoint.path,
-              method: endpoint.method
+              method: endpoint.method,
+              api_id: id
             });
             return { ...endpoint, flags: details.flags || [] };
           } catch (error) {
@@ -1377,9 +1374,9 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
 const handleStartScan = () => {
-  console.log("CLICKED START SCAN, scanProfile:", scanProfile);
+  //console.log("CLICKED START SCAN, scanProfile:", scanProfile);
   if (scanProfile) {
-    console.log("✅ Calling onScanStart with", scanProfile);
+    //console.log("✅ Calling onScanStart with", scanProfile);
     onScanStart(scanProfile);
     onClose();
   } else {
@@ -1541,6 +1538,7 @@ const handleStartScan = () => {
                           <EndpointFlagEditor 
                             endpoint={endpoint}
                             allFlags={AVAILABLE_FLAGS}
+                            api_id={api?.api_id || api?.id} // Pass the api_id here
                             onFlagsChanged={(newFlags) => {
                               const updatedEndpoints = [...endpoints];
                               updatedEndpoints[index].flags = newFlags;
@@ -1638,6 +1636,7 @@ const ManageAPIs = () => {
   const { darkMode = false, toggleDarkMode = () => {} } = themeContext;
   
   const authContext = useAuth() || { currentUser: null, logout: () => {}, getUserFullName: () => 'User' };
+  const userId = authContext.currentUser?.id;
   const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
   
   useEffect(() => {
@@ -1664,55 +1663,14 @@ const ManageAPIs = () => {
     };
   }, [scanMonitoringService]);
 
-  const fallbackApis = [
-    {
-      id: 1,
-      name: 'E-commerce API',
-      baseUrl: 'https://api.ecommerce.com/v1',
-      description: 'Main API for the e-commerce platform with user authentication and product management',
-      lastScanned: '2025-06-20',
-      status: 'Active',
-      scanCount: 12,
-      lastScanResult: 'Clean'
-    },
-    {
-      id: 2,
-      name: 'Payment Gateway API',
-      baseUrl: 'https://api.payments.com/v2',
-      description: 'Secure payment processing API with PCI compliance',
-      lastScanned: '2025-06-18',
-      status: 'Active',
-      scanCount: 8,
-      lastScanResult: 'Issues Found'
-    },
-    {
-      id: 3,
-      name: 'User Management Service',
-      baseUrl: 'https://api.users.internal/v1',
-      description: 'Internal user authentication and profile management service',
-      lastScanned: '2025-06-15',
-      status: 'Inactive',
-      scanCount: 5,
-      lastScanResult: 'Pending'
-    },
-    {
-      id: 4,
-      name: 'Analytics API',
-      baseUrl: 'https://api.analytics.com/v3',
-      description: 'Data analytics and reporting API for business intelligence',
-      lastScanned: '2025-06-22',
-      status: 'Active',
-      scanCount: 15,
-      lastScanResult: 'Clean'
-    }
-  ];
+
 
   const [apis, setApis] = useState(() => {
     const local = loadApisFromLocal();
     if (Array.isArray(local) && local.length > 0) {
       return local;
     }
-    return Array.isArray(fallbackApis) ? fallbackApis : [];
+    return[];
   });
 
   useEffect(() => {
@@ -1736,14 +1694,15 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
 // REPLACE your existing fetchPastScans with this
 const fetchPastScans = async (api) => {
-  console.log('[DEBUG] fetchPastScans called for api:', api);
+  //('[DEBUG] fetchPastScans called for api:', api);
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   setScanSelectionApi(api); // remember caller so modal can use it later
 
   try {
-    const res = await fetch('http://localhost:3001/api/scan/list', { method: 'GET' });
-    console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
+    const res = await fetch(`http://localhost:3001/api/scan/list?user_id=${user_id}`, { method: 'GET' });
+    //console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
     const body = await res.json();
-    console.log('[DEBUG] /api/scan/list response body:', body);
+    //console.log('[DEBUG] /api/scan/list response body:', body);
 
     if (!body || !body.success || !body.data || !body.data.result) {
       showMessage('No past scans found.', 'info');
@@ -1787,7 +1746,7 @@ const fetchPastScans = async (api) => {
       return { scanId, results: normalized, firstTimestamp: firstTs };
     });
 
-    console.log('[DEBUG] normalized scans:', scans);
+    //console.log('[DEBUG] normalized scans:', scans);
 
     if (!scans.length) {
       showMessage('No past scans found.', 'info');
@@ -1809,23 +1768,20 @@ const fetchPastScans = async (api) => {
 
 
 
-  // Refresh tags function
-  const refreshAllTags = useCallback(async () => {
+// Fetches tags for a specific API
+  const refreshApiTags = useCallback(async (api_id) => {
+    if (!api_id) return; // Don't fetch if there's no api_id
     setTagsLoading(true);
     setTagsError('');
     try {
-      const tags = await fetchAllTags();
+      const tags = await fetchAllTags(api_id);
       setAllTags(Array.isArray(tags) ? tags : []);
     } catch (e) {
-      setTagsError(e.message || "Failed to fetch tags");
+      setTagsError(e.message || "Failed to fetch tags for this API");
     } finally {
       setTagsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    refreshAllTags();
-  }, [refreshAllTags]);
 
   // Handler for when a profile is selected and scan is created
   const handleProfileSelected = (scanId, scanProfile) => {
@@ -1838,7 +1794,7 @@ const fetchPastScans = async (api) => {
 
   // ENHANCED API scanning handler with realistic progress
   const handleScanStart = async (scanProfile) => {
-    console.log('🚀 === STARTING ENHANCED SCAN WORKFLOW ===');
+    //console.log('🚀 === STARTING ENHANCED SCAN WORKFLOW ===');
 
     setScanLoading(true);
     setScanResult(null);
@@ -1857,11 +1813,11 @@ const fetchPastScans = async (api) => {
       const isImportedApi = importedApis.some(importedApi => importedApi.id === scanTargetApi.id);
       const isRegularApi = apis.some(api => api.id === scanTargetApi.id);
       
-      console.log('🔍 API Type Detection:', { 
-        isImportedApi, 
-        isRegularApi, 
-        targetApiId: scanTargetApi.id
-      });
+      // console.log('🔍 API Type Detection:', { 
+      //   isImportedApi, 
+      //   isRegularApi, 
+      //   targetApiId: scanTargetApi.id
+      // });
 
       // Extract api_name based on API type
       let apiName;
@@ -1874,7 +1830,7 @@ const fetchPastScans = async (api) => {
         throw new Error(`API not found in either imported or regular APIs. ID: ${scanTargetApi.id}`);
       }
 
-      console.log('🔍 Extracted values:', { apiName, scanProfile });
+      //console.log('🔍 Extracted values:', { apiName, scanProfile });
 
       if (!apiName) {
         throw new Error(`Missing required data: apiName=${apiName}`);
@@ -1883,14 +1839,16 @@ const fetchPastScans = async (api) => {
       showMessage(`🔍 Starting enhanced scan for "${apiName}"...`, "info");
 
       // 🚀 STEP 2: Start Scan  
-      console.log('🚀 Step 2: Starting scan...');
+      //console.log('🚀 Step 2: Starting scan...');
+      const user_id = localStorage.getItem('currentUser_id') || 'default_user'; 
       const startScanResponse = await fetch("/api/scan/start", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         credentials: "include",
         body: JSON.stringify({ 
-          api_name: apiName,
+          api_id: scanTargetApi.api_id || scanTargetApi.id,
           scan_profile: scanProfile || "OWASP_API_10",
+          user_id: user_id
         }),
       });
 
@@ -1907,20 +1865,17 @@ const fetchPastScans = async (api) => {
         throw new Error(startScanResult.message || "Failed to start scan");
       }
 
-      console.log('✅ Step 2 Complete - Scan started:', startScanResult);
 
-      // 💾 STEP 3: Store scan_id and update state
       const returnedScanId = startScanResult.data?.scan_id || startScanResult.scan_id;
       let scanId = returnedScanId;
-      console.log('📋 Scan ID received:', scanId);
+
       if (!returnedScanId) {
         throw new Error('No scan_id returned from start scan');
       }
 
-      console.log('💾 Step 3: Storing scan_id:', returnedScanId);
       setCurrentScanId(returnedScanId);
       
-      // Update the correct state array based on API type
+
       if (isImportedApi) {
         setImportedApis(prev => prev.map(api => 
           api.id === scanTargetApi.id ? {
@@ -1943,11 +1898,11 @@ const fetchPastScans = async (api) => {
       showMessage(`🔄 Enhanced scan started with ID: ${returnedScanId}. Monitoring with realistic progress...`, "info");
 
       // 📊 STEP 4: Start enhanced results monitoring with progress simulation
-      console.log('📊 Step 4: Starting enhanced results monitoring...');
+      //console.log('📊 Step 4: Starting enhanced results monitoring...');
       startEnhancedScanMonitoring(returnedScanId, scanTargetApi, isImportedApi, isRegularApi, apiName);
 
     } catch (error) {
-      console.error("❌ Enhanced scan workflow failed:", error);
+      //console.error("❌ Enhanced scan workflow failed:", error);
       setScanError(error.message || "Scan failed");
       showMessage(`❌ Scan failed: ${error.message}`, "error");
       setScanLoading(false);
@@ -1965,7 +1920,7 @@ const fetchPastScans = async (api) => {
         showMessage(`🔄 ${progressInfo.stepLabel} (${progressInfo.progress}%)`, "info");
       },
       onStepComplete: (step) => {
-        console.log(`✅ Completed: ${step.label}`);
+        //console.log(`✅ Completed: ${step.label}`); 
       },
       onComplete: (results) => {
         handleEnhancedScanComplete(scanId, results, targetApi, isImportedApi, isRegularApi, apiName);
@@ -1976,11 +1931,12 @@ const fetchPastScans = async (api) => {
     });
   };
 
-  const handleEnhancedScanComplete = (scanId, results, targetApi, isImportedApi, isRegularApi, apiName) => {
+const handleEnhancedScanComplete = (scanId, results, targetApi, isImportedApi, isRegularApi, apiName) => {
     console.log('✅ Enhanced scan completed with results:', results);
     
     setDetailedResults(results);
-    const vulnCount = results?.result?.length || results?.vulnerabilities?.length || 0;
+    // FIX: Add 'results?.results?.length' to correctly count vulnerabilities from the backend payload.
+    const vulnCount = results?.result?.length || results?.vulnerabilities?.length || results?.results?.length || 0;
     setScanResult(`✅ Scan completed! Found ${vulnCount} vulnerabilities.`);
     setScanLoading(false);
     setCurrentScanId(null);
@@ -2101,30 +2057,34 @@ const fetchPastScans = async (api) => {
     }
   }, []);
 
-  const handleViewDetails = async (endpoint) => {
-    setDetailLoading(true);
-    setDetailError('');
-    try {
-      const details = await fetchEndpointDetails({
-        endpoint_id: endpoint.id,
-        path: endpoint.path,
-        method: endpoint.method
-      });
-      setEndpointDetail(details);
-      setDetailModalOpen(true);
-    } catch (e) {
-      setDetailError(e.message);
-    }
-    setDetailLoading(false);
-  };
+const handleViewDetails = async (endpoint) => {
+  setDetailLoading(true);
+  setDetailError('');
+  try {
+    const details = await fetchEndpointDetails({
+      endpoint_id: endpoint.id,
+      path: endpoint.path,
+      method: endpoint.method,
+      api_id: selectedApiForEndpoints?.api_id || selectedApiForEndpoints?.id // Add this line
+    });
+    setEndpointDetail(details);
+    setDetailModalOpen(true);
+  } catch (e) {
+    setDetailError(e.message);
+  }
+  setDetailLoading(false);
+};
 
-  const handleViewEndpoints = async (api) => {
+const handleViewEndpoints = async (api) => {
     setEndpointsLoading(true);
     setEndpointsError('');
     setSelectedApiForEndpoints(api);
 
     try {
       const id = api.api_id || api.id;
+      // Fetch tags specifically for this API
+      await refreshApiTags(id); 
+
       const endpointsData = await fetchApiEndpoints(id);
       
       let endpoints = endpointsData;
@@ -2140,7 +2100,6 @@ const fetchPastScans = async (api) => {
       }));
       
       setSelectedApiEndpoints(endpointsWithTags);
-      await refreshAllTags();
       
     } catch (err) {
       setEndpointsError(err.message || "Failed to load endpoints");
@@ -2380,6 +2339,7 @@ const fetchPastScans = async (api) => {
   }, [processFile]);
 
   const handleImportAPISubmit = async (e) => {
+    //console.log("asdasdsa: ", userId);
     e.preventDefault();
     setImportLoading(true);
     setImportError("");
@@ -2392,6 +2352,7 @@ const fetchPastScans = async (api) => {
     }
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("user_id", userId);
 
     try {
       const res = await fetch("/api/import", {
@@ -2415,7 +2376,7 @@ const fetchPastScans = async (api) => {
         throw new Error("Import response missing API ID");
       }
 
-      console.log('Import successful:', { filename, api_id });
+      //console.log('Import successful:', { filename, api_id });
       
       // Add to imported APIs list instead of regular APIs
       const newImportedApi = {
@@ -2431,7 +2392,7 @@ const fetchPastScans = async (api) => {
         vulnerabilitiesFound: 0
       };
       
-      console.log('Adding new imported API:', newImportedApi);
+      //console.log('Adding new imported API:', newImportedApi);
       
       setImportedApis(prev => [...prev, newImportedApi]);
       showMessage(`✅ Imported API "${filename}" successfully! You can now scan it.`, "success");
@@ -2464,96 +2425,42 @@ const safeParseJSON = (maybeJson) => {
 
 
 
-  const handleSaveApi = useCallback(async () => {
-    try {
-      if (!currentApi) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      if (!currentApi.name?.trim()) {
-        setError('API name is required');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!currentApi.baseUrl?.trim()) {
-        setError('Base URL is required');
-        setIsLoading(false);
-        return;
-      }
+const handleSaveApi = () => {
+  if (!currentApi || !currentApi.name || !currentApi.baseUrl) {
+    alert("Please fill out Name and Base URL before saving.");
+    return;
+  }
 
-      let apiToSave = { ...currentApi };
-
-      if (pendingFile) {
-        try {
-          showMessage(`📤 Uploading file "${pendingFile.name}"...`, 'info');
-          
-          const formData = new FormData();
-          formData.append("file", pendingFile);
-
-          const res = await fetch("/api/import", {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-          });
-          
-          const result = await res.json();
-          
-          if (!res.ok || !result.success) {
-            throw new Error(result.message || "Upload failed");
-          }
-
-          const { filename, api_id } = result.data;
-          
-          apiToSave = {
-            ...apiToSave,
-            api_id: api_id,
-            filename: filename
-          };
-
-          showMessage(`✅ File "${filename}" uploaded successfully!`, "success");
-        } catch (uploadError) {
-          setError(`File upload failed: ${uploadError.message}`);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (apiToSave.id) {
-        setApis(prevApis => 
-          prevApis.map(api => 
-            api.id === apiToSave.id ? { 
-              ...apiToSave, 
-              lastScanned: api.lastScanned || 'Never' 
-            } : api
-          )
-        );
-        showMessage(`✅ API "${apiToSave.name}" updated successfully!`, 'success');
-      } else {
-        const newApi = {
-          ...apiToSave,
-          id: Math.max(...apis.map(a => a.id), 0) + 1,
-          lastScanned: 'Never',
-          scanCount: 0,
-          lastScanResult: 'Pending'
-        };
-        setApis(prevApis => [...prevApis, newApi]);
-        showMessage(`✅ API "${apiToSave.name}" added successfully!`, 'success');
-      }
-      
-      setIsModalOpen(false);
-      setCurrentApi(null);
-      setPendingFile(null);
-    } catch (error) {
-      console.error('Error saving API:', error);
-      setError('Failed to save API. Please try again.');
-    } finally {
-      setIsLoading(false);
+  setImportedApis(prev => {
+    
+    if (currentApi.id) {
+      return prev.map(api =>
+        api.id === currentApi.id ? { ...api, ...currentApi } : api
+      );
     }
-  }, [currentApi, apis, showMessage, pendingFile]);
+   
+    return [
+      ...prev,
+      {
+        id: Date.now(),
+        filename: currentApi.name || `api_${Date.now()}.json`,
+        api_id: `api_${Date.now()}`,
+        baseUrl: currentApi.baseUrl,
+        description: currentApi.description,
+        uploadDate: new Date().toLocaleDateString(),
+        lastScanned: "Never",
+        scanStatus: "Not Scanned",
+        vulnerabilitiesFound: 0,
+        status: currentApi.status || "Active"
+      }
+    ];
+  });
+
+  setIsModalOpen(false);
+  setCurrentApi(null);
+};
+
+
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -2799,7 +2706,7 @@ const safeParseJSON = (maybeJson) => {
                       <div className="api-card-actions">
                         <button
                           onClick={() => {
-                            console.log('Selected imported API for scan:', importedApi);
+                            //console.log('Selected imported API for scan:', importedApi);
                             setScanTargetApi(importedApi);
                             setIsScanProfileModalOpen(true);
                           }}
@@ -2839,6 +2746,17 @@ const safeParseJSON = (maybeJson) => {
                         </button>
 
                         <button
+                          onClick={() => {
+                            setCurrentApi(importedApi); 
+                            setIsModalOpen(true);         
+                          }}
+                          className="action-btn edit"
+                          title="Edit API"
+                          style={{ background: "#3b82f6", color: "white" }}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
                           onClick={() => handleDeleteImportedApi(importedApi)}
                           className="action-btn delete"
                           title="Delete Imported API"
@@ -2854,96 +2772,7 @@ const safeParseJSON = (maybeJson) => {
             </section>
           )}
 
-          <section className="manage-apis-top">
-            <h2 className="section-title">Your APIs</h2>
-            <button onClick={handleAddApi} className="add-api-btn">
-              ➕ Add API
-            </button>
-          </section>
-
-          <section 
-            id="apis-list" 
-            className={`apis-list-section animate-on-scroll ${isVisible['apis-list'] ? 'visible' : ''}`}
-          >
-            <div className="apis-list">
-              {apis.length > 0 ? (
-                <>
-                  <div className="apis-list-header">
-                    <h3 className="list-title">🔗 API Endpoints</h3>
-                    <p className="list-description">Manage and monitor your API security</p>
-                  </div>
-                  <div className="apis-grid">
-                    {apis.map((api, index) => (
-                      <div key={api.id} className="api-card" style={{animationDelay: `${index * 0.1}s`}}>
-                        <div className="api-card-header">
-                          <h4 className="api-name">{api.name}</h4>
-                          <span className={`api-status ${api.status.toLowerCase()}`}>
-                            {api.status}
-                          </span>
-                        </div>
-                        
-                        <div className="api-url">{api.baseUrl}</div>
-                        
-                        {api.description && (
-                          <p className="api-description">{api.description}</p>
-                        )}
-                        
-                        <div className="api-meta">
-                          <span>Last scanned: {api.lastScanned}</span>
-                          <span>Scans: {api.scanCount}</span>
-                        </div>
-
-                        <div className="api-card-actions">
-                          <button
-                            onClick={() => {
-                              setScanTargetApi(api);
-                              setIsScanProfileModalOpen(true);
-                            }}
-                            className="action-btn scan"
-                            title="Select Scan Profile"
-                          >
-                            ⚙️ Select Profile
-                          </button>
-
-                          <button 
-                            onClick={() => handleEditApi(api)} 
-                            className="action-btn edit"
-                            title="Edit API"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteApi(api)} 
-                            className="action-btn delete"
-                            title="Delete API"
-                          >
-                            🗑️ Delete
-                          </button>
-                          <button
-                            onClick={() => handleViewEndpoints(api)}
-                            className="action-btn endpoints"
-                            title="View Endpoints"
-                            style={{ background: "#6366f1", color: "#fff" }}
-                          >
-                            📂 Tags
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="no-apis">
-                  <div className="no-apis-icon">🔗</div>
-                  <h3>No APIs Found</h3>
-                  <p>Get started by adding your first API endpoint to begin security scanning.</p>
-                  <button onClick={handleAddApi} className="add-api-btn">
-                    ➕ Add Your First API
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
+          
         </main>
 
         {/* Enhanced Scan Progress Modal */}
@@ -3072,9 +2901,9 @@ style={{
               <button
                 className="action-btn"
 onClick={() => {
-  console.log('[DEBUG] per-row View Result clicked for scan:', scan);
+  //console.log('[DEBUG] per-row View Result clicked for scan:', scan);
   // show which API is driving this modal
-  console.log('[DEBUG] scanSelectionApi at time of View Result:', scanSelectionApi);
+  //console.log('[DEBUG] scanSelectionApi at time of View Result:', scanSelectionApi);
 
   if (!scan.results || !scan.results.length) {
     showMessage('No detailed results available for that scan.', 'info');
@@ -3097,8 +2926,8 @@ onClick={() => {
     [scan.scanId]: parsed
   };
 
-  console.log('[DEBUG] payload passed to ScanResultsModal (per-row):', payload);
-  console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
+  // console.log('[DEBUG] payload passed to ScanResultsModal (per-row):', payload);
+  // console.log('[DEBUG] setting scanTargetApi to:', scanSelectionApi);
 
   setDetailedResults(payload);
   setScanTargetApi(scanSelectionApi); // use saved API object (not local importedApi variable)
@@ -3490,13 +3319,14 @@ onClick={() => {
                           <div className="endpoint-summary">{ep.summary || ep.description}</div>
                         ) : null}
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                         <EndpointTagEditor 
-                          endpoint={ep}
-                          allTags={allTags}
-                          tagsLoading={tagsLoading}
-                          tagsError={tagsError}
-                          onRefreshTags={refreshAllTags} 
-                        />
+                          <EndpointTagEditor 
+                            endpoint={ep}
+                            allTags={allTags}
+                            tagsLoading={tagsLoading}
+                            tagsError={tagsError}
+                            api_id={selectedApiForEndpoints?.api_id} // Pass the api_id here
+                            onRefreshTags={refreshApiTags} // Use the new refresh function
+                          />
                           <button
                             onClick={() => handleViewDetails(ep)}
                             className="action-btn details"

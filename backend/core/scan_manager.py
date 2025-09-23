@@ -1,57 +1,137 @@
-# Manage your VulnerabilityScanner objects
-# Store each VulnerabilityScanner in a dictionare, vulnScanners["profileName"] to access VulnerabilityScanner object
+# Manages the creation, execution, and retrieval of scans.
+# This version re-introduces the `scans` and `scan_results` tables.
+
+import uuid
+import json
 from enum import Enum
-from core.result_manager import ResultManager
 from core.vulnerability_scanner import VulnerabilityScanner
+from core.db_manager import db_manager
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+# FIX: Import server_error to handle exceptions correctly
+from utils.query import server_error
 
 class ScanProfiles(Enum):
     DEFAULT = "OWASP API Top 10 Full Scan"
 
 class ScanManager:
     def __init__(self, api_client):
-        self.vulnScanners = []
-        self.resultManager = ResultManager()
         self.APIClient = api_client
-        self.scan_profile = ScanProfiles.DEFAULT #force to default 
-        self.loaded_profiles = []
+        self.vulnScanners = [VulnerabilityScanner(api_client, ScanProfiles.DEFAULT)]
     
-    def createScan(self, scan_profile):
-        for profile in self.loaded_profiles:
-            if profile is scan_profile:
-                print("Profile already loaded")
-                return
-
-        self.loaded_profiles.append(scan_profile)        
-        scanner = VulnerabilityScanner(self.APIClient, scan_profile)
-        self.vulnScanners.append(scanner)
-
-    def runScan(self, scan_profile):
-        id = 0
-        print("Starting new Scan")
+    def _start_scan_entry(self, api_id: str, user_id: str) -> Optional[str]:
+        """Creates a record in the 'scans' table."""
         try:
-            for scanner in self.vulnScanners:
-                print("Running api test")
-                result = scanner.run_tests()
-                id = self.resultManager.add_result(result)
+            scan_id = uuid.uuid4().hex
+            scan_data = {
+                "id": scan_id,
+                "api_id": api_id,
+                "user_id": user_id,
+                "status": "running",
+                "started_at": datetime.now().isoformat()
+            }
+            
+            result = db_manager.insert("scans", scan_data)
+            if result:
+                print(f"Created new scan entry with ID: {scan_id}")
+                return scan_id
+            
+            print("Failed to create scan entry in database.")
+            return None
+                
         except Exception as e:
-            return str(e)
+            print(f"Error creating scan entry: {e}")
+            return None
 
-        return id
+    def _save_scan_results(self, scan_id: str, results: List[Dict[str, Any]]):
+        """Bulk-inserts all scan findings into the 'scan_results' table."""
+        if not results:
+            print("No vulnerabilities found to save.")
+            return
 
-    def get_all_scans(self):
-        return self.resultManager.get_all_results()
-
-    def get_scan(self, id):
         try:
-            return self.resultManager.get_result(id)
-        except KeyError:
-            return -1
+            db_manager.insert("scan_results", results)
+            print(f"Successfully saved {len(results)} findings for scan {scan_id}.")
+        except Exception as e:
+            print(f"Error bulk-saving scan results: {e}")
 
-    def reset_all_flags(self):
-        print("reset all flags")
+    def _complete_scan_entry(self, scan_id: str):
+        """Updates the scan record to 'completed' status."""
+        try:
+            update_data = {
+                "status": "completed",
+                "completed_at": datetime.now().isoformat()
+            }
+            db_manager.update("scans", update_data, {"id": scan_id})
+            print(f"Scan {scan_id} marked as completed.")
+        except Exception as e:
+            print(f"Error completing scan entry {scan_id}: {e}")
 
-    def reset_endpoint_flags(self, endpoint_id):
-        print("reset flags for a particular endpoint")
+    def run_scan(self, api_id: str, user_id: str) -> Optional[str]:
+        """Runs a complete scan and records it in the database."""
+        print(f"Starting new scan for API ID: {api_id}")
+        scan_id = self._start_scan_entry(api_id, user_id)
+        if not scan_id:
+             # FIX: Correctly call server_error without 'self'
+            return None
+        
+        try:
+            # Run the actual vulnerability tests
+            all_results_for_db = []
+            for scanner in self.vulnScanners:
+                print(f"Running tests for profile: {scanner.scanProfile.value}")
+                list_of_scan_results_list = scanner.run_tests()
+                
+                # Flatten the list and prepare results for DB insertion
+                for result_list in list_of_scan_results_list:
+                    if result_list:
+                        for scan_result_obj in result_list:
+                             all_results_for_db.append(scan_result_obj.to_db_dict(scan_id))
 
-    def removeScan(self):
-        return self.resultManager.remove_result(id)
+            # Save the consolidated results and complete the scan
+            self._save_scan_results(scan_id, all_results_for_db)
+            self._complete_scan_entry(scan_id)
+            
+            return scan_id
+            
+        except Exception as e:
+            print(f"An error occurred during run_scan: {e}")
+            try:
+                # Mark as failed if something goes wrong mid-scan
+                db_manager.update("scans", {"status": "failed"}, {"id": scan_id})
+            except Exception as fail_e:
+                print(f"Could not even mark scan as failed: {fail_e}")
+            return None
+
+    def get_scan_details(self, scan_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific scan and its associated results."""
+        try:
+            scan_data = db_manager.select("scans", filters={"id": scan_id})
+            if not scan_data:
+                return None
+            
+            results_data = db_manager.select("scan_results", filters={"scan_id": scan_id})
+            
+            # Parse JSONB fields before returning
+            for result in results_data:
+                if result.get("evidence") and isinstance(result["evidence"], str):
+                    result["evidence"] = json.loads(result["evidence"])
+                if result.get("affected_params") and isinstance(result["affected_params"], str):
+                    result["affected_params"] = json.loads(result["affected_params"])
+
+            return {
+                "scan_info": scan_data[0],
+                "results": results_data
+            }
+        except Exception as e:
+            print(f"Error getting scan details: {e}")
+            return None
+
+    def get_all_api_scans(self, api_id: str) -> List[Dict[str, Any]]:
+        """Get all scan records for a specific API."""
+        try:
+            return db_manager.select("scans", filters={"api_id": api_id})
+        except Exception as e:
+            print(f"Error retrieving scans: {e}")
+            return []
+

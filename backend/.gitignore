@@ -9,3 +9,13 @@
 ignore.md
 owasptop10.md
 legacy.md
+spdb.py
+tables.txt
+db_testing.py
+db_api.py
+db_backup.py
+backups/*
+Backup/*
+db_testing_2.txt
+db_testing.txt
+notes.md

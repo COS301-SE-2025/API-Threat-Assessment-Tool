@@ -1,4 +1,4 @@
-// index.js - Enhanced with user profile and preferences endpoints + Commands.MD compliance
+// index.js - Enhanced with user profile and preferences endpoints + Commands.MD compliance + Google OAuth
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -18,7 +18,7 @@ const nodemailer = require('nodemailer');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 if (!supabaseUrl || !supabaseKey) {
-  console.error('⚠ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
+  console.error('⚠️ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -278,7 +278,7 @@ async function pickTransport() {
   const PASS   = process.env.SMTP_PASS;                     
   if (PASS) {
     try {
-      _tx = nodemailer.createTransport({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
+      _tx = nodemailer.createTransporter({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
       await _tx.verify();
       _label = `smtp:${HOST}:${PORT}`;
       console.log(`📧 using SMTP from .env (${_label})`);
@@ -291,7 +291,7 @@ async function pickTransport() {
 
   // optional dev fallback incase email fails
   try {
-    const dev = nodemailer.createTransport({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
+    const dev = nodemailer.createTransporter({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
     await dev.verify();
     _tx = dev; _label = 'dev:1025';
     console.log('📧 using transport: dev1025');
@@ -314,7 +314,7 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
       <p><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Reset password</a></p>
       <p>Or copy this link:</p>
       <p><a href="${resetUrl}">${resetUrl}</a></p>
-      <hr><p>If you didn’t request this, ignore this email.</p>
+      <hr><p>If you didn't request this, ignore this email.</p>
     </div>`;
 
   const tx = await pickTransport();
@@ -322,7 +322,7 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
     try {
       console.log(`[MAIL] attempting via ${_label} | from=${FROM_ADDR} to=${to}`);
       const info = await tx.sendMail({ from: FROM_ADDR, to, subject, text, html });
-      // Nodemailer always returns an info object — log the useful bits to see if it sends successfully:
+      // Nodemailer always returns an info object – log the useful bits to see if it sends successfully:
       console.log('[MAIL] sent', {
         messageId: info.messageId,
         accepted: info.accepted,
@@ -403,7 +403,7 @@ const startEngine = () => {
     
     engineStarting = true;
     console.log('🚀 Starting Python engine...');
-    console.log(`📁 Working directory: ${path.join(process.cwd(), '../backend')}`);
+    console.log(`📍 Working directory: ${path.join(process.cwd(), '../backend')}`);
     
     engineProcess = spawn('python', ['-u', 'main.py'], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -426,7 +426,7 @@ const startEngine = () => {
     
     engineProcess.stderr.on('data', (data) => {
       const error = data.toString();
-      console.error(`⚠ Engine stderr: ${error.trim()}`);
+      console.error(`⚠️ Engine stderr: ${error.trim()}`);
     });
     
     engineProcess.on('spawn', () => {
@@ -440,7 +440,7 @@ const startEngine = () => {
     });
     
     engineProcess.on('error', (err) => {
-      console.error(`⚠ Failed to start engine: ${err.message}`);
+      console.error(`⚠️ Failed to start engine: ${err.message}`);
       engineStarting = false;
       reject(err);
     });
@@ -504,14 +504,14 @@ const sendToEngine = async (request) => {
         
         resolve(response);
       } catch (err) {
-        console.error(`⚠ Failed to parse response: ${err.message}`);
+        console.error(`⚠️ Failed to parse response: ${err.message}`);
         reject(new Error('Failed to parse engine response'));
       }
     });
 
     client.on('error', (err) => {
       const elapsed = Date.now() - startTime;
-      console.error(`⚠ Engine connection error after ${elapsed}ms:`, err.message);
+      console.error(`⚠️ Engine connection error after ${elapsed}ms:`, err.message);
       reject(new Error(`Engine connection failed: ${err.message}`));
     });
 
@@ -534,6 +534,7 @@ app.get('/', (req, res) => {
       health: 'GET /',
       signup: 'POST /api/auth/signup',
       login: 'POST /api/auth/login',
+      googleLogin: 'POST /api/auth/google-login', // NEW: Google OAuth endpoint
       logout: 'POST /api/auth/logout',
       profile: 'GET /api/auth/profile',
       // User management
@@ -1139,6 +1140,198 @@ app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res
     sendError(res, 'Login error', err.message, 500);
   }
 });
+
+// ==========================================================
+// NEW: GOOGLE OAUTH LOGIN ENDPOINT
+// ==========================================================
+
+app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
+  try {
+    const {
+      email,
+      firstName,
+      lastName,
+      name,
+      profilePicture,
+      googleId,
+      provider = 'google'
+    } = req.body;
+
+    // Validate required fields
+    if (!email || !googleId) {
+      return sendError(res, 'Missing required Google user data', null, 400);
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return sendError(res, 'Invalid email format', null, 400);
+    }
+
+    console.log('Google OAuth login attempt:', { email, googleId: googleId.substring(0, 10) + '...' });
+
+    // Check if user exists by email
+    const { data: existingUsers, error: searchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email.trim().toLowerCase());
+
+    if (searchError) {
+      console.error('User search error:', searchError);
+      return sendError(res, 'Database error during user lookup', searchError.message, 500);
+    }
+
+    let user;
+
+    if (existingUsers && existingUsers.length > 0) {
+      // User exists - update Google info and last login
+      user = existingUsers[0];
+      
+      const updateData = {
+        google_id: googleId,
+        auth_provider: provider,
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Update profile picture if provided
+      if (profilePicture) {
+        updateData.profile_picture = profilePicture;
+      }
+
+      // Update names if they weren't set before
+      if (!user.first_name && firstName) {
+        updateData.first_name = firstName.trim();
+      }
+      if (!user.last_name && lastName) {
+        updateData.last_name = lastName.trim();
+      }
+
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id)
+        .select('*')
+        .single();
+
+      if (updateError) {
+        console.error('User update error:', updateError);
+        return sendError(res, 'Failed to update user', updateError.message, 500);
+      }
+
+      user = updatedUser;
+      console.log('Updated existing user for Google OAuth');
+
+    } else {
+      // Create new user from Google data
+      const newUserId = crypto.randomUUID();
+      const userData = {
+        id: newUserId,
+        email: email.trim().toLowerCase(),
+        first_name: firstName ? firstName.trim() : '',
+        last_name: lastName ? lastName.trim() : '',
+        username: email.split('@')[0], // Generate username from email
+        profile_picture: profilePicture || '',
+        google_id: googleId,
+        auth_provider: provider,
+        email_confirmed: true, // Google emails are verified
+        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Random password
+        created_at: new Date().toISOString(),
+        last_login: new Date().toISOString()
+      };
+
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([userData])
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('User creation error:', createError);
+        
+        // Handle duplicate username
+        if (createError.code === '23505' && createError.message.includes('username')) {
+          // Try with a unique username
+          userData.username = `${email.split('@')[0]}_${Date.now()}`;
+          
+          const { data: retryUser, error: retryError } = await supabase
+            .from('users')
+            .insert([userData])
+            .select('*')
+            .single();
+
+          if (retryError) {
+            return sendError(res, 'Failed to create user account', retryError.message, 500);
+          }
+          user = retryUser;
+        } else {
+          return sendError(res, 'Failed to create user account', createError.message, 500);
+        }
+      } else {
+        user = newUser;
+      }
+
+      console.log('Created new user for Google OAuth');
+    }
+
+    // Generate JWT token (same as regular login)
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not configured');
+      return sendError(res, 'Server configuration error', null, 500);
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' } // Longer expiry for OAuth users
+    );
+
+    // Log successful login
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: user.id,
+          action: 'google_login',
+          description: 'User logged in via Google OAuth',
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent'),
+          metadata: { provider, googleId: googleId.substring(0, 10) + '...' }
+        }]);
+    } catch (logError) {
+      console.warn('Failed to log Google login activity:', logError);
+    }
+
+    // Return user data (same format as regular login)
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      username: user.username,
+      profilePicture: user.profile_picture,
+      authProvider: user.auth_provider,
+      emailConfirmed: user.email_confirmed,
+      createdAt: user.created_at,
+      lastLogin: user.last_login
+    };
+
+    sendSuccess(res, 'Google login successful', {
+      token,
+      user: userResponse
+    });
+
+  } catch (error) {
+    console.error('Google login error:', error);
+    sendError(res, 'Google login failed', error.message, 500);
+  }
+});
+
+// ==========================================================
+// REST OF EXISTING ROUTES CONTINUE HERE...
+// ==========================================================
 
 app.post('/api/auth/logout', async (req, res) => {
   try {
@@ -2333,11 +2526,12 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
-//////////////
-//Forget Password
-//////////////
-// POST /api/auth/forgot-password
 
+//////////////
+// Forget Password
+//////////////
+
+// POST /api/auth/forgot-password
 app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
   const generic = 'If that account exists, we sent a reset link.';
   try {
@@ -2345,7 +2539,6 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
     if (!email) return sendSuccess(res, generic);
 
     const identifier = String(email).trim().toLowerCase();
-
 
     const { data: user, error } = await supabase
       .from('users')
@@ -2357,10 +2550,10 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
       const token = newToken();
       saveResetToken(user.id, token);
 
-      const origin = (req.get('FRONTEND_URL') || 'http://localhost:3002').replace(/\/+$/, '');
+      const origin = (req.get('FRONTEND_URL') || 'http://localhost:3000').replace(/\/+$/, '');
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
       // Dev "send": log the link 
-   await sendResetEmail(user.email, resetUrl);
+      await sendResetEmail(user.email, resetUrl);
     } else if (error) {
       console.warn('forgot-password lookup:', error.message);
     }
@@ -2373,11 +2566,9 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
   }
 });
 
-
-
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {
-try {
+  try {
     const { token, password } = req.body || {};
     if (!token || !password) {
       return sendError(res, 'token_and_password_required', null, 400);
@@ -2395,7 +2586,7 @@ try {
 
     if (uerr || !user) return sendError(res, 'invalid_or_expired_token', null, 400);
 
- const hash = await bcrypt.hash(password, 12); 
+    const hash = await bcrypt.hash(password, 12); 
 
     const { error: upErr } = await supabase
       .from('users')
@@ -2413,6 +2604,7 @@ try {
     return sendError(res, 'Internal server error', err.message, 500);
   }
 });
+
 // 404 handler
 app.use('*', (req, res) => {
   sendError(res, 'Route not found', { path: req.originalUrl, method: req.method }, 404);
@@ -2453,6 +2645,8 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`⚡ Engine will auto-start when needed`);
+    console.log(`📧 Email configured: ${_label}`);
+    console.log(`🔒 Google OAuth: ${supabaseUrl ? 'Enabled' : 'Disabled'}`);
   });
 }
 

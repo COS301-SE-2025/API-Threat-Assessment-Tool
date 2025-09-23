@@ -9,7 +9,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isLoading, isAuthenticated } = useAuth();
   
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

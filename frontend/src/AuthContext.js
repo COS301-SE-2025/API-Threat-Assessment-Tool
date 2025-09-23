@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const AuthContext = createContext();
 
-// Initialize Supabase client
+// Initialize Supabase client for Google OAuth only
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
@@ -12,8 +12,8 @@ let supabase = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: true,
-      persistSession: true,
+      autoRefreshToken: false,
+      persistSession: false,
       detectSessionInUrl: true
     }
   });
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('at_at_token') || '');
 
-  // Base API URL
+  // Base API URL - matches your backend
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Use the new user profile endpoint
+        // Use your existing profile endpoint
         const res = await axios.get(`${API_BASE_URL}/api/user/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -67,47 +67,61 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  // Handle Supabase auth state changes
+  // Check for Google OAuth session on app load
   useEffect(() => {
-    if (!supabase) return;
+    const checkOAuthSession = async () => {
+      if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Supabase auth event:', event);
+      try {
+        // Check URL for OAuth response
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
         
-        if (event === 'SIGNED_IN' && session) {
-          // Handle Google OAuth success
-          await handleSupabaseLogin(session);
-        } else if (event === 'SIGNED_OUT') {
-          // Handle logout if needed
-          console.log('Supabase session ended');
+        // Check for OAuth error
+        const error = urlParams.get('error') || hashParams.get('error');
+        if (error) {
+          console.error('OAuth error:', error);
+          return;
         }
-      }
-    );
 
-    return () => subscription?.unsubscribe();
+        // Check for access token
+        const accessToken = hashParams.get('access_token');
+        if (accessToken) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session && session.user) {
+            await handleGoogleOAuthSuccess(session.user);
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
+      } catch (error) {
+        console.error('OAuth session check error:', error);
+      }
+    };
+
+    checkOAuthSession();
   }, []);
 
   /**
-   * Handle Supabase Google OAuth login and exchange for JWT
+   * Handle successful Google OAuth and create/login user
    */
-  const handleSupabaseLogin = async (supabaseSession) => {
+  const handleGoogleOAuthSuccess = async (googleUser) => {
     try {
       setIsLoading(true);
 
-      // Extract user info from Supabase session
-      const { user: supabaseUser } = supabaseSession;
-      
-      // Send Supabase user data to your backend to create/login user and get JWT
-      const res = await axios.post(`${API_BASE_URL}/api/auth/google-oauth`, {
-        supabaseUserId: supabaseUser.id,
-        email: supabaseUser.email,
-        name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name,
-        firstName: supabaseUser.user_metadata?.given_name,
-        lastName: supabaseUser.user_metadata?.family_name,
-        profilePicture: supabaseUser.user_metadata?.avatar_url,
+      // Extract user data from Google
+      const userData = {
+        email: googleUser.email,
+        firstName: googleUser.user_metadata?.given_name || '',
+        lastName: googleUser.user_metadata?.family_name || '',
+        name: googleUser.user_metadata?.full_name || googleUser.user_metadata?.name,
+        profilePicture: googleUser.user_metadata?.avatar_url || '',
+        googleId: googleUser.id,
         provider: 'google'
-      });
+      };
+
+      // Send to your backend Google login endpoint
+      const res = await axios.post(`${API_BASE_URL}/api/auth/google-login`, userData);
 
       if (res.data.success) {
         const { token: newToken, user } = res.data.data;
@@ -115,34 +129,31 @@ export const AuthProvider = ({ children }) => {
         setToken(newToken);
         setCurrentUser(user);
 
-        // Sign out from Supabase since we only needed it for OAuth
+        // Clean up Supabase session
         await supabase.auth.signOut();
-        
+
         return { success: true, user };
       } else {
-        throw new Error(res.data.message || 'OAuth login failed');
+        throw new Error(res.data.message || 'Google login failed');
       }
     } catch (error) {
-      console.error('Supabase login error:', error);
-      // Sign out from Supabase on error
+      console.error('Google OAuth backend error:', error);
+      // Clean up Supabase session on error
       if (supabase) await supabase.auth.signOut();
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Google login failed'
-      };
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   /**
-   * Initiate Google OAuth login through Supabase
+   * Initiate Google OAuth login
    */
   const loginWithGoogle = async () => {
     if (!supabase) {
       return {
         success: false,
-        error: 'Google login not configured. Please check Supabase settings.'
+        error: 'Google login not configured. Please check environment variables.'
       };
     }
 
@@ -152,10 +163,10 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
         },
       });
@@ -164,7 +175,7 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-      // The actual login handling will happen in the onAuthStateChange callback
+      // OAuth will redirect, so this won't execute immediately
       return { success: true, data };
     } catch (error) {
       console.error('Google OAuth initiation error:', error);
@@ -179,6 +190,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (identifier, password) => {
     setIsLoading(true);
     try {
+      // Use your existing login endpoint structure
       const res = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         [identifier.includes('@') ? 'email' : 'username']: identifier,
         password
@@ -208,6 +220,7 @@ export const AuthProvider = ({ children }) => {
   const signup = async (userData) => {
     setIsLoading(true);
     try {
+      // Use your existing signup endpoint
       const res = await axios.post(`${API_BASE_URL}/api/auth/signup`, userData);
       
       if (res.data.success) {
@@ -428,8 +441,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasPermission = (permission) => {
-    // Placeholder for role-based permissions
-    // For now, all authenticated users have all permissions
     return isAuthenticated();
   };
 
@@ -445,7 +456,7 @@ export const AuthProvider = ({ children }) => {
 
     // Authentication methods
     login,
-    loginWithGoogle, // New Google OAuth method
+    loginWithGoogle, // Google OAuth method
     signup,
     logout,
     isAuthenticated,

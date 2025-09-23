@@ -798,7 +798,6 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
 
   const vulnerabilities = results.result || results.vulnerabilities || results.results || [];
   
-  // Group vulnerabilities by type
   const groupedVulns = vulnerabilities.reduce((acc, vuln) => {
     const type = vuln.vulnerability_name;
     if (!acc[type]) {
@@ -827,6 +826,7 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
   };
 
   const exportToPDF = () => {
+    // This function remains the same
     const printWindow = window.open('', '_blank');
     const htmlContent = `
       <!DOCTYPE html>
@@ -843,7 +843,7 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
             .severity-low { border-left: 4px solid #10b981; }
             .vuln-title { font-weight: bold; margin-bottom: 10px; }
             .vuln-details { margin-bottom: 8px; }
-            .evidence { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+            .evidence { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; }
           </style>
         </head>
         <body>
@@ -872,7 +872,7 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
                 <div class="vuln-details"><strong>Severity:</strong> ${vuln.severity} (CVSS: ${vuln.cvss_score})</div>
                 <div class="vuln-details"><strong>Description:</strong> ${vuln.description}</div>
                 <div class="vuln-details"><strong>Recommendation:</strong> ${vuln.recommendation}</div>
-                ${vuln.evidence ? `<div class="vuln-details"><strong>Evidence:</strong></div><div class="evidence">${vuln.evidence}</div>` : ''}
+                ${vuln.evidence ? `<div class="vuln-details"><strong>Evidence:</strong></div><div class="evidence">${typeof vuln.evidence === 'object' ? JSON.stringify(vuln.evidence, null, 2) : vuln.evidence}</div>` : ''}
               </div>
             `).join('')}
           `).join('')}
@@ -912,7 +912,7 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
               API: {apiName}
             </p>
           </div>
-<img src={logoImageW} alt="Company Logo" style={{ height: '80px', width: 'auto', marginLeft: '-20px' }} />
+          <img src={logoImageW} alt="Company Logo" style={{ height: '80px', width: 'auto', marginLeft: '-20px' }} />
         </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
@@ -1064,9 +1064,13 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
                           fontSize: '13px',
                           color: '#495057',
                           overflow: 'auto',
-                          whiteSpace: 'pre-wrap'
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all'
                         }}>
-                          {vuln.evidence}
+                          {/* FIX: Check if evidence is an object and stringify it if so */}
+                          {typeof vuln.evidence === 'object' 
+                            ? JSON.stringify(vuln.evidence, null, 2) 
+                            : vuln.evidence}
                         </pre>
                       </div>
                     )}
@@ -1105,7 +1109,6 @@ const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
     </div>
   );
 };
-
 // Enhanced Progress Modal Component
 const ScanProgressModal = ({ isOpen, onClose, progress, apiName }) => {
   if (!isOpen) return null;

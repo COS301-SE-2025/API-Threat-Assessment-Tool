@@ -13,27 +13,24 @@ logger = logging.getLogger(__name__)
 class DB_Manager:
     _instance = None
     _supabase: Client = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(DB_Manager, cls).__new__(cls)
-            cls._instance._initialize()
         return cls._instance
-    
-    def _initialize(self):
-        try:
+
+    @property
+    def supabase(self):
+        if self._supabase is None:
             load_dotenv()
             SUPABASE_URL = os.getenv("SUPABASE_URL")
             SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-            
             if not SUPABASE_URL or not SUPABASE_KEY:
                 raise ValueError("Supabase URL or KEY not found in environment variables")
-            
             self._supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
             logger.info("Supabase connection established successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize Supabase client: {e}")
-            raise
+        return self._supabase
+
     
     def insert(self, table_name: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
         """

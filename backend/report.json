@@ -1,0 +1,16 @@
+[
+    {
+        "vulnerability_name": "SQL Injection",
+        "description": "A SQL injection vulnerability was detected",
+        "severity": "High",
+        "owasp_category": "A01:2021",
+        "recommendation": "Use prepared statements"
+    },
+    {
+        "vulnerability_name": "Cross-Site Scripting",
+        "description": "A cross-site scripting vulnerability was detected",
+        "severity": "Medium",
+        "owasp_category": "A02:2021",
+        "recommendation": "Use input validation"
+    }
+]

@@ -2,7 +2,7 @@
 from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import logging
 from datetime import datetime
 
@@ -35,12 +35,28 @@ class DB_Manager:
             logger.error(f"Failed to initialize Supabase client: {e}")
             raise
     
-    def insert(self, table_name: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def insert(self, table_name: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
+        """
+        Inserts a single record or a list of records into the specified table.
+        - If data is a dict, performs a single insert.
+        - If data is a list of dicts, performs a bulk insert.
+        """
         try:
             result = self._supabase.table(table_name).insert(data).execute()
-            return result.data[0] if result.data else None
+            
+            # For a single insert, Supabase returns a list with one item.
+            # For a bulk insert, it returns a list of all inserted items.
+            if result.data:
+                # If the original data was a single dict, return just that dict.
+                if isinstance(data, dict):
+                    return result.data[0]
+                # If the original data was a list, return the list of results.
+                return result.data
+            return None
         except Exception as e:
-            logger.error(f"Error inserting into {table_name}: {e}")
+            # Log the table and the type of data that caused the error for better debugging.
+            data_type = "single record" if isinstance(data, dict) else "bulk records"
+            logger.error(f"Error inserting {data_type} into {table_name}: {e}")
             return None
     
     def select(self, table_name: str, columns: str = "*", filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:

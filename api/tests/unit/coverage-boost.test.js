@@ -378,4 +378,35 @@ describe('Coverage Boost Tests - Error Paths & Edge Cases', () => {
       expect(successful.length).toBeGreaterThan(requests.length * 0.8);
     });
   });
+
+  describe('New Endpoints Edge Cases', () => {
+    test('should handle missing scan_id in /api/scan/status', async () => {
+      const response = await request(app)
+        .get('/api/scan/status')
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Scan ID is required');
+    });
+
+    test('should handle invalid template_id in /api/templates/details', async () => {
+      const response = await request(app)
+        .get('/api/templates/details')
+        .query({ template_id: '' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Template ID is required');
+    });
+
+    test('should handle engine failure in /api/user/profile/get', async () => {
+      mockEngine.setErrorMode(true); // Assume mock has error mode
+      const response = await request(app)
+        .get('/api/user/profile/get')
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      mockEngine.setErrorMode(false);
+    });
+  });
 });

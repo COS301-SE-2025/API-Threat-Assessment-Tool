@@ -267,6 +267,11 @@ body, html {
   transform: translateX(-50%) scaleX(1);
 }
 
+/* ========================================
+   HEADER ALIGNMENT FIXES
+   ======================================== */
+
+/* Ensure all header action elements have consistent height */
 .header-actions {
   display: flex;
   align-items: center;
@@ -274,6 +279,163 @@ body, html {
   flex-shrink: 0;
   min-width: 250px;
   justify-content: flex-end;
+  height: 44px; /* Fixed height for consistent alignment */
+}
+
+/* Standardize all interactive elements to same height */
+.theme-toggle,
+.login-link,
+.signup-btn {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  transition: var(--transition-all);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: var(--font-size-base);
+  line-height: 1;
+}
+
+.theme-toggle {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  width: 44px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  padding: 0; /* Remove padding, rely on fixed dimensions */
+}
+
+.theme-toggle:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: var(--primary-color);
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.login-link {
+  color: var(--text-secondary);
+  padding: 0 var(--spacing-lg);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  min-width: 80px;
+  background: transparent;
+}
+
+.login-link:hover {
+  color: var(--primary-color);
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-medium);
+}
+
+.signup-btn {
+  background: var(--primary-gradient);
+  color: var(--text-inverse);
+  font-weight: 600;
+  padding: 0 var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  min-width: 140px;
+}
+
+.signup-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-inverse);
+}
+
+/* Enhanced mobile responsive fixes */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    align-items: center;
+  }
+  
+  .logo-section {
+    min-width: auto;
+    justify-content: center;
+    order: 0;
+  }
+  
+  .landing-nav {
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0;
+    order: 2;
+    width: 100%;
+  }
+  
+  .header-actions {
+    min-width: auto;
+    justify-content: center;
+    order: 1;
+    width: auto;
+    gap: var(--spacing-lg);
+    height: 44px; /* Maintain consistent height on mobile */
+  }
+  
+  .login-link, .signup-btn {
+    min-width: 120px;
+    padding: 0 var(--spacing-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: var(--spacing-md);
+    flex-wrap: nowrap; /* Prevent wrapping on small screens */
+  }
+  
+  .login-link, .signup-btn {
+    min-width: 100px;
+    padding: 0 var(--spacing-md);
+    font-size: var(--font-size-sm);
+  }
+  
+  .theme-toggle {
+    width: 40px;
+    height: 40px;
+    font-size: var(--font-size-base);
+  }
+  
+  /* Adjust header actions height for smaller screens */
+  .header-actions {
+    height: 40px;
+  }
+  
+  .login-link,
+  .signup-btn {
+    height: 40px;
+  }
+}
+
+/* Focus states for better accessibility */
+.theme-toggle:focus,
+.login-link:focus,
+.signup-btn:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/* Ensure proper text alignment */
+.login-link,
+.signup-btn {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Fix any potential line-height issues */
+.header-actions * {
+  line-height: 1;
 }
 
 .theme-toggle {

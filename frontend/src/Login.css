@@ -174,20 +174,6 @@
   animation: themeTransition 0.4s ease-out;
 }
 
-/* Fixed: Correct selector for background image */
-.login-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: url('img/71fjyQJIHOL._AC_UF8941000_QL80_.jpg') no-repeat center center/cover !important;
-  filter: blur(5px);
-  z-index: -1;
-  animation: backgroundBlur 1s ease-out;
-  transition: filter 0.3s ease;
-}
 
 .dark-mode .login-container::before {
   filter: blur(5px) brightness(0.7);

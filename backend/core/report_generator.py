@@ -102,10 +102,12 @@
 from models.vulnerability_report import VulnerabilityReport
 from fpdf import FPDF
 import json
-
 class ReportGenerator:
     def __init__(self):
-        self.vuln_report = VulnerabilityReport()
+        this.vulnReport = ""
+
+    def create_Technical_Report():
+        print("do something")
 
     def create_technical_report(self, scan_results):
         technical_report = ""

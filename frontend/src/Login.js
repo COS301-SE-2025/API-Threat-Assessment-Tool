@@ -32,6 +32,34 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fixed: Better OAuth callback error handling
+  useEffect(() => {
+    // Check for OAuth errors in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+    
+    const oauthError = urlParams.get('error') || hashParams.get('error');
+    const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+    
+    if (oauthError) {
+      console.log('OAuth error detected:', oauthError, errorDescription);
+      
+      // Map OAuth errors to user-friendly messages
+      let errorMessage = 'Google sign-in failed. Please try again.';
+      if (oauthError === 'access_denied') {
+        errorMessage = 'You cancelled the Google sign-in process.';
+      } else if (oauthError === 'invalid_request') {
+        errorMessage = 'Invalid Google sign-in request. Please try again.';
+      } else if (errorDescription) {
+        errorMessage = errorDescription;
+      }
+      
+      showError(errorMessage);
+      // Clean the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated()) {
       setAnimationPhase('exiting');
@@ -50,17 +78,39 @@ const Login = () => {
   };
 
   const getButtonContent = (text) => isSubmitting ? (<><span className="loading-spinner"></span>{text}</>) : text;
-  const getGoogleButtonContent = () => isGoogleLoading ? (<><span className="loading-spinner"></span>Signing in with Google...</>) : (
-    <>
-      <img 
-        src="https://developers.google.com/identity/images/g-logo.png" 
-        alt="Google"
-        width="18"
-        height="18"
-      />
-      Continue with Google
-    </>
-  );
+  
+  // Fixed: Better Google button content with loading state awareness
+  const getGoogleButtonContent = () => {
+    if (isGoogleLoading) {
+      return (
+        <>
+          <span className="loading-spinner"></span>
+          Redirecting to Google...
+        </>
+      );
+    }
+    
+    if (isLoading) {
+      return (
+        <>
+          <span className="loading-spinner"></span>
+          Processing...
+        </>
+      );
+    }
+    
+    return (
+      <>
+        <img 
+          src="https://developers.google.com/identity/images/g-logo.png" 
+          alt="Google"
+          width="18"
+          height="18"
+        />
+        Continue with Google
+      </>
+    );
+  };
 
   const showError = (message) => {
     setError(message);
@@ -75,32 +125,33 @@ const Login = () => {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
+  // Fixed: Improved Google login handling
   const handleGoogleLogin = async () => {
-    if (isGoogleLoading || isSubmitting) return;
+    if (isGoogleLoading || isSubmitting || isLoading) return;
     
     setIsGoogleLoading(true);
     setError('');
 
     try {
-      // For now, this is a placeholder - you'll need to implement actual Google OAuth
-      // You can integrate with Google OAuth using libraries like @google-cloud/oauth2-client
-      // or implement the OAuth flow manually
+      console.log('Initiating Google login...');
+      const result = await loginWithGoogle();
       
-      console.log('Google OAuth integration needed');
-      
-      // Simulate API call for demo purposes
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // This is where you'd handle the actual Google OAuth response
-      // Example: const result = await authenticateWithGoogle();
-      
-      showError('Google OAuth integration pending - please use regular login for now');
-      
+      if (result.success) {
+        console.log('Google login initiated successfully');
+        // Don't show success message as user will be redirected to Google
+        // The success will be handled when they return
+      } else {
+        console.error('Google login failed:', result.error);
+        showError(result.error || 'Google login failed. Please try again.');
+      }
     } catch (err) {
       console.error('Google login error:', err);
       showError('Google login failed. Please try again or use regular login.');
     } finally {
-      setIsGoogleLoading(false);
+      // Keep loading state for a bit longer as OAuth redirect might be happening
+      setTimeout(() => {
+        setIsGoogleLoading(false);
+      }, 2000);
     }
   };
 
@@ -146,6 +197,9 @@ const Login = () => {
     }, 300);
   };
 
+  // Fixed: Better loading state awareness
+  const isAnyLoading = isLoading || isSubmitting || isGoogleLoading;
+
   return (
     <div className={`login-page ${darkMode ? 'dark-mode' : ''}`}>
       <div className={`login-container ${animationPhase}`}>
@@ -168,6 +222,14 @@ const Login = () => {
             <h1>Welcome Back</h1>
             <p className="login-subtitle">Sign in to your AT-AT account</p>
 
+            {/* Fixed: Show processing state for OAuth */}
+            {isLoading && !isSubmitting && !isGoogleLoading && (
+              <div className="processing-message">
+                <span className="loading-spinner"></span>
+                Processing your login...
+              </div>
+            )}
+
             {showSuccess && <div className="success-message">✅ Login successful! Redirecting to dashboard...</div>}
             {error && <div className="error-message" ref={errorRef}>⚠️ {error}</div>}
 
@@ -176,7 +238,7 @@ const Login = () => {
               type="button"
               className="google-login-btn"
               onClick={handleGoogleLogin}
-              disabled={isGoogleLoading || isSubmitting}
+              disabled={isAnyLoading}
               aria-label="Sign in with Google"
             >
               {getGoogleButtonContent()}
@@ -192,7 +254,7 @@ const Login = () => {
                   id="identifier"
                   value={identifier}
                   onChange={(e) => handleInputChange('identifier', e.target.value)}
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isAnyLoading}
                   placeholder="Enter your username or email"
                   required
                   autoComplete="username"
@@ -205,7 +267,7 @@ const Login = () => {
                   id="password"
                   value={password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isAnyLoading}
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
@@ -214,7 +276,7 @@ const Login = () => {
               <button
                 type="submit"
                 className="login-btn"
-                disabled={isSubmitting || isLoading || isGoogleLoading}
+                disabled={isAnyLoading}
                 ref={submitButtonRef}
                 aria-label={isSubmitting ? 'Signing in...' : 'Sign in'}
               >

@@ -6,15 +6,17 @@ const AuthContext = createContext();
 
 // Initialize Supabase client for Google OAuth only
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
 
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: true
+      autoRefreshToken: true,     // Fixed: Changed to true for proper session handling
+      persistSession: true,       // Fixed: Changed to true to persist OAuth sessions
+      detectSessionInUrl: true,
+      storage: window.localStorage,
+      flowType: 'pkce'
     }
   });
 }
@@ -31,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('at_at_token') || '');
+  const [oAuthProcessing, setOAuthProcessing] = useState(false);
 
   // Base API URL - matches your backend
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -67,39 +70,93 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  // Check for Google OAuth session on app load
+  // Fixed: Improved OAuth session detection and handling
   useEffect(() => {
     const checkOAuthSession = async () => {
       if (!supabase) return;
 
       try {
-        // Check URL for OAuth response
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        console.log('Checking for OAuth session...');
+        console.log('Current URL:', window.location.href);
         
-        // Check for OAuth error
-        const error = urlParams.get('error') || hashParams.get('error');
-        if (error) {
-          console.error('OAuth error:', error);
+        // Check if this is an OAuth callback
+        const isOAuthCallback = window.location.hash.includes('access_token') || 
+                               window.location.search.includes('code') ||
+                               window.location.hash.includes('error');
+
+        if (!isOAuthCallback) {
+          console.log('Not an OAuth callback');
           return;
         }
 
-        // Check for access token
-        const accessToken = hashParams.get('access_token');
-        if (accessToken) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session && session.user) {
-            await handleGoogleOAuthSuccess(session.user);
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
+        console.log('OAuth callback detected, processing...');
+        setOAuthProcessing(true);
+
+        // Handle OAuth errors first
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        
+        const error = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        
+        if (error) {
+          console.error('OAuth error:', error, errorDescription);
+          // Clean URL and show error to user
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setOAuthProcessing(false);
+          return;
+        }
+
+        // Get the session from Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw sessionError;
+        }
+        
+        if (session && session.user) {
+          console.log('Valid OAuth session found:', session.user.email);
+          await handleGoogleOAuthSuccess(session.user);
+          // Clean URL after successful processing
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          console.log('No valid session found');
         }
       } catch (error) {
         console.error('OAuth session check error:', error);
+        // Clean URL even on error
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } finally {
+        setOAuthProcessing(false);
       }
     };
 
+    // Process OAuth callback immediately
     checkOAuthSession();
+
+    // Fixed: Better auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event);
+        
+        if (event === 'SIGNED_IN' && session?.user && !oAuthProcessing) {
+          console.log('Auth state: signed in with', session.user.email);
+          setOAuthProcessing(true);
+          try {
+            await handleGoogleOAuthSuccess(session.user);
+          } catch (error) {
+            console.error('Auth state change error:', error);
+          } finally {
+            setOAuthProcessing(false);
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   /**
@@ -108,19 +165,26 @@ export const AuthProvider = ({ children }) => {
   const handleGoogleOAuthSuccess = async (googleUser) => {
     try {
       setIsLoading(true);
+      console.log('Processing Google OAuth for:', googleUser.email);
 
-      // Extract user data from Google
+      // Fixed: Better data extraction from Google user
+      const metadata = googleUser.user_metadata || {};
+      const fullName = metadata.full_name || metadata.name || '';
+      const nameParts = fullName.split(' ');
+
       const userData = {
         email: googleUser.email,
-        firstName: googleUser.user_metadata?.given_name || '',
-        lastName: googleUser.user_metadata?.family_name || '',
-        name: googleUser.user_metadata?.full_name || googleUser.user_metadata?.name,
-        profilePicture: googleUser.user_metadata?.avatar_url || '',
+        firstName: metadata.given_name || nameParts[0] || '',
+        lastName: metadata.family_name || nameParts.slice(1).join(' ') || '',
+        name: fullName || googleUser.email.split('@')[0],
+        profilePicture: metadata.avatar_url || metadata.picture || '',
         googleId: googleUser.id,
         provider: 'google'
       };
 
-      // Send to your backend Google login endpoint
+      console.log('Sending to backend:', userData.email);
+
+      // Send to your existing backend Google login endpoint
       const res = await axios.post(`${API_BASE_URL}/api/auth/google-login`, userData);
 
       if (res.data.success) {
@@ -129,9 +193,10 @@ export const AuthProvider = ({ children }) => {
         setToken(newToken);
         setCurrentUser(user);
 
-        // Clean up Supabase session
+        // Clean up Supabase session after successful backend processing
         await supabase.auth.signOut();
 
+        console.log('Google OAuth successful, user logged in');
         return { success: true, user };
       } else {
         throw new Error(res.data.message || 'Google login failed');
@@ -159,22 +224,30 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setIsLoading(true);
+      console.log('Initiating Google OAuth...');
+
+      // Fixed: Better redirect URL construction
+      const redirectUrl = window.location.origin + window.location.pathname;
+      console.log('Using redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
           },
+          skipBrowserRedirect: false,
         },
       });
 
       if (error) {
+        console.error('OAuth initiation error:', error);
         throw error;
       }
 
+      console.log('OAuth initiation successful');
       // OAuth will redirect, so this won't execute immediately
       return { success: true, data };
     } catch (error) {
@@ -451,7 +524,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // State
     currentUser,
-    isLoading,
+    isLoading: isLoading || oAuthProcessing, // Fixed: Include OAuth processing in loading state
     token,
 
     // Authentication methods

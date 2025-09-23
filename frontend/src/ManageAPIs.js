@@ -23,8 +23,9 @@ export {
 };
 
 // API functions
-async function fetchAllTags() {
-  const res = await fetch('/api/tags', {
+async function fetchAllTags(api_id) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user'; 
+  const res = await fetch(`/api/tags?user_id=${user_id}&api_id=${api_id}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -35,10 +36,11 @@ async function fetchAllTags() {
 }
 
 async function fetchApiEndpoints(api_id) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ api_id }),
+    body: JSON.stringify({ api_id: api_id, user_id: user_id }),
     credentials: 'include',
   });
   const data = await res.json();
@@ -46,48 +48,50 @@ async function fetchApiEndpoints(api_id) {
   return data.data;
 }
 
-async function addTagsToEndpoint({ path, method, tags }) {
+async function addTagsToEndpoint({ path, method, tags, api_id, endpoint_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/tags/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path: path, method: method, tags: tags, user_id: user_id, api_id: api_id, endpoint_id: endpoint_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add tags");
   return data.data;
 }
-
-async function fetchEndpointDetails({ endpoint_id, path, method }) {
+async function fetchEndpointDetails({ endpoint_id, path, method, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/details', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, path, method }),
+    body: JSON.stringify({ endpoint_id, path, method, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch endpoint details");
   return data.data;
 }
 
-async function removeTagsFromEndpoint({ path, method, tags }) {
+async function removeTagsFromEndpoint({ path, method, tags, api_id, endpoint_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/tags/remove', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path, method, tags, user_id, api_id, endpoint_id: endpoint_id}),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove tags");
   return data.data;
 }
 
-async function replaceTagsOnEndpoint({ path, method, tags }) {
+async function replaceTagsOnEndpoint({ path, method, tags, endpoint_id}) {
   const res = await fetch('/api/endpoints/tags/replace', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ path, method, tags }),
+    body: JSON.stringify({ path, method, tags, endpoint_id: endpoint_id}),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to replace tags");
@@ -95,24 +99,25 @@ async function replaceTagsOnEndpoint({ path, method, tags }) {
 }
 
 // Flag management functions
-async function addFlagsToEndpoint({ endpoint_id, flag }) {
+async function addFlagsToEndpoint({ endpoint_id, flag, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/flags/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, flags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to add flag");
   return data.data;
 }
-
-async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
+async function removeFlagsFromEndpoint({ endpoint_id, flag, api_id }) {
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   const res = await fetch('/api/endpoints/flags/remove', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ endpoint_id, flags: flag }),
+    body: JSON.stringify({ endpoint_id, flags: flag, user_id, api_id }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to remove flag");
@@ -120,7 +125,8 @@ async function removeFlagsFromEndpoint({ endpoint_id, flag }) {
 }
 
 // Tag Editor Component
-function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags }) {
+// Tag Editor Component
+function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [], tagsLoading = false, tagsError = "", onRefreshTags, api_id }) { // Add api_id prop
   const [tagInput, setTagInput] = React.useState('');
   const [removeInput, setRemoveInput] = React.useState('');
   const [replaceInput, setReplaceInput] = React.useState('');
@@ -129,15 +135,18 @@ function EndpointTagEditor({ endpoint, onTagsAdded, onTagsRemoved, allTags = [],
   const [replacing, setReplacing] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [currentTags, setCurrentTags] = React.useState(endpoint.tags || []);
-  // ADD near other useState calls
-const [scanSelectionApi, setScanSelectionApi] = useState(null);
+  const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
 
   React.useEffect(() => {
     setCurrentTags(endpoint.tags || []);
   }, [endpoint.tags]);
 
-  const handleAddTags = async () => {
+  const handleAddTags = async () => { // No longer takes api_id as an argument
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot add tags.');
+      return;
+    }
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
     if (tags.length === 0) {
       setMessage('Please enter at least one tag.');
@@ -150,6 +159,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
         tags,
+        api_id: api_id,
+        endpoint_id: endpoint.id
       });
       setMessage('✅ Tags added!');
       setTagInput('');
@@ -158,7 +169,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       setCurrentTags(newTags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsAdded) onTagsAdded(tags);
@@ -170,6 +181,10 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
   const handleRemoveTags = async () => {
+    if (!api_id) {
+        setMessage('❌ API ID is missing. Cannot remove tags.');
+        return;
+    }
     const tags = removeInput.split(',').map(t => t.trim()).filter(Boolean);
     if (tags.length === 0) {
       setMessage('Please enter at least one tag to remove.');
@@ -182,6 +197,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
         tags,
+        api_id: api_id,
+        endpoint_id: endpoint.id
       });
       setMessage('✅ Tags removed!');
       setRemoveInput('');
@@ -190,7 +207,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       setCurrentTags(newTags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsRemoved) onTagsRemoved(tags);
@@ -213,15 +230,17 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       await replaceTagsOnEndpoint({
         path: endpoint.path || endpoint.url,
         method: (endpoint.method || "GET").toUpperCase(),
-        tags,
-      });
+          tags,
+          api_id: api_id,          
+          endpoint_id: endpoint.id 
+        });
       setMessage('✅ Tags replaced!');
       setReplaceInput('');
       
       setCurrentTags(tags);
       
       if (onRefreshTags) {
-        onRefreshTags();
+        onRefreshTags(api_id); // Pass api_id to refresh function
       }
       
       if (onTagsAdded) onTagsAdded(tags);
@@ -232,51 +251,10 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
     }
   };
 
+  // The JSX part of this component remains the same, except for the onClick handler for the "Add Tag" button
   return (
     <div style={{ marginTop: 8 }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 4 }}>
-          Current Tags:
-        </div>
-        {currentTags && currentTags.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {currentTags.map(tag => (
-              <span key={tag} style={{
-                display: 'inline-block', 
-                background: "#22c55e", 
-                color: "white",
-                borderRadius: 8, 
-                padding: "2px 8px", 
-                fontSize: 11,
-                fontWeight: 600
-              }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, color: "#999", fontStyle: 'italic' }}>
-            No tags assigned
-          </div>
-        )}
-      </div>
-
-      {tagsLoading ? (
-        <div style={{ fontSize: 13, color: "#888" }}>Loading tags...</div>
-      ) : tagsError ? (
-        <div style={{ fontSize: 13, color: "#e53e3e" }}>❌ {tagsError}</div>
-      ) : allTags && allTags.length > 0 ? (
-        <div style={{ marginBottom: 5, fontSize: 12, color: "#888", whiteSpace: 'pre-line' }}>
-          <strong>Available tags:</strong>{" "}
-          {allTags.map(tag => (
-            <span key={tag} style={{
-              display: 'inline-block', background: "#f3f4f6", color: "#6366f1",
-              borderRadius: 8, padding: "2px 8px", marginRight: 4, marginBottom: 2, fontWeight: 600
-            }}>{tag}</span>
-          ))}
-        </div>
-      ) : null}
-
+      {/* ... other JSX ... */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
         <input
           type="text"
@@ -287,7 +265,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
           style={{ padding: 4, borderRadius: 4, minWidth: 120 }}
         />
         <button
-          onClick={handleAddTags}
+          onClick={handleAddTags} // No need to pass api_id here, it's read from props
           disabled={adding}
           style={{
             marginLeft: 6,
@@ -360,20 +338,22 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 }
 
 // Flag Editor Component
-function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged }) {
+function EndpointFlagEditor({ endpoint, allFlags = [], onFlagsChanged, api_id }) { // Add api_id prop
   const [flagInput, setFlagInput] = useState('');
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
   const [currentFlags, setCurrentFlags] = useState(endpoint.flags || []);
-  // ADD near other useState calls
-const [scanSelectionApi, setScanSelectionApi] = useState(null);
-
+  const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
   useEffect(() => {
     setCurrentFlags(endpoint.flags || []);
   }, [endpoint.flags]);
 
   const handleAddFlag = async () => {
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot add flag.');
+      return;
+    }
     const flag = flagInput.trim();
     if (!flag) {
       setMessage('Please enter a flag.');
@@ -391,6 +371,7 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
       await addFlagsToEndpoint({
         endpoint_id: endpoint.id,
         flag,
+        api_id: api_id // Use the api_id from props
       });
       setMessage('✅ Flag added!');
       setFlagInput('');
@@ -407,10 +388,15 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
   };
 
   const handleRemoveFlag = async (flagToRemove) => {
+    if (!api_id) {
+      setMessage('❌ API ID is missing. Cannot remove flag.');
+      return;
+    }
     try {
       await removeFlagsFromEndpoint({
         endpoint_id: endpoint.id,
         flag: flagToRemove,
+        api_id: api_id // Use the api_id from props
       });
       
       const newFlags = currentFlags.filter(flag => flag !== flagToRemove);
@@ -562,36 +548,54 @@ const SCAN_STEPS = [
 ];
 
 // Enhanced scan monitoring service with realistic progress
+// This is a partial update. Replace the ScanMonitoringService class
+// in your ManageAPIs.js file with this corrected version.
+
+// ... (keep everything else in the file the same) ...
+
+// Enhanced scan monitoring service with realistic progress
+// Enhanced scan monitoring service with realistic progress
 class ScanMonitoringService {
   constructor() {
     this.activeScanIntervals = new Map();
     this.scanProgress = new Map();
   }
 
+  // FIX: This function now calls the correct API endpoint with the correct method (POST).
   async checkScanResults(scanId) {
-    //console.log("Fetching results for scanID: ", scanId)
     try {
-      const response = await fetch(`/api/scan/results?scan_id=${scanId}`, {
-        method: 'GET',
+      // The API layer expects a POST request for all engine communications.
+      const response = await fetch(`/api/scan/details`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ scan_id: scanId })
       });
-      
+
       if (!response.ok) {
+        // A 404 here means the /api/scan/details route is missing in your Node.js server
         return { hasResults: false, error: `HTTP ${response.status}` };
       }
       
       const data = await response.json();
       
-      if (data.success && data.data) {
+      // Check for backend engine errors
+      if (!data.success) {
+        return { hasResults: false, error: data.message || 'Polling request failed' };
+      }
+
+      // Check the status from the engine response
+      if (data.data && data.data.status === 'completed') {
         return { 
           hasResults: true, 
-          results: data.data,
+          results: data.data.results, // The actual results are nested in the 'results' key
           isComplete: true
         };
       }
       
+      // If not complete, keep polling
       return { hasResults: false };
+
     } catch (error) {
       console.error('Error checking scan results:', error);
       return { hasResults: false, error: error.message };
@@ -600,8 +604,8 @@ class ScanMonitoringService {
 
   startMonitoring(scanId, callbacks, options = {}) {
     const { 
-      pollInterval = 10000,
-      maxAttempts = 30,
+      pollInterval = 5000, // Check every 5 seconds
+      maxAttempts = 36,    // For a total of 3 minutes
       onProgress,
       onComplete,
       onError,
@@ -614,29 +618,14 @@ class ScanMonitoringService {
     }
 
     let attempts = 0;
-    let currentStepIndex = 0;
-    
-    // Initialize progress
-    this.scanProgress.set(scanId, {
-      currentStep: 0,
-      totalSteps: SCAN_STEPS.length,
-      currentStepLabel: SCAN_STEPS[0].label,
-      progress: 0
-    });
-
-    //console.log(`🔄 Starting enhanced scan monitoring for ${scanId}`);
-
-    // Start realistic progress simulation
     this.simulateProgress(scanId, onProgress, onStepComplete);
 
     const poll = async () => {
       attempts++;
-      //console.log(`📊 Checking scan results (attempt ${attempts}/${maxAttempts})`);
       
       const result = await this.checkScanResults(scanId);
       
-      if (result.hasResults && result.isComplete) {
-        //console.log('✅ Scan completed with results');
+      if (result.isComplete) {
         this.stopMonitoring(scanId);
         if (onComplete) {
           onComplete(result.results);
@@ -645,11 +634,15 @@ class ScanMonitoringService {
       }
       
       if (result.error) {
-        console.error('❌ Error checking scan results:', result.error);
+        this.stopMonitoring(scanId);
+        if (onError) {
+          // Pass the specific error message to the handler
+          onError(new Error(result.error));
+        }
+        return;
       }
       
       if (attempts >= maxAttempts) {
-        //console.log('⏰ Maximum polling attempts reached');
         this.stopMonitoring(scanId);
         if (onError) {
           onError(new Error('Scan timeout - results not available after maximum attempts'));
@@ -662,11 +655,12 @@ class ScanMonitoringService {
       this.activeScanIntervals.set(scanId, timeoutId);
     };
 
-    // Start first poll after 5 seconds
-    const initialTimeoutId = setTimeout(poll, 5000);
+    // Start first poll after an initial delay
+    const initialTimeoutId = setTimeout(poll, pollInterval);
     this.activeScanIntervals.set(scanId, initialTimeoutId);
   }
 
+  // ... (the rest of the ScanMonitoringService class and file remains the same) ...
   simulateProgress(scanId, onProgress, onStepComplete) {
     let currentStepIndex = 0;
     
@@ -678,7 +672,6 @@ class ScanMonitoringService {
       const step = SCAN_STEPS[currentStepIndex];
       const progress = Math.round(((currentStepIndex + 1) / SCAN_STEPS.length) * 100);
       
-      // Update progress
       this.scanProgress.set(scanId, {
         currentStep: currentStepIndex + 1,
         totalSteps: SCAN_STEPS.length,
@@ -701,23 +694,20 @@ class ScanMonitoringService {
 
       currentStepIndex++;
       
-      // Schedule next step
       if (currentStepIndex < SCAN_STEPS.length) {
         setTimeout(executeStep, step.duration);
       }
     };
 
-    // Start simulation
     executeStep();
   }
 
   stopMonitoring(scanId) {
-    const intervalId = this.activeScanIntervals.get(scanId);
-    if (intervalId) {
-      clearTimeout(intervalId);
+    const timeoutId = this.activeScanIntervals.get(scanId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
       this.activeScanIntervals.delete(scanId);
       this.scanProgress.delete(scanId);
-      //console.log(`🛑 Stopped monitoring scan ${scanId}`);
     }
   }
 
@@ -733,14 +723,18 @@ class ScanMonitoringService {
 }
 
 // Enhanced Results Modal Component
+// ManageAPIs.js around line 711
+
+// Enhanced Results Modal Component
 const ScanResultsModal = ({ isOpen, onClose, results, apiName }) => {
   if (!isOpen || !results) return null;
 
-  // Handle both formats: results.result or results.vulnerabilities
-  const vulnerabilities = results.result || results.vulnerabilities || [];
+  // FIX: Add 'results.results' to correctly find the array of vulnerabilities.
+  const vulnerabilities = results.result || results.vulnerabilities || results.results || [];
   
   // Group vulnerabilities by type
   const groupedVulns = vulnerabilities.reduce((acc, vuln) => {
+  // ... rest of the component
     const type = vuln.vulnerability_name;
     if (!acc[type]) {
       acc[type] = [];
@@ -1173,18 +1167,20 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 
   const handleCreateScan = async () => {
     if (!api) return;
+    const user_id = localStorage.getItem('currentUser_id') || 'default_user';
     
     setCreatingScan(true);
     setError('');
     try {
-      const clientId = api.api_id || api.id;
+      const api_id = api.api_id || api.id;
       
       const response = await fetch("/api/scan/create", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         credentials: "include",
         body: JSON.stringify({ 
-          client_id: clientId,
+          user_id: user_id,
+          api_id: api_id,
           scan_profile: selectedScanType
         }),
       });
@@ -1357,7 +1353,8 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
             const details = await fetchEndpointDetails({
               endpoint_id: endpoint.id,
               path: endpoint.path,
-              method: endpoint.method
+              method: endpoint.method,
+              api_id: id
             });
             return { ...endpoint, flags: details.flags || [] };
           } catch (error) {
@@ -1541,6 +1538,7 @@ const handleStartScan = () => {
                           <EndpointFlagEditor 
                             endpoint={endpoint}
                             allFlags={AVAILABLE_FLAGS}
+                            api_id={api?.api_id || api?.id} // Pass the api_id here
                             onFlagsChanged={(newFlags) => {
                               const updatedEndpoints = [...endpoints];
                               updatedEndpoints[index].flags = newFlags;
@@ -1638,6 +1636,7 @@ const ManageAPIs = () => {
   const { darkMode = false, toggleDarkMode = () => {} } = themeContext;
   
   const authContext = useAuth() || { currentUser: null, logout: () => {}, getUserFullName: () => 'User' };
+  const userId = authContext.currentUser?.id;
   const { currentUser = null, logout = () => {}, getUserFullName = () => 'User' } = authContext;
   
   useEffect(() => {
@@ -1696,10 +1695,11 @@ const [scanSelectionApi, setScanSelectionApi] = useState(null);
 // REPLACE your existing fetchPastScans with this
 const fetchPastScans = async (api) => {
   //('[DEBUG] fetchPastScans called for api:', api);
+  const user_id = localStorage.getItem('currentUser_id') || 'default_user';
   setScanSelectionApi(api); // remember caller so modal can use it later
 
   try {
-    const res = await fetch('http://localhost:3001/api/scan/list', { method: 'GET' });
+    const res = await fetch(`http://localhost:3001/api/scan/list?user_id=${user_id}`, { method: 'GET' });
     //console.log('[DEBUG] /api/scan/list HTTP status:', res.status);
     const body = await res.json();
     //console.log('[DEBUG] /api/scan/list response body:', body);
@@ -1768,23 +1768,20 @@ const fetchPastScans = async (api) => {
 
 
 
-  // Refresh tags function
-  const refreshAllTags = useCallback(async () => {
+// Fetches tags for a specific API
+  const refreshApiTags = useCallback(async (api_id) => {
+    if (!api_id) return; // Don't fetch if there's no api_id
     setTagsLoading(true);
     setTagsError('');
     try {
-      const tags = await fetchAllTags();
+      const tags = await fetchAllTags(api_id);
       setAllTags(Array.isArray(tags) ? tags : []);
     } catch (e) {
-      setTagsError(e.message || "Failed to fetch tags");
+      setTagsError(e.message || "Failed to fetch tags for this API");
     } finally {
       setTagsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    refreshAllTags();
-  }, [refreshAllTags]);
 
   // Handler for when a profile is selected and scan is created
   const handleProfileSelected = (scanId, scanProfile) => {
@@ -1843,13 +1840,15 @@ const fetchPastScans = async (api) => {
 
       // 🚀 STEP 2: Start Scan  
       //console.log('🚀 Step 2: Starting scan...');
+      const user_id = localStorage.getItem('currentUser_id') || 'default_user'; 
       const startScanResponse = await fetch("/api/scan/start", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         credentials: "include",
         body: JSON.stringify({ 
-          api_name: apiName,
+          api_id: scanTargetApi.api_id || scanTargetApi.id,
           scan_profile: scanProfile || "OWASP_API_10",
+          user_id: user_id
         }),
       });
 
@@ -1932,11 +1931,12 @@ const fetchPastScans = async (api) => {
     });
   };
 
-  const handleEnhancedScanComplete = (scanId, results, targetApi, isImportedApi, isRegularApi, apiName) => {
-    //console.log('✅ Enhanced scan completed with results:', results);
+const handleEnhancedScanComplete = (scanId, results, targetApi, isImportedApi, isRegularApi, apiName) => {
+    console.log('✅ Enhanced scan completed with results:', results);
     
     setDetailedResults(results);
-    const vulnCount = results?.result?.length || results?.vulnerabilities?.length || 0;
+    // FIX: Add 'results?.results?.length' to correctly count vulnerabilities from the backend payload.
+    const vulnCount = results?.result?.length || results?.vulnerabilities?.length || results?.results?.length || 0;
     setScanResult(`✅ Scan completed! Found ${vulnCount} vulnerabilities.`);
     setScanLoading(false);
     setCurrentScanId(null);
@@ -2057,30 +2057,34 @@ const fetchPastScans = async (api) => {
     }
   }, []);
 
-  const handleViewDetails = async (endpoint) => {
-    setDetailLoading(true);
-    setDetailError('');
-    try {
-      const details = await fetchEndpointDetails({
-        endpoint_id: endpoint.id,
-        path: endpoint.path,
-        method: endpoint.method
-      });
-      setEndpointDetail(details);
-      setDetailModalOpen(true);
-    } catch (e) {
-      setDetailError(e.message);
-    }
-    setDetailLoading(false);
-  };
+const handleViewDetails = async (endpoint) => {
+  setDetailLoading(true);
+  setDetailError('');
+  try {
+    const details = await fetchEndpointDetails({
+      endpoint_id: endpoint.id,
+      path: endpoint.path,
+      method: endpoint.method,
+      api_id: selectedApiForEndpoints?.api_id || selectedApiForEndpoints?.id // Add this line
+    });
+    setEndpointDetail(details);
+    setDetailModalOpen(true);
+  } catch (e) {
+    setDetailError(e.message);
+  }
+  setDetailLoading(false);
+};
 
-  const handleViewEndpoints = async (api) => {
+const handleViewEndpoints = async (api) => {
     setEndpointsLoading(true);
     setEndpointsError('');
     setSelectedApiForEndpoints(api);
 
     try {
       const id = api.api_id || api.id;
+      // Fetch tags specifically for this API
+      await refreshApiTags(id); 
+
       const endpointsData = await fetchApiEndpoints(id);
       
       let endpoints = endpointsData;
@@ -2096,7 +2100,6 @@ const fetchPastScans = async (api) => {
       }));
       
       setSelectedApiEndpoints(endpointsWithTags);
-      await refreshAllTags();
       
     } catch (err) {
       setEndpointsError(err.message || "Failed to load endpoints");
@@ -2336,6 +2339,7 @@ const fetchPastScans = async (api) => {
   }, [processFile]);
 
   const handleImportAPISubmit = async (e) => {
+    //console.log("asdasdsa: ", userId);
     e.preventDefault();
     setImportLoading(true);
     setImportError("");
@@ -2348,6 +2352,7 @@ const fetchPastScans = async (api) => {
     }
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("user_id", userId);
 
     try {
       const res = await fetch("/api/import", {
@@ -2454,7 +2459,6 @@ const handleSaveApi = () => {
   setIsModalOpen(false);
   setCurrentApi(null);
 };
-
 
 
   const confirmDelete = useCallback(async () => {
@@ -3314,13 +3318,14 @@ onClick={() => {
                           <div className="endpoint-summary">{ep.summary || ep.description}</div>
                         ) : null}
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                         <EndpointTagEditor 
-                          endpoint={ep}
-                          allTags={allTags}
-                          tagsLoading={tagsLoading}
-                          tagsError={tagsError}
-                          onRefreshTags={refreshAllTags} 
-                        />
+                          <EndpointTagEditor 
+                            endpoint={ep}
+                            allTags={allTags}
+                            tagsLoading={tagsLoading}
+                            tagsError={tagsError}
+                            api_id={selectedApiForEndpoints?.api_id} // Pass the api_id here
+                            onRefreshTags={refreshApiTags} // Use the new refresh function
+                          />
                           <button
                             onClick={() => handleViewDetails(ep)}
                             className="action-btn details"

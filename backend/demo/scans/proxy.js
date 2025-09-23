@@ -2,9 +2,13 @@
 const WebSocket = require('ws');
 const net = require('net');
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 7777 });
 const ENGINE_HOST = 'localhost';
 const ENGINE_PORT = 9011;
+
+wss.on('listening', () => {
+  console.log('WebSocket server started on port 8080');
+});
 
 wss.on('connection', (ws) => {
     console.log('WebSocket client connected');

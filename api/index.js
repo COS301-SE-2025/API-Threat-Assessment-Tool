@@ -19,6 +19,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 if (!supabaseUrl || !supabaseKey) {
   console.error('⚠️ Missing Supabase config. Add SUPABASE_URL and SUPABASE_KEY to your .env');
+
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -467,64 +468,146 @@ const ensureEngineRunning = async () => {
   }
 };
 
-const sendToEngine = async (request) => {
-  await ensureEngineRunning();
+// const sendToEngine = async (request) => {
+//   await ensureEngineRunning();
   
+//   return new Promise((resolve, reject) => {
+//     const client = new net.Socket();
+//     let responseData = '';
+//     const startTime = Date.now();
+
+//     console.log(`📊 Setting socket timeout to 120 seconds`);
+//     client.setTimeout(120000);
+
+//     client.on('connect', () => {
+//       console.log(`🔗 Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT}`);
+//       client.write(JSON.stringify(request));
+//       console.log(`📤 Sent to engine: ${request.command}`);
+//     });
+
+//     client.on('data', (data) => {
+//       responseData += data.toString();
+//       console.log(`📨 Received data chunk: ${data.toString().length} bytes`);
+//     });
+
+//     client.on('close', () => {
+//       const elapsed = Date.now() - startTime;
+//       console.log(`🔌 Connection to engine closed after ${elapsed}ms`);
+//       console.log(`📦 Raw response data: [${responseData}]`);
+//       try {
+//         const response = JSON.parse(responseData);
+//         console.log(`🔥 Engine response code: ${response.code}`);
+        
+//         if (response.code !== 200 && response.code !== '200') {
+//           const errorMessage = response.data || 'Unknown engine error';
+//           return reject(new Error(errorMessage));
+//         }
+        
+//         resolve(response);
+//       } catch (err) {
+//         console.error(`⚠ Failed to parse response: ${err.message}`);
+//         reject(new Error('Failed to parse engine response'));
+//       }
+//     });
+
+//     client.on('error', (err) => {
+//       const elapsed = Date.now() - startTime;
+//       console.error(`⚠ Engine connection error after ${elapsed}ms:`, err.message);
+//       reject(new Error(`Engine connection failed: ${err.message}`));
+//     });
+
+//     client.on('timeout', () => {
+//       const elapsed = Date.now() - startTime;
+//       console.error(`⏰ Engine connection timeout after ${elapsed}ms`);
+//       client.destroy();
+//       reject(new Error('Engine request timeout'));
+//     });
+
+//     client.connect(ENGINE_PORT, ENGINE_HOST);
+//   });
+// };
+
+
+const sendToEngine = async (request, timeout = 30000) => {
+  // ensureEngineRunning() should be defined elsewhere in your project
+  // to start the Python backend if it's not already running.
+  // await ensureEngineRunning();
+
+  const ENGINE_PORT = 9011;
+  const ENGINE_HOST = '127.0.0.1';
+
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
-    let responseData = '';
+    const chunks = [];
     const startTime = Date.now();
 
     console.log(`📊 Setting socket timeout to 120 seconds`);
     client.setTimeout(120000);
 
+    // Event handler for when the connection is successfully established.
     client.on('connect', () => {
-      console.log(`🔗 Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT}`);
-      client.write(JSON.stringify(request));
-      console.log(`📤 Sent to engine: ${request.command}`);
+      const elapsed = Date.now() - startTime;
+      console.log(`[CLIENT] Connected to engine at ${ENGINE_HOST}:${ENGINE_PORT} in ${elapsed}ms.`);
+      
+      const payload = JSON.stringify(request);
+
+      // Use client.end() to send the data and immediately signal completion.
+      client.end(payload);
+      console.log(`[CLIENT] Sent command: ${request.command}`);
     });
 
-    client.on('data', (data) => {
-      responseData += data.toString();
-      console.log(`📨 Received data chunk: ${data.toString().length} bytes`);
+    // Event handler for receiving data from the server.
+    client.on('data', (chunk) => {
+      chunks.push(chunk);
     });
 
+    // Event handler for when the server closes the connection.
     client.on('close', () => {
       const elapsed = Date.now() - startTime;
-      console.log(`🔌 Connection to engine closed after ${elapsed}ms`);
-      console.log(`📦 Raw response data: [${responseData}]`);
+      console.log(`[CLIENT] Connection closed by server after ${elapsed}ms.`);
+
+      const responseData = Buffer.concat(chunks).toString();
+      
+      if (!responseData) {
+        console.error('[CLIENT] No response data received before connection close.');
+        return reject(new Error('Engine closed connection without a response.'));
+      }
+
       try {
         const response = JSON.parse(responseData);
-        console.log(`🔥 Engine response code: ${response.code}`);
         
-        if (response.code !== 200 && response.code !== '200') {
-          const errorMessage = response.data || 'Unknown engine error';
-          return reject(new Error(errorMessage));
-        }
-        
-        resolve(response);
+        // **FIX:** Resolve with the entire response object, not just the data part.
+        // This makes the 'code' property available to the calling function.
+        console.log(`[CLIENT] Successfully received and parsed response for command: ${request.command}`);
+        resolve(response); 
       } catch (err) {
         console.error(`⚠️ Failed to parse response: ${err.message}`);
         reject(new Error('Failed to parse engine response'));
       }
     });
 
+    // Event handler for any connection errors.
     client.on('error', (err) => {
       const elapsed = Date.now() - startTime;
       console.error(`⚠️ Engine connection error after ${elapsed}ms:`, err.message);
       reject(new Error(`Engine connection failed: ${err.message}`));
     });
 
+    // Event handler for timeouts.
     client.on('timeout', () => {
       const elapsed = Date.now() - startTime;
-      console.error(`⏰ Engine connection timeout after ${elapsed}ms`);
-      client.destroy();
-      reject(new Error('Engine request timeout'));
+      console.error(`[CLIENT] Connection timed out after ${elapsed}ms.`);
+      client.destroy(new Error('Request Timeout'));
+      reject(new Error('Engine request timed out.'));
     });
 
+    // Initiate the connection.
     client.connect(ENGINE_PORT, ENGINE_HOST);
   });
 };
+
+
+
 
 // Routes
 app.get('/', (req, res) => {
@@ -571,6 +654,8 @@ app.get('/', (req, res) => {
       listTags: 'GET /api/tags',
       createScan: 'POST /api/scan/create',
       startScan: 'POST /api/scan/start',
+      statusScan: 'POST /api/scan/status',
+      detailsScan: 'POST /api/scan/details',
       scanProgress: 'GET /api/scan/progress',
       stopScan: 'POST /api/scan/stop',
       scanResults: 'GET /api/scan/results',
@@ -1672,10 +1757,11 @@ app.post('/api/apis/key/validate', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
+
 
     const engineResponse = await sendToEngine({
       command: 'apis.key.validate',
@@ -1711,10 +1797,11 @@ app.post('/api/apis/key/set', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
+
 
     const engineResponse = await sendToEngine({
       command: 'apis.key.set',
@@ -1736,72 +1823,88 @@ app.post('/api/apis/key/set', async (req, res) => {
 });
 
 // Import API from File (apis.import_file) - UPDATED: Now requires user_id
-app.post('/api/import', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return sendError(res, 'No file uploaded', null, 400);
+// We will apply the middleware inside, after validating user_id
+app.post('/api/import', async (req, res) => {
+  // Use multer as a middleware function within the route handler
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      // Handle multer-specific errors
+      return sendError(res, err.message, null, 400);
     }
-
-    const { user_id } = req.body;
-    
-    // Validate required user_id parameter
-    const userIdValidation = validateUserId(user_id);
-    if (!userIdValidation.isValid) {
-      return sendError(res, userIdValidation.error, null, 400);
-    }
-
-    const fileName = req.file.originalname;
-    const tempPath = req.file.path;
-    
-    const filesDir = path.join(__dirname, 'Files');
-    if (!fs.existsSync(filesDir)) {
-      fs.mkdirSync(filesDir, { recursive: true });
-    }
-    
-    const finalPath = path.join(filesDir, fileName);
-    fs.renameSync(tempPath, finalPath);
-    
-    console.log(`📁 File saved to: ${finalPath}`);
-
-    const engineRequest = {
-      command: "apis.import_file",
-      data: {
-        file: fileName,
-        user_id: user_id.trim()
-      }
-    };
-
-    const engineResponse = await sendToEngine(engineRequest);
 
     try {
-      fs.unlinkSync(finalPath);
-      console.log(`🗑️ Cleaned up file: ${finalPath}`);
-    } catch (cleanupErr) {
-      console.warn(`⚠️ Failed to cleanup file: ${cleanupErr.message}`);
-    }
-
-    if (engineResponse.code === 200 || engineResponse.code === '200') {
-      sendSuccess(res, 'API imported successfully', {
-        api_id: engineResponse.data?.client_id || 'global',
-        filename: fileName
-      });
-    } else {
-      const errorMsg = engineResponse.data || 'Engine processing failed';
-      sendError(res, 'Import failed', errorMsg, engineResponse.code || 500);
-    }
-
-  } catch (err) {
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupErr) {
-        console.warn(`⚠️ Failed to cleanup temp file: ${cleanupErr.message}`);
+      if (!req.file) {
+        return sendError(res, 'No file uploaded', null, 400);
       }
+
+      const { user_id } = req.body;
+      
+      const userIdValidation = validateUserId(user_id);
+      if (!userIdValidation.isValid) {
+        // Clean up the uploaded file if validation fails
+        if (req.file && req.file.path) fs.unlinkSync(req.file.path);
+        return sendError(res, userIdValidation.error, null, 400);
+      }
+
+      // The rest of your original logic from this route goes here...
+      const fileName = req.file.originalname;
+      const tempPath = req.file.path;
+      
+      const filesDir = path.join(__dirname, 'Files');
+      if (!fs.existsSync(filesDir)) {
+        fs.mkdirSync(filesDir, { recursive: true });
+      }
+      
+      const finalPath = path.join(filesDir, fileName);
+      fs.renameSync(tempPath, finalPath);
+      
+      console.log(`📁 File saved to: ${finalPath}`);
+
+      const engineRequest = {
+        command: "apis.import_file",
+        data: {
+          file: fileName,
+          user_id: user_id.trim()
+        }
+      };
+
+      const engineResponse = await sendToEngine(engineRequest);
+
+      try {
+        fs.unlinkSync(finalPath);
+        console.log(`🗑️ Cleaned up file: ${finalPath}`);
+      } catch (cleanupErr) {
+        console.warn(`⚠️ Failed to cleanup file: ${cleanupErr.message}`);
+      }
+      
+      console.log(engineResponse);
+
+      if (engineResponse.code === 200 || engineResponse.code === '200') {
+        const apiId = engineResponse.data?.api_id;
+        if (!apiId) {
+          return sendError(res, 'Import failed', 'Engine did not return a valid API ID.', 500);
+        }
+        sendSuccess(res, 'API imported successfully', {
+          api_id: apiId,
+          filename: fileName
+        });
+      } else {
+        const errorMsg = engineResponse.data || 'Engine processing failed';
+        sendError(res, 'Import failed', errorMsg, engineResponse.code || 500);
+      }
+
+    } catch (err) {
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupErr) {
+          console.warn(`⚠️ Failed to cleanup temp file: ${cleanupErr.message}`);
+        }
+      }
+      console.error('Import error:', err.message);
+      sendError(res, 'Import failed', err.message, 500);
     }
-    
-    console.error('Import error:', err.message);
-    sendError(res, 'Import failed', err.message, 500);
-  }
+  });
 });
 
 // Import API from URL (apis.import_url)
@@ -1829,10 +1932,14 @@ app.post('/api/apis/import/url', async (req, res) => {
 app.post('/api/endpoints', async (req, res) => {
   try {
     const { api_id } = req.body;
+    const {user_id} = req.body;
     
     const engineRequest = {
       command: "endpoints.list",
-      data: {}
+      data: {
+        api_id: api_id, 
+        user_id: user_id
+      }
     };
 
     const engineResponse = await sendToEngine(engineRequest);
@@ -1853,16 +1960,26 @@ app.post('/api/endpoints', async (req, res) => {
 // Get Endpoint Details (endpoints.details)
 app.post('/api/endpoints/details', async (req, res) => {
   try {
-    const { endpoint_id, path, method } = req.body;
+    const { endpoint_id, path, method, user_id, api_id } = req.body;
     
     if (!endpoint_id) {
       return sendError(res, 'Missing endpoint_id', null, 400);
     }
 
+    if (!api_id) {
+      return sendError(res, 'Missing api_id', null, 400);
+    }
+
+    if (!user_id) {
+      return sendError(res, 'Missing api_id', null, 400);
+    }
+
     const engineRequest = {
       command: "endpoints.details",
       data: {
-        id: endpoint_id,
+        api_id: api_id,
+        endpoint_id: endpoint_id,
+        user_id: user_id.trim(), 
         path: path,
         method: method
       }
@@ -1887,6 +2004,8 @@ app.post('/api/endpoints/details', async (req, res) => {
 app.post('/api/endpoints/tags/add', async (req, res) => {
   try {
     const { endpoint_id, path, method, tags, user_id, api_id } = req.body;
+    console.log(endpoint_id, path, method, tags, user_id, api_id)
+
     
     // Validate required parameters
     if (!tags || !Array.isArray(tags)) {
@@ -1901,20 +2020,21 @@ app.post('/api/endpoints/tags/add', async (req, res) => {
     if (!userIdValidation.isValid) {
       return sendError(res, userIdValidation.error, null, 400);
     }
-    
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
+
 
     const engineRequest = {
       command: "endpoints.tags.add",
       data: {
+        endpoint_id: endpoint_id, 
         path: path,
         method: method,
         tags: tags,
         user_id: user_id.trim(),
-        api_id: api_id.trim()
+        api_id: api_id
       }
     };
 
@@ -1952,14 +2072,15 @@ app.post('/api/endpoints/tags/remove', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineRequest = {
       command: "endpoints.tags.remove",
       data: {
+        endpoint_id: endpoint_id, 
         path: path,
         method: method,
         tags: tags,
@@ -1999,6 +2120,7 @@ app.post('/api/endpoints/tags/replace', async (req, res) => {
     const engineRequest = {
       command: "endpoints.tags.replace",
       data: {
+        endpoint_id: endpoint_id, 
         path: path,
         method: method,
         tags: tags
@@ -2031,10 +2153,10 @@ app.get('/api/tags', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineRequest = {
       command: "tags.list",
@@ -2078,10 +2200,10 @@ app.post('/api/endpoints/flags/add', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineRequest = {
       command: "endpoints.flags.add",
@@ -2129,10 +2251,10 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineRequest = {
       command: "endpoints.flags.remove",
@@ -2164,10 +2286,10 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
 // Create Scan (scan.create) - UPDATED: Now requires user_id (renamed from client_id)
 app.post('/api/scan/create', async (req, res) => {
   try {
-    const { client_id, user_id, scan_profile, api_id } = req.body;
+    const { user_id, scan_profile, api_id } = req.body;
     
     // Use user_id as primary, fall back to client_id for backward compatibility
-    const finalUserId = user_id || client_id;
+    const finalUserId = user_id;
     
     // Validate required parameters
     const userIdValidation = validateUserId(finalUserId);
@@ -2175,10 +2297,10 @@ app.post('/api/scan/create', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineResponse = await sendToEngine({
       command: 'scan.create',
@@ -2202,10 +2324,10 @@ app.post('/api/scan/create', async (req, res) => {
 // Start Scan (scan.start) - UPDATED: Now requires user_id and api_id (renamed from api_name)
 app.post('/api/scan/start', async (req, res) => {
   try {
-    const { api_name, api_id, scan_profile, user_id } = req.body;
+    const { api_id, scan_profile, user_id } = req.body;
     
     // Use api_id as primary, fall back to api_name for backward compatibility
-    const finalApiId = api_id || api_name;
+    const finalApiId = api_id;
     
     // Validate required parameters
     const userIdValidation = validateUserId(user_id);
@@ -2239,6 +2361,56 @@ app.post('/api/scan/start', async (req, res) => {
   }
 });
 
+app.post('/api/scan/status', async (req, res) => {
+  try {
+    const { scan_id } = req.body;
+
+    // Basic validation
+    if (!scan_id || typeof scan_id !== 'string') {
+      return sendError(res, 'A valid scan_id is required.', null, 400);
+    }
+
+    const engineResponse = await sendToEngine({
+      command: 'scan.status',
+      data: { scan_id: scan_id.trim() }
+    });
+
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan status retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get scan status', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get scan status error', err.message, 500);
+  }
+});
+
+// index.js around line 1819
+
+// FIX: Change 'scan.details' to 'scan.status' to match the Python backend handler.
+app.post('/api/scan/details', async (req, res) => {
+  try {
+    const { scan_id } = req.body;
+
+    if (!scan_id || typeof scan_id !== 'string') {
+      return sendError(res, 'A valid scan_id is required.', null, 400);
+    }
+
+    // Forward the request to the python engine
+    const engineResponse = await sendToEngine({
+      command: 'scan.status', // <-- This was 'scan.details'
+      data: { scan_id: scan_id.trim() }
+    });
+
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Scan details retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get scan details', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get scan details error', err.message, 500);
+  }
+});
 // Check Scan Progress (scan.progress)
 app.get('/api/scan/progress', async (req, res) => {
   try {
@@ -2300,10 +2472,10 @@ app.get('/api/scan/results', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    const apiIdValidation = validateApiId(api_id, true);
-    if (!apiIdValidation.isValid) {
-      return sendError(res, apiIdValidation.error, null, 400);
-    }
+    // const apiIdValidation = validateApiId(api_id, true);
+    // if (!apiIdValidation.isValid) {
+    //   return sendError(res, apiIdValidation.error, null, 400);
+    // }
 
     const engineResponse = await sendToEngine({
       command: 'scan.results',
@@ -2556,6 +2728,10 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
+//////////////
+//Forget Password
+//////////////
+// POST /api/auth/forgot-password
 
 //////////////
 // Forget Password
@@ -2599,6 +2775,7 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
+
     const { token, password } = req.body || {};
     if (!token || !password) {
       return sendError(res, 'token_and_password_required', null, 400);
@@ -2616,7 +2793,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
     if (uerr || !user) return sendError(res, 'invalid_or_expired_token', null, 400);
 
-    const hash = await bcrypt.hash(password, 12); 
+ const hash = await bcrypt.hash(password, 12); 
 
     const { error: upErr } = await supabase
       .from('users')

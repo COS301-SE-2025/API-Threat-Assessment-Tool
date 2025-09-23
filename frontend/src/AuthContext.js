@@ -284,6 +284,7 @@ export const AuthProvider = ({ children }) => {
       if (res.data.success) {
         const { token: newToken, user } = res.data.data;
         localStorage.setItem('at_at_token', newToken);
+        localStorage.setItem('currentUser_id', user.id); 
         setToken(newToken);
         setCurrentUser(user);
 

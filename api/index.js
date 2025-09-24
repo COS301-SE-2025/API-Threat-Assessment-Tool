@@ -2501,7 +2501,7 @@ app.get('/api/scan/results', async (req, res) => {
 // List All Scans (scan.list) - UPDATED: Now requires user_id
 app.get('/api/scan/list', async (req, res) => {
   try {
-    const { user_id } = req.query;
+    const { user_id, api_id } = req.query;
     
     // Validate required user_id parameter
     const userIdValidation = validateUserId(user_id);
@@ -2511,7 +2511,7 @@ app.get('/api/scan/list', async (req, res) => {
 
     const engineResponse = await sendToEngine({
       command: 'scan.list',
-      data: { user_id: user_id.trim() }
+      data: { user_id: user_id.trim(), api_id: api_id.trim() }
     });
     
     if (engineResponse.code === 200) {

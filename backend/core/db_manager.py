@@ -88,19 +88,31 @@ class DB_Manager:
         except Exception as e:
             logger.error(f"Error updating {table_name}: {e}")
             return []
-    
+
     def delete(self, table_name: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         try:
             query = self._supabase.table(table_name).delete()
             
+            if not filters:
+                # To prevent accidental deletion of a whole table
+                logger.warning(f"Attempted to delete from {table_name} with no filters. Aborting.")
+                return []
+
             for key, value in filters.items():
-                query = query.eq(key, value)
+                if isinstance(value, list):
+                    # Use 'in_' for list values, essential for bulk deletes
+                    query = query.in_(key, value)
+                else:
+                    # Use 'eq' for single values
+                    query = query.eq(key, value)
             
             result = query.execute()
+            logger.info(f"Deleted {len(result.data)} record(s) from {table_name}")
             return result.data
         except Exception as e:
             logger.error(f"Error deleting from {table_name}: {e}")
             return []
+
     
     def execute_raw(self, query: str) -> List[Dict[str, Any]]:
         try:
@@ -110,35 +122,36 @@ class DB_Manager:
             logger.error(f"Error executing raw query: {e}")
             return []
 
-    def backup(self, output_dir: str = "./backups") -> Optional[str]:
-        """
-        Creates a PostgreSQL dump backup of the Supabase database.
-        Returns the path to the backup file if successful.
-        """
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(output_dir, f"backup_{timestamp}.sql")
+    # Deprecated
+    # def backup(self, output_dir: str = "./backups") -> Optional[str]:
+    #     """
+    #     Creates a PostgreSQL dump backup of the Supabase database.
+    #     Returns the path to the backup file if successful.
+    #     """
+    #     try:
+    #         os.makedirs(output_dir, exist_ok=True)
+    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #         backup_file = os.path.join(output_dir, f"backup_{timestamp}.sql")
 
-            env = os.environ.copy()
-            env["PGPASSWORD"] = self.db_config["password"]
+    #         env = os.environ.copy()
+    #         env["PGPASSWORD"] = self.db_config["password"]
 
-            cmd = [
-                "pg_dump",
-                "-h", self.db_config["host"],
-                "-p", str(self.db_config["port"]),
-                "-U", self.db_config["user"],
-                "-d", self.db_config["dbname"],
-                "-F", "c",  # custom format, compressed
-                "-f", backup_file
-            ]
+    #         cmd = [
+    #             "pg_dump",
+    #             "-h", self.db_config["host"],
+    #             "-p", str(self.db_config["port"]),
+    #             "-U", self.db_config["user"],
+    #             "-d", self.db_config["dbname"],
+    #             "-F", "c",  # custom format, compressed
+    #             "-f", backup_file
+    #         ]
 
-            subprocess.run(cmd, check=True, env=env)
-            logger.info(f"Backup created at {backup_file}")
-            return backup_file
-        except Exception as e:
-            logger.error(f"Backup failed: {e}")
-            return None
+    #         subprocess.run(cmd, check=True, env=env)
+    #         logger.info(f"Backup created at {backup_file}")
+    #         return backup_file
+    #     except Exception as e:
+    #         logger.error(f"Backup failed: {e}")
+    #         return None
 
 
 #singleton instance

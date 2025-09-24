@@ -8,6 +8,8 @@ from core.scan_manager import ScanManager, ScanProfiles
 from utils.query import success, bad_request, not_found, server_error, connection_test, response, HTTPCode
 from typing import Dict, Any, List
 from datetime import datetime, timezone
+from dateutil.parser import parse as parse_datetime
+from collections import defaultdict 
 
 import socket
 import json
@@ -34,16 +36,41 @@ def log_with_timestamp(message: str):
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] + "Z"
     print(f"[{timestamp}] {message}")
 
+
+def _invalidate_api_list_cache(user_id: str):
+    """Removes the cached API list for a specific user."""
+    if USER_STORE.get(user_id) and "api_list_cache" in USER_STORE[user_id]:
+        del USER_STORE[user_id]["api_list_cache"]
+        log_with_timestamp(f"Invalidated API list cache for user {user_id}")
+
 # === Helper function to get or create ScanManager ===
+# In main.py
+
 def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return None
-    if "scans" not in USER_STORE[user_id]:
-        USER_STORE[user_id]["scans"] = {}
+    # Ensure the basic cache structure exists to prevent errors
+    USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
+    USER_STORE[user_id].setdefault("scans", {})
+
+    # 1. Check if the APIClient object is already in memory
+    api_client = USER_STORE[user_id]["apis"].get(api_id)
+
+    # 2. If not in memory, try to load it from the database
+    if not api_client:
+        log_with_timestamp(f"APIClient for {api_id} not in cache. Loading from DB for scan...")
+        api_client = APIClient.load_from_db(api_id)
+        
+        if not api_client:
+            # If it's not in the DB either, then it's a true "not found"
+            return None
+        
+        # Add the loaded client to the cache for future use
+        USER_STORE[user_id]["apis"][api_id] = api_client
+    
+    # 3. Now that we have the api_client, get or create its ScanManager
     if api_id not in USER_STORE[user_id]["scans"]:
-        api_client = USER_STORE[user_id]["apis"][api_id]
         USER_STORE[user_id]["scans"][api_id] = ScanManager(api_client)
         log_with_timestamp(f"[INFO] Created new ScanManager in memory for api_id: {api_id}")
+
     return USER_STORE[user_id]["scans"][api_id]
 
 # === Dashboard ===
@@ -55,6 +82,8 @@ def dashboard_metrics(request):
 
 def dashboard_alerts(request): 
     return server_error("Not yet implemented")
+
+# In main.py
 
 def import_file(request):
     user_id = request.get("data", {}).get("user_id")
@@ -76,10 +105,15 @@ def import_file(request):
         
         api_id = api_client.db_id
 
-        if user_id not in USER_STORE:
-            USER_STORE[user_id] = {"apis": {}, "scans": {}}
+        # FIX: Robustly ensure the cache structure exists before use
+        # This prevents the KeyError: 'apis'
+        USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
         
+        # Now it is safe to add the new API to the in-memory cache
         USER_STORE[user_id]["apis"][api_id] = api_client
+
+        # Invalidate the cached list of APIs so the new one appears on next fetch
+        _invalidate_api_list_cache(user_id)
 
         return response(HTTPCode.SUCCESS, {"api_id": api_id, "filename": file_name})
 
@@ -94,31 +128,87 @@ def get_all_apis(request):
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
+    # 1. Check for a cached response first (keeps subsequent refreshes fast)
+    if USER_STORE.get(user_id) and "api_list_cache" in USER_STORE[user_id]:
+        log_with_timestamp(f"Serving API list for user {user_id} from cache.")
+        return response(HTTPCode.SUCCESS, {"apis": USER_STORE[user_id]["api_list_cache"]})
+
+    log_with_timestamp(f"No cache. Optimizing API list fetch for user {user_id}.")
     try:
-        user_apis_from_db = db_manager.select("apis", columns="id, name, version", filters={"user_id": user_id})
+        # STEP 1: Get all of the user's APIs in a single query.
+        user_apis = db_manager.select("apis", columns="id, name, version, imported_on", filters={"user_id": user_id})
+        if not user_apis:
+            return response(HTTPCode.SUCCESS, {"apis": []})
 
+        api_ids = [api['id'] for api in user_apis]
+
+        # STEP 2: Batch fetch all completed scans for ALL those APIs in a single query.
+        all_completed_scans = db_manager.select(
+            "scans",
+            columns="id, api_id, completed_at",
+            filters={"api_id": api_ids, "status": "completed"}
+        )
+
+        # Group scans by api_id for quick lookups later
+        scans_by_api_id = defaultdict(list)
+        for scan in all_completed_scans:
+            scans_by_api_id[scan['api_id']].append(scan)
+        
+        scan_ids_to_check = [scan['id'] for scan in all_completed_scans]
+        results_count_by_scan_id = defaultdict(int)
+
+        if scan_ids_to_check:
+            # STEP 3: Batch fetch results for ALL relevant scans in a single query.
+            all_scan_results = db_manager.select(
+                "scan_results",
+                columns="scan_id", # We only need scan_id to count them
+                filters={"scan_id": scan_ids_to_check}
+            )
+            # Count the vulnerabilities for each scan in memory
+            for result in all_scan_results:
+                results_count_by_scan_id[result['scan_id']] += 1
+
+        # STEP 4: Build the final response by processing the fetched data in memory.
+        api_list_for_frontend = []
+        for api in user_apis:
+            api_id = api['id']
+            vulnerabilities_found = 0
+            last_scanned = "Never"
+            scan_status = "Ready"
+
+            # Find the latest scan for this specific API from our in-memory data
+            if api_id in scans_by_api_id:
+                api_scans = scans_by_api_id[api_id]
+                # Sort just this small list of scans for this API
+                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]) if isinstance(s["completed_at"], str) else s["completed_at"], reverse=True)
+                latest_scan = api_scans[0]
+                
+                scan_status = "Completed"
+                completed_at = latest_scan.get("completed_at")
+                dt_obj = parse_datetime(completed_at) if isinstance(completed_at, str) else completed_at
+                last_scanned = dt_obj.isoformat().split('T')[0]
+                
+                # Look up the vulnerability count from our in-memory data
+                vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
+
+            imported_on_ts = api.get("imported_on")
+            created_at_iso = None
+            if imported_on_ts:
+                dt_obj = parse_datetime(imported_on_ts) if isinstance(imported_on_ts, str) else imported_on_ts
+                created_at_iso = dt_obj.isoformat()
+
+            api_list_for_frontend.append({"id": api_id, "api_id": api_id, "name": api.get("name"), "version": api.get("version"), "created_at": created_at_iso, "vulnerabilitiesFound": vulnerabilities_found, "lastScanned": last_scanned, "scanStatus": scan_status})
+        
+        # Store the generated list in the cache for next time
         if user_id not in USER_STORE:
-            USER_STORE[user_id] = {"apis": {}, "scans": {}}
-
-        for api_data in user_apis_from_db:
-            api_id = api_data.get("id")
-            if api_id and api_id not in USER_STORE[user_id].get("apis", {}):
-                log_with_timestamp(f"Loading API {api_id} from DB into memory cache...")
-                api_client = APIClient.load_from_db(api_id)
-                if api_client:
-                    USER_STORE[user_id].setdefault("apis", {})[api_id] = api_client
-
-        api_list_for_frontend = [
-            {"api_id": api.get("id"), "name": api.get("name"), "version": api.get("version")}
-            for api in user_apis_from_db
-        ]
+            USER_STORE[user_id] = {}
+        USER_STORE[user_id]["api_list_cache"] = api_list_for_frontend
 
         return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
 
     except Exception as e:
         log_with_timestamp(f"Error in get_all_apis: {e}")
         return server_error(str(e))
-
 
 def create_api(request): 
     return server_error("Not yet implemented")
@@ -171,24 +261,40 @@ def update_api(request):
 
     return success({ "message": "API metadata updated successfully." }) 
 
+# In main.py
+# Replace the existing delete_api function with this improved version.
+
 def delete_api(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API not found in memory.")
+    # Try to get from cache first
+    client = USER_STORE.get(user_id, {}).get("apis", {}).get(api_id)
 
-    client = USER_STORE[user_id]["apis"][api_id]
-    
+    # If not in cache, load from DB to ensure we can delete it
+    if not client:
+        log_with_timestamp(f"API {api_id} not in cache. Attempting to load from DB for deletion.")
+        client = APIClient.load_from_db(api_id)
+        if not client:
+            # If it's not in DB either, it's truly not found or already deleted.
+            return not_found("API not found in memory or database.")
+
     if client.delete_from_db():
-        USER_STORE[user_id]["apis"].pop(api_id, None)
-        if "scans" in USER_STORE[user_id]:
+        # Clean up from cache if it exists
+        if user_id in USER_STORE and "apis" in USER_STORE[user_id]:
+            USER_STORE[user_id]["apis"].pop(api_id, None)
+        if user_id in USER_STORE and "scans" in USER_STORE[user_id]:
             USER_STORE[user_id]["scans"].pop(api_id, None)
+        
+        # Invalidate the API list cache for this user so the UI updates on next fetch
+        _invalidate_api_list_cache(user_id)
+
         return success({"message": "API deleted successfully."})
     else:
         return server_error("Failed to delete API from the database.")
+
 
 
 def import_url(request): 

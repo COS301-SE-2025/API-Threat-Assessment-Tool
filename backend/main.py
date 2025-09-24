@@ -10,6 +10,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_datetime
 from collections import defaultdict 
+from datetime import timedelta
 
 import socket
 import json
@@ -234,14 +235,6 @@ def get_api_details(request):
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        api_client = APIClient.load_from_db(api_id)
-        if not api_client:
-            return not_found("API client not found in memory or database.")
-        if user_id not in USER_STORE:
-            USER_STORE[user_id] = {"apis": {}, "scans": {}}
-        USER_STORE[user_id].setdefault("apis", {})[api_id] = api_client
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found in memory or database.")
@@ -260,16 +253,14 @@ def update_api(request):
     if not all([user_id, api_id]):
         return bad_request("Missing 'user_id' or 'api_id'")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
 
     db_updates = {}
     for key in ["title", "version", "base_url"]:
-        if key in updates:
+        # only apply if the key exists and is not None
+        if key in updates and updates[key] is not None:
             setattr(client, key, updates[key])
             db_key = "name" if key == "title" else key
             db_updates[db_key] = updates[key]
@@ -278,7 +269,8 @@ def update_api(request):
         if not client.update_in_db(db_updates):
             return server_error("Failed to persist API updates to the database.")
 
-    return success({ "message": "API metadata updated successfully." }) 
+    return success({"message": "API metadata updated successfully."})
+
 
 def delete_api(request):
     user_id = request.get("data", {}).get("user_id")
@@ -286,18 +278,9 @@ def delete_api(request):
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    # Try to get from cache first
     client = _get_api_client(user_id, api_id)
     if not client:
-        return not_found("API client not found.")
-
-    # If not in cache, load from DB to ensure we can delete it
-    if not client:
-        log_with_timestamp(f"API {api_id} not in cache. Attempting to load from DB for deletion.")
-        client = APIClient.load_from_db(api_id)
-        if not client:
-            # If it's not in DB either, it's truly not found or already deleted.
-            return not_found("API not found in memory or database.")
+        return not_found("API not found, cannot delete.")
 
     if client.delete_from_db():
         # Clean up from cache if it exists
@@ -306,7 +289,6 @@ def delete_api(request):
         if user_id in USER_STORE and "scans" in USER_STORE[user_id]:
             USER_STORE[user_id]["scans"].pop(api_id, None)
         
-        # Invalidate the API list cache for this user so the UI updates on next fetch
         _invalidate_api_list_cache(user_id)
 
         return success({"message": "API deleted successfully."})
@@ -325,9 +307,10 @@ def get_api_endpoints(request):
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
+    # CORRECT IMPLEMENTATION: Rely solely on the helper function
     client = _get_api_client(user_id, api_id)
     if not client:
-        return not_found("API client not found.")
+        return not_found({"message": "API not found."})
 
     endpoints = [{
         "id": ep.id,
@@ -348,9 +331,6 @@ def get_endpoint_details(request):
     endpoint_id = request.get("data", {}).get("endpoint_id")
     if not all([user_id, api_id, endpoint_id]):
         return bad_request("Missing 'user_id', 'api_id', or endpoint 'id'")
-
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
 
     client = _get_api_client(user_id, api_id)
     if not client:
@@ -381,9 +361,6 @@ def add_tags(request):
     if not all([user_id, api_id, path, method, tags]):
         return bad_request("Missing required fields")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
@@ -407,13 +384,10 @@ def remove_tags(request):
     if not all([user_id, api_id, path, method, tags]):
         return bad_request("Missing required fields")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
-
+        
     for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = [t for t in ep.tags if t not in tags]
@@ -433,9 +407,6 @@ def replace_tags(request):
     if not all([user_id, api_id, path, method]) or tags is None:
         return bad_request("Missing required fields")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
@@ -454,9 +425,7 @@ def get_all_tags(request):
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id'")
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
+    
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
@@ -476,9 +445,6 @@ def add_flags(request):
     )
     if not all([user_id, api_id, endpoint_id, flag_str]):
         return bad_request("Missing required fields")
-
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
 
     client = _get_api_client(user_id, api_id)
     if not client:
@@ -509,9 +475,6 @@ def remove_flags(request):
     if not all([user_id, api_id, endpoint_id, flag_str]):
         return bad_request("Missing required fields")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
@@ -539,11 +502,121 @@ def remove_flags(request):
     return not_found(f"Endpoint with ID '{endpoint_id}' not found")
 
 
-# === Scans ===
-# This is a partial update. Only the scan-related functions are shown.
-# Apply these changes to your existing main.py file.
+# === Scheduled Scans (NEW FUNCTIONS) ===
 
-# ... (keep all existing imports and functions from before) ...
+def get_schedule(request):
+    """Retrieves the schedule for a given API."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    schedule_data = db_manager.select("scheduled_scans", filters={"api_id": api_id, "user_id": user_id})
+    if not schedule_data:
+        return response(HTTPCode.SUCCESS, {"schedule": None}) # Return success with no schedule
+    
+    return response(HTTPCode.SUCCESS, {"schedule": schedule_data[0]})
+
+def create_or_update_schedule(request):
+    """Creates a new scan schedule or updates an existing one."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    frequency = request.get("data", {}).get("frequency")
+    is_enabled = request.get("data", {}).get("is_enabled", True)
+
+    if not all([user_id, api_id, frequency]):
+        return bad_request("Missing user_id, api_id, or frequency")
+    if frequency not in ['daily', 'weekly', 'monthly']:
+        return bad_request("Invalid frequency. Must be 'daily', 'weekly', or 'monthly'.")
+
+    now = datetime.now(timezone.utc)
+    if frequency == 'daily':
+        next_run_at = now + timedelta(days=1)
+    elif frequency == 'weekly':
+        next_run_at = now + timedelta(weeks=1)
+    else: # monthly
+        next_run_at = now + timedelta(days=30)
+
+    schedule_data = {
+        "user_id": user_id,
+        "api_id": api_id,
+        "frequency": frequency,
+        "is_enabled": is_enabled,
+        "next_run_at": next_run_at.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    # Use an "upsert" to either create or update the schedule based on the unique api_id
+    result = db_manager.upsert("scheduled_scans", schedule_data, on_conflict="api_id")
+
+    if not result:
+        return server_error("Failed to save schedule to the database.")
+
+    _invalidate_api_list_cache(user_id)
+    return response(HTTPCode.SUCCESS, {"schedule": result[0]})
+
+def delete_schedule(request):
+    """Deletes a scan schedule."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    deleted = db_manager.delete("scheduled_scans", filters={"api_id": api_id, "user_id": user_id})
+    if not deleted:
+        return not_found("No schedule found for this API to delete.")
+    
+    _invalidate_api_list_cache(user_id)
+    return success({"message": "Schedule deleted successfully."})
+
+# NOTE: This function is for the cron job runner.
+# It should be called by a separate, scheduled script.
+def check_and_run_scheduled_scans():
+    """
+    This function should be run periodically by a scheduler (e.g., a cron job).
+    It finds and starts scans that are due to run.
+    """
+    log_with_timestamp("Checking for scheduled scans to run...")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    # Find schedules that are enabled and past their due time
+    due_scans = db_manager.select_with_filter("scheduled_scans", filters=[
+        ("is_enabled", "eq", True),
+        ("next_run_at", "lte", now_iso)
+    ])
+
+    if not due_scans:
+        log_with_timestamp("No scans are due.")
+        return
+
+    for schedule in due_scans:
+        log_with_timestamp(f"Running scheduled scan for API {schedule['api_id']}")
+        try:
+            scan_manager = _get_or_create_scan_manager(schedule['user_id'], schedule['api_id'])
+            if not scan_manager:
+                log_with_timestamp(f"Could not find API Client for {schedule['api_id']}. Skipping.")
+                continue
+
+            # Start the scan
+            scan_manager.run_scan(schedule['api_id'], schedule['user_id'])
+            
+            # Calculate the next run time and update the schedule
+            now = datetime.now(timezone.utc)
+            if schedule['frequency'] == 'daily':
+                next_run_at = now + timedelta(days=1)
+            elif schedule['frequency'] == 'weekly':
+                next_run_at = now + timedelta(weeks=1)
+            else: # monthly
+                next_run_at = now + timedelta(days=30)
+            
+            db_manager.update("scheduled_scans", 
+                data={"next_run_at": next_run_at.isoformat(), "updated_at": now.isoformat()},
+                filters={"id": schedule['id']}
+            )
+            log_with_timestamp(f"Successfully started scan for API {schedule['api_id']}. Next run at {next_run_at.isoformat()}")
+
+        except Exception as e:
+            log_with_timestamp(f"Error processing scheduled scan for API {schedule['api_id']}: {e}")
 
 # === Scans ===
 def create_scan(request):
@@ -697,9 +770,6 @@ def set_api_key(request):
     if not all([user_id, api_id, api_key]):
         return bad_request("Missing 'user_id', 'api_id', or 'api_key'")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API client not found.")
-
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found("API client not found.")
@@ -764,6 +834,11 @@ def handle_request(request: dict):
         "scan.status": get_scan_status,
         "scan.stop": stop_scan,
         "scan.list": get_all_scans,
+        # --- ADD THESE NEW ROUTES ---
+        "scans.schedule.get": get_schedule,
+        "scans.schedule.create_or_update": create_or_update_schedule,
+        "scans.schedule.delete": delete_schedule,
+        # --- END NEW ROUTES ---
         "templates.list": get_all_templates,
         "templates.details": get_template_details,
         "templates.use": use_template,
@@ -852,4 +927,5 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
+
 

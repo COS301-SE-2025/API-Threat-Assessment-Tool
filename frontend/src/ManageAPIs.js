@@ -36,6 +36,16 @@ const apiService = {
     if (!res.ok || !data.success) throw new Error(data.message || 'Failed to delete API');
     return data;
   },
+  async updateApiDetails(apiId, userId, updates) {
+    const res = await fetch('/api/apis/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_id: apiId, user_id: userId, updates }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update API details');
+    return data;
+  },
   async fetchApiEndpoints(apiId, userId) {
     const res = await fetch('/api/endpoints', {
         method: 'POST',
@@ -95,25 +105,52 @@ const apiService = {
     const data = await res.json();
     if (!data.success) throw new Error(data.message || 'Failed to fetch scans.');
     return data.data.scans || [];
+  },
+  async getSchedule(apiId, userId) {
+    const res = await fetch(`/api/scans/schedule?api_id=${apiId}&user_id=${userId}`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch schedule');
+    return data.data.schedule;
+  },
+  async saveSchedule(apiId, userId, frequency, is_enabled) {
+    const res = await fetch('/api/scans/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_id: apiId, user_id: userId, frequency, is_enabled }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to save schedule');
+    return data.data.schedule;
+  },
+  async deleteSchedule(apiId, userId) {
+    const res = await fetch('/api/scans/schedule', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_id: apiId, user_id: userId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to delete schedule');
+    return data;
   }
 };
+
+
 
 const AVAILABLE_FLAGS = ["BOLA", "BKEN_AUTH", "BOPLA", "URC", "BFLA", "UABF", "SSRF", "SEC_MISC", "IIM", "UCAPI", "SKIP"];
 const SCAN_TYPES = ["OWASP_API_10", "Sensitive Data Exposure", "Broken Authentication", "SQL Injection"];
 
-const StatCard = ({ icon, number, label }) => (
-    <div className="stat-card">
+const StatCard = ({ icon, number, label, onClick, active }) => (
+    <div className={`stat-card ${onClick ? 'interactive' : ''} ${active ? 'active' : ''}`} onClick={onClick}>
         <div className="stat-icon">{icon}</div>
         <span className="stat-number">{number}</span>
         <span className="stat-label">{label}</span>
     </div>
 );
 
-const ApiCard = ({ api, onScan, onDelete, onViewEndpoints, onViewReport, onViewPastScans }) => (
-    <div className="api-card">
+const ApiCard = ({ api, onScan, onDelete, onViewEndpoints, onViewPastScans, onEdit, onSchedule }) => (    <div className="api-card">
         <div className="api-card-header">
             <h4 className="api-name">{api.name}</h4>
-            <span className={`api-status ${api.scanStatus === 'Completed' ? 'active' : 'inactive'}`}>
+            <span className={`api-status ${api.vulnerabilitiesFound > 0 ? 'warning' : 'active'}`}>
                 {api.scanStatus || 'Ready'}
             </span>
         </div>
@@ -131,6 +168,8 @@ const ApiCard = ({ api, onScan, onDelete, onViewEndpoints, onViewReport, onViewP
             <button onClick={() => onScan(api)} className="action-btn scan">⚙️ New Scan</button>
             <button onClick={() => onViewEndpoints(api)} className="action-btn endpoints">📂 Endpoints</button>
             <button onClick={() => onViewPastScans(api)} className="action-btn history">📜 History</button>
+            <button onClick={() => onSchedule(api)} className="action-btn schedule">🗓️ Schedule</button>
+            <button onClick={() => onEdit(api)} className="action-btn edit">✏️ Edit</button>
             <button onClick={() => onDelete(api)} className="action-btn delete">🗑️ Delete</button>
         </div>
     </div>
@@ -147,6 +186,11 @@ const ManageAPIs = () => {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [isVisible, setIsVisible] = useState({});
     const [modal, setModal] = useState({ type: null, data: null });
+    
+    // State for Search, Sort, and Filter
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('name');
+    const [activeFilter, setActiveFilter] = useState(null);
 
     const fetchApis = useCallback(async () => {
         if (!currentUser?.id) return;
@@ -187,15 +231,49 @@ const ManageAPIs = () => {
         setTimeout(() => setMessage({ text: '', type: '' }), duration);
     };
 
+    const handleUpdateApi = async (apiId, updates) => {
+        try {
+            await apiService.updateApiDetails(apiId, currentUser.id, updates);
+            showMessage('API updated successfully', 'success');
+            fetchApis();
+            setModal({ type: null, data: null });
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    const filteredAndSortedApis = useMemo(() => {
+        return apis
+            .filter(api => {
+                if (activeFilter === 'issues' && (api.vulnerabilitiesFound || 0) === 0) {
+                    return false;
+                }
+                if (searchTerm && !api.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    return false;
+                }
+                return true;
+            })
+            .sort((a, b) => {
+                if (sortBy === 'lastScanned') {
+                    const dateA = a.lastScanned === 'Never' ? 0 : new Date(a.lastScanned).getTime();
+                    const dateB = b.lastScanned === 'Never' ? 0 : new Date(b.lastScanned).getTime();
+                    return dateB - dateA;
+                }
+                if (sortBy === 'vulnerabilities') {
+                    return (b.vulnerabilitiesFound || 0) - (a.vulnerabilitiesFound || 0);
+                }
+                return a.name.localeCompare(b.name); // Default sort by name
+            });
+    }, [apis, searchTerm, sortBy, activeFilter]);
+
     const handleDelete = async (api) => {
-        if (window.confirm(`Are you sure you want to delete "${api.name}"? This is permanent.`)) {
-            try {
-                await apiService.deleteApi(api.id, currentUser.id);
-                showMessage(`API "${api.name}" deleted successfully.`, 'success');
-                fetchApis();
-            } catch (error) {
-                showMessage(`Error: ${error.message}`, 'error');
-            }
+        // The window.confirm check is removed to delete directly.
+        try {
+            await apiService.deleteApi(api.id, currentUser.id);
+            showMessage(`API "${api.name}" deleted successfully.`, 'success');
+            fetchApis();
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
         }
     };
 
@@ -259,14 +337,13 @@ const ManageAPIs = () => {
         }
     };
 
-    const apiStats = useMemo(() => ({
+const apiStats = useMemo(() => ({
         total: apis.length,
         active: apis.filter(api => api.status === 'Active').length,
-        totalScans: apis.reduce((sum, api) => sum + (api.scanCount || 0), 0),
         issuesFound: apis.filter(api => (api.vulnerabilitiesFound || 0) > 0).length,
     }), [apis]);
 
-    if (isLoading && apis.length === 0) {
+if (isLoading && apis.length === 0) {
         return <div className="loading-full-page">Loading...</div>;
     }
     
@@ -277,10 +354,10 @@ const ManageAPIs = () => {
             {modal.type === 'import' && <ImportModal onClose={() => setModal({ type: null, data: null })} onImport={handleImport} />}
             {modal.type === 'endpoints' && <EndpointsModal api={modal.data} onClose={() => setModal({ type: null, data: null })} />}
             {modal.type === 'scanProfile' && <ScanProfileModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onProfileSelected={handleProfileSelected} />}
-            {modal.type === 'endpointFlags' && <EndpointFlagsModal data={modal.data} onClose={() => setModal({ type: null, data: null })} onScanStart={handleStartScan} />}
-            {modal.type === 'scanProgress' && <ScanProgressModal apiName={modal.data.apiName} />}
+            {modal.type === 'endpointFlags' && <EndpointFlagsModal data={modal.data} onClose={() => setModal({ type: null, data: null })} onScanStart={handleStartScan} showMessage={showMessage} />}            {modal.type === 'scanProgress' && <ScanProgressModal apiName={modal.data.apiName} />}
             {modal.type === 'scanResults' && <ScanResultsModal data={modal.data} onClose={() => setModal({type:null, data:null})} />}
             {modal.type === 'pastScans' && <PastScansModal api={modal.data} onClose={() => setModal({type:null, data:null})} onViewReport={handleViewSpecificReport} />}
+            {modal.type === 'schedule' && <ScheduleScanModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}            {modal.type === 'editApi' && <EditApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onSave={handleUpdateApi} />}
 
             <header className="manage-apis-header">
                 <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -321,8 +398,13 @@ const ManageAPIs = () => {
                     <div className="stats-grid">
                         <StatCard icon="🔗" label="Total APIs" number={apiStats.total} />
                         <StatCard icon="✅" label="Active APIs" number={apiStats.active} />
-                        <StatCard icon="🔍" label="Total Scans" number={apiStats.totalScans} />
-                        <StatCard icon="⚠️" label="APIs with Issues" number={apiStats.issuesFound} />
+                        <StatCard 
+                            icon="⚠️" 
+                            label="APIs with Issues" 
+                            number={apiStats.issuesFound} 
+                            onClick={() => setActiveFilter(activeFilter === 'issues' ? null : 'issues')}
+                            active={activeFilter === 'issues'}
+                        />
                     </div>
                 </section>
                 
@@ -330,25 +412,41 @@ const ManageAPIs = () => {
                     <div className="apis-list">
                          <div className="apis-list-header">
                             <h3 className="list-title">📁 My APIs</h3>
+                              <div className="controls-container">
+                                  <input 
+                                      type="text" 
+                                      placeholder="Search by name..." 
+                                      className="search-input"
+                                      value={searchTerm}
+                                      onChange={e => setSearchTerm(e.target.value)}
+                                  />
+                                  <select className="sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                                      <option value="name">Sort by Name</option>
+                                      <option value="lastScanned">Sort by Last Scanned</option>
+                                      <option value="vulnerabilities">Sort by Vulnerabilities</option>
+                                  </select>
+                              </div>
                          </div>
-                         <div className="apis-grid">
-                            {isLoading ? <p>Loading APIs...</p> : apis.length > 0 ? (
-                                apis.map(api => 
-                                    <ApiCard 
-                                        key={api.id} 
-                                        api={api}
-                                        onScan={handleStartScanFlow}
-                                        onDelete={handleDelete}
-                                        onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
-                                        onViewPastScans={handleViewPastScans}
-                                    />
-                                )
-                            ) : (
+                          <div className="apis-grid">
+                            {!isLoading && filteredAndSortedApis.length === 0 ? (
                                 <div className="no-apis">
                                     <div className="no-apis-icon">📂</div>
-                                    <h3>No APIs Found</h3>
-                                    <p>Get started by importing your first API specification file.</p>
+                                    <h3>No APIs Match Your Criteria</h3>
+                                    <p>Try adjusting your search or filter.</p>
                                 </div>
+                            ) : (
+                                filteredAndSortedApis.map(api => 
+                                        <ApiCard 
+                                          key={api.id} 
+                                          api={api}
+                                          onEdit={() => setModal({ type: 'editApi', data: api })}
+                                          onSchedule={() => setModal({ type: 'schedule', data: api })}
+                                          onScan={handleStartScanFlow}
+                                          onDelete={handleDelete}
+                                          onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
+                                          onViewPastScans={handleViewPastScans}
+                                      />
+                                )
                             )}
                          </div>
                     </div>
@@ -487,7 +585,9 @@ const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     );
 };
 
-const EndpointFlagsModal = ({ data, onClose, onScanStart }) => {
+// In ManageAPIs.js, replace the EndpointFlagsModal component
+
+const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
     const { api, scanProfile } = data;
     const { currentUser } = useAuth();
     const [endpoints, setEndpoints] = useState([]);
@@ -513,9 +613,10 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart }) => {
         });
         setEndpoints(updatedEndpoints);
         
+        // This now uses showMessage instead of alert
         apiService.updateEndpointFlag(api.id, currentUser.id, endpointId, flag, isEnabled ? 'add' : 'remove')
             .catch(err => {
-                alert(`Failed to update flag: ${err.message}`);
+                showMessage(`Failed to update flag: ${err.message}`, 'error');
                 setEndpoints(originalEndpoints);
             });
     };
@@ -547,14 +648,16 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart }) => {
                     </div>
                 }
             </div>
-            <div className="modal-actions">
+              <div className="modal-actions">
+                <button className="action-btn" disabled style={{marginRight: 'auto'}}>Save as Template</button>
                 <button onClick={onClose} className="cancel-btn">Cancel</button>
-                <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>{startScanLoading ? 'Starting...' : 'Start Scan'}</button>
+                <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>
+                    {startScanLoading ? 'Starting...' : 'Start Scan'}
+                </button>
             </div>
         </Modal>
     );
 };
-
 const ScanProgressModal = ({ apiName }) => (
     <div className="modal-overlay">
         <div className="modal-content">
@@ -608,6 +711,97 @@ const ScanResultsModal = ({ data, onClose }) => {
     );
 };
 
+
+const EditApiModal = ({ api, onClose, onSave }) => {
+    const [name, setName] = useState(api.name);
+    const [baseUrl, setBaseUrl] = useState(api.base_url || '');
+
+    const handleSave = () => {
+        onSave(api.id, { title: name, base_url: baseUrl });
+    };
+
+    return (
+        <Modal onClose={onClose} title={`✏️ Edit ${api.name}`}>
+            <div className="modal-form">
+                <div className="form-group">
+                    <label htmlFor="api-name">API Name</label>
+                    <input id="api-name" type="text" value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="api-url">Base URL</label>
+                    <input id="api-url" type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} />
+                </div>
+                 <div className="modal-actions">
+                    <button onClick={onClose} className="cancel-btn">Cancel</button>
+                    <button onClick={handleSave} className="save-btn">Save Details</button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// In ManageAPIs.js, replace the ScheduleScanModal component
+
+const ScheduleScanModal = ({ api, onClose, showMessage }) => {
+    const { currentUser } = useAuth();
+    const [schedule, setSchedule] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchSchedule = useCallback(() => {
+        setIsLoading(true);
+        apiService.getSchedule(api.id, currentUser.id)
+            .then(setSchedule)
+            .finally(() => setIsLoading(false));
+    }, [api.id, currentUser.id]);
+
+    useEffect(() => {
+        fetchSchedule();
+    }, [fetchSchedule]);
+
+    const handleScheduleSave = (frequency) => {
+        apiService.saveSchedule(api.id, currentUser.id, frequency, true)
+            .then(fetchSchedule)
+            .catch(err => showMessage(err.message, 'error')); // Use showMessage
+    };
+
+    const handleScheduleDelete = () => {
+        // The window.confirm check is removed to disable directly.
+        apiService.deleteSchedule(api.id, currentUser.id)
+            .then(() => {
+                setSchedule(null)
+                showMessage('Schedule disabled successfully.', 'success');
+            })
+            .catch(err => showMessage(err.message, 'error')); // Use showMessage
+    };
+
+    return (
+        <Modal onClose={onClose} title={`🗓️ Scheduled Scanning for ${api.name}`}>
+            <div className="modal-form">
+                {isLoading ? <p>Loading schedule...</p> : (
+                    <div className="schedule-container">
+                        {schedule && schedule.is_enabled ? (
+                            <div>
+                                <p>A scan is currently scheduled to run <strong>{schedule.frequency}</strong>.</p>
+                                <p>Next run is estimated for: <br/><strong>{new Date(schedule.next_run_at).toLocaleString()}</strong></p>
+                                <button onClick={handleScheduleDelete} className="action-btn delete">Disable Schedule</button>
+                            </div>
+                        ) : (
+                            <div>
+                                <p>No active schedule. Select a frequency to enable automated scanning:</p>
+                                <div className="schedule-actions">
+                                    <button onClick={() => handleScheduleSave('daily')} className="action-btn">Daily</button>
+                                    <button onClick={() => handleScheduleSave('weekly')} className="action-btn">Weekly</button>
+                                    <button onClick={() => handleScheduleSave('monthly')} className="action-btn">Monthly</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+};
+
 const PastScansModal = ({ api, onClose, onViewReport }) => {
     const { currentUser } = useAuth();
     const [scans, setScans] = useState([]);
@@ -633,15 +827,19 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
                 {error && <p className="error-text">{error}</p>}
                 {!loading && !error && (
                     <ul className="past-scans-list">
-                       {scans.length > 0 ? scans.map(scan => (
-                           <li key={scan.id} className="past-scan-item">
-                                <div>
-                                    <p className="scan-date"><strong>Date:</strong> {new Date(scan.completed_at).toLocaleString()}</p>
-                                    <p className="scan-id">ID: {scan.id}</p>
-                                </div>
+                    {scans.length > 0 && scans.map(scan => (
+                        <li key={scan.id} className="past-scan-item">
+                            <div>
+                                <p className="scan-date"><strong>Date:</strong> {new Date(scan.completed_at).toLocaleString()}</p>
+                                <p className="scan-id">ID: {scan.id}</p>
+                            </div>
+                            <div className="past-scan-actions">
                                 <button onClick={() => onViewReport(scan.id, api.name)} className="action-btn view-report">View</button>
-                            </li>
-                       )) : <p>No completed scans found for this API.</p>}
+                                <button className="action-btn download-report" disabled>Executive Report</button>
+                                <button className="action-btn download-report" disabled>Technical Report</button>
+                            </div>
+                          </li>
+                      ))}
                     </ul>
                 )}
             </div>
@@ -650,4 +848,3 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
 };
 
 export default ManageAPIs;
-

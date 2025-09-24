@@ -659,6 +659,9 @@ app.get('/', (req, res) => {
       scanProgress: 'GET /api/scan/progress',
       stopScan: 'POST /api/scan/stop',
       scanResults: 'GET /api/scan/results',
+      getSchedule: 'GET /api/scans/schedule',
+      saveSchedule: 'POST /api/scans/schedule',
+      deleteSchedule: 'DELETE /api/scans/schedule',
       listScans: 'GET /api/scan/list',
       listTemplates: 'GET /api/templates/list',
       getTemplateDetails: 'GET /api/templates/details',
@@ -1677,7 +1680,7 @@ app.get('/api/apis/details', async (req, res) => {
 // Update API (apis.update) - UPDATED: Now requires user_id
 app.put('/api/apis/update', async (req, res) => {
   try {
-    const { api_id, name, description, user_id } = req.body;
+    const { api_id, user_id, updates } = req.body;
     
     // Validate required parameters
     if (!api_id) {
@@ -1694,8 +1697,7 @@ app.put('/api/apis/update', async (req, res) => {
       data: { 
         api_id: api_id.trim(),
         user_id: user_id.trim(),
-        name, 
-        description 
+        updates
       }
     });
     
@@ -2521,6 +2523,66 @@ app.get('/api/scan/list', async (req, res) => {
     }
   } catch (err) {
     sendError(res, 'List scans error', err.message, 500);
+  }
+});
+
+app.get('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.query;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.get',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule retrieved successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to retrieve schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get schedule error', err.message, 500);
+  }
+});
+
+app.post('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id, frequency, is_enabled } = req.body;
+    if (!user_id || !api_id || !frequency) {
+      return sendError(res, 'user_id, api_id, and frequency are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.create_or_update',
+      data: { user_id, api_id, frequency, is_enabled }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule saved successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to save schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Save schedule error', err.message, 500);
+  }
+});
+
+app.delete('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.body;
+     if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.delete',
+      data: { user_id, api_id }
+    });
+     if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule deleted successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to delete schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Delete schedule error', err.message, 500);
   }
 });
 

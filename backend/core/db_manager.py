@@ -113,6 +113,26 @@ class DB_Manager:
             logger.error(f"Error deleting from {table_name}: {e}")
             return []
 
+    def upsert(self, table_name: str, data: Dict[str, Any], on_conflict: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Performs an 'upsert' (update or insert) operation.
+        If a row with a matching 'on_conflict' column exists, it updates it.
+        Otherwise, it inserts a new row.
+        """
+        try:
+            # Supabase's upsert method handles the logic automatically.
+            result = self._supabase.table(table_name).upsert(
+                data, 
+                on_conflict=on_conflict
+            ).execute()
+            
+            if result.data:
+                return result.data
+            return None
+        except Exception as e:
+            logger.error(f"Error upserting into {table_name}: {e}")
+            return None
+
     
     def execute_raw(self, query: str) -> List[Dict[str, Any]]:
         try:

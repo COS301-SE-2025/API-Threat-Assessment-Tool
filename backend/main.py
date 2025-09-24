@@ -43,33 +43,48 @@ def _invalidate_api_list_cache(user_id: str):
         del USER_STORE[user_id]["api_list_cache"]
         log_with_timestamp(f"Invalidated API list cache for user {user_id}")
 
-# === Helper function to get or create ScanManager ===
-# In main.py
+def _get_api_client(user_id: str, api_id: str) -> APIClient:
+    """
+    Robustly retrieves an APIClient instance, checking memory cache first,
+    then loading from the database as a fallback.
+    """
+    # Ensure the basic cache structure exists to prevent KeyErrors
+    USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
+    
+    # 1. Check if the APIClient object is already in memory (fast path)
+    api_client = USER_STORE[user_id]["apis"].get(api_id)
+    
+    if api_client:
+        return api_client
+
+    # 2. If not in memory, try to load it from the database
+    log_with_timestamp(f"APIClient for {api_id} not in cache. Loading from DB...")
+    api_client = APIClient.load_from_db(api_id)
+    
+    if not api_client:
+        # If it's not in the DB either, then it's a true "not found"
+        return None
+    
+    # 3. Add the loaded client back to the cache for future requests
+    USER_STORE[user_id]["apis"][api_id] = api_client
+    log_with_timestamp(f"Cached APIClient {api_id} for user {user_id} from DB.")
+    
+    return api_client
 
 def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
     # Ensure the basic cache structure exists to prevent errors
     USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
     USER_STORE[user_id].setdefault("scans", {})
 
-    # 1. Check if the APIClient object is already in memory
-    api_client = USER_STORE[user_id]["apis"].get(api_id)
-
-    # 2. If not in memory, try to load it from the database
+    # 1. Use the new robust helper to get the API client
+    api_client = _get_api_client(user_id, api_id)
     if not api_client:
-        log_with_timestamp(f"APIClient for {api_id} not in cache. Loading from DB for scan...")
-        api_client = APIClient.load_from_db(api_id)
-        
-        if not api_client:
-            # If it's not in the DB either, then it's a true "not found"
-            return None
-        
-        # Add the loaded client to the cache for future use
-        USER_STORE[user_id]["apis"][api_id] = api_client
-    
-    # 3. Now that we have the api_client, get or create its ScanManager
+        return None # API truly does not exist
+
+    # 2. Now that we have the api_client, get or create its ScanManager
+    USER_STORE[user_id].setdefault("scans", {})
     if api_id not in USER_STORE[user_id]["scans"]:
         USER_STORE[user_id]["scans"][api_id] = ScanManager(api_client)
-        log_with_timestamp(f"[INFO] Created new ScanManager in memory for api_id: {api_id}")
 
     return USER_STORE[user_id]["scans"][api_id]
 
@@ -227,7 +242,9 @@ def get_api_details(request):
             USER_STORE[user_id] = {"apis": {}, "scans": {}}
         USER_STORE[user_id].setdefault("apis", {})[api_id] = api_client
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found in memory or database.")
 
     return response(HTTPCode.SUCCESS, {
         "title": client.title,
@@ -246,7 +263,9 @@ def update_api(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     db_updates = {}
     for key in ["title", "version", "base_url"]:
@@ -261,9 +280,6 @@ def update_api(request):
 
     return success({ "message": "API metadata updated successfully." }) 
 
-# In main.py
-# Replace the existing delete_api function with this improved version.
-
 def delete_api(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
@@ -271,7 +287,9 @@ def delete_api(request):
         return bad_request("Missing 'user_id' or 'api_id' field")
 
     # Try to get from cache first
-    client = USER_STORE.get(user_id, {}).get("apis", {}).get(api_id)
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     # If not in cache, load from DB to ensure we can delete it
     if not client:
@@ -307,10 +325,9 @@ def get_api_endpoints(request):
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
-        return not_found("API not found.")
-
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     endpoints = [{
         "id": ep.id,
@@ -335,7 +352,9 @@ def get_endpoint_details(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     for ep in client.endpoints:
         if ep.id == endpoint_id:
@@ -365,7 +384,10 @@ def add_tags(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = list(set(ep.tags + tags))
@@ -388,7 +410,10 @@ def remove_tags(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = [t for t in ep.tags if t not in tags]
@@ -410,7 +435,11 @@ def replace_tags(request):
 
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
-    client = USER_STORE[user_id]["apis"][api_id]
+
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = tags
@@ -428,7 +457,10 @@ def get_all_tags(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     all_tags = set()
     for ep in client.endpoints:
         all_tags.update(ep.tags)
@@ -447,7 +479,11 @@ def add_flags(request):
 
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
-    client = USER_STORE[user_id]["apis"][api_id]
+
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     try:
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
@@ -475,7 +511,11 @@ def remove_flags(request):
 
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
-    client = USER_STORE[user_id]["apis"][api_id]
+
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     try:
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
@@ -660,7 +700,10 @@ def set_api_key(request):
     if user_id not in USER_STORE or api_id not in USER_STORE[user_id].get("apis", {}):
         return not_found("API client not found.")
 
-    client = USER_STORE[user_id]["apis"][api_id]
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
     client.set_auth_token(api_key)
     return response(HTTPCode.SUCCESS, {"message": "api key set"})
 

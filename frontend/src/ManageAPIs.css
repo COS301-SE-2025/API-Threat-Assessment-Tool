@@ -1497,3 +1497,275 @@
   background: #2c2c36;
   border-color: #6366f1;
 }
+
+
+/* Reusing styles from Home.css for consistency where applicable */
+@import url('./Home.css');
+
+.manage-apis-main {
+  flex: 1;
+  padding: 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.manage-apis-hero {
+  background: var(--gradient-bg);
+  padding: 80px 40px;
+  text-align: center;
+}
+
+.api-stats-section {
+  padding: 20px 40px 40px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 25px;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  padding: 30px 25px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-medium);
+}
+
+.stat-icon {
+  font-size: 2.5em;
+  margin-bottom: 15px;
+}
+.stat-number {
+  font-size: 2.2em;
+  font-weight: 700;
+  color: var(--primary-color);
+  display: block;
+}
+.dark-mode .stat-number {
+  color: var(--primary-light);
+}
+.stat-label {
+  font-size: 1em;
+  color: var(--text-secondary);
+}
+
+.apis-list-section {
+  padding: 40px;
+}
+
+.apis-list {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-light);
+}
+
+.apis-list-header {
+  padding: 30px 40px;
+  background: var(--primary-gradient);
+  color: white;
+  border-top-left-radius: var(--border-radius);
+  border-top-right-radius: var(--border-radius);
+}
+
+.list-title {
+  font-size: 1.8em;
+  margin: 0;
+}
+
+.apis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  padding: 40px;
+}
+
+.api-card {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 25px;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+.dark-mode .api-card {
+  background: var(--bg-secondary);
+}
+
+.api-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-medium);
+}
+
+.api-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.api-name {
+  font-size: 1.3em;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.api-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.api-status.active {
+  background: #d4edda;
+  color: #155724;
+}
+.dark-mode .api-status.active {
+  background: #1f3f2f;
+  color: #66bb6a;
+}
+.api-status.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+.dark-mode .api-status.inactive {
+  background: #3f1f1f;
+  color: #ef5350;
+}
+
+.api-description {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  font-family: monospace;
+  margin-bottom: 15px;
+  flex-grow: 1;
+}
+
+.api-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  padding-top: 15px;
+  border-top: 1px solid var(--secondary-color);
+  margin-bottom: 20px;
+}
+
+.vulnerabilities-found {
+  color: var(--warning-color);
+  font-weight: bold;
+  margin-bottom: 15px;
+  background-color: rgba(255, 193, 7, 0.1);
+  padding: 8px;
+  border-radius: var(--border-radius-small);
+  text-align: center;
+}
+
+.api-card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: auto;
+}
+
+.action-btn {
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  text-align: center;
+}
+
+.action-btn.scan { background-color: var(--primary-color); color: white; }
+.action-btn.scan:hover { background-color: var(--primary-dark); }
+.action-btn.endpoints, .action-btn.history { background-color: var(--bg-secondary); color: var(--text-primary); border-color: var(--secondary-color); }
+.action-btn.endpoints:hover, .action-btn.history:hover { background-color: var(--secondary-color); }
+.action-btn.delete { color: var(--danger-color); }
+.action-btn.delete:hover { background-color: rgba(220, 53, 69, 0.1); }
+
+.no-apis {
+  text-align: center;
+  padding: 60px;
+  grid-column: 1 / -1;
+}
+.no-apis-icon { font-size: 3em; }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+.modal-content {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  width: 90%;
+  box-shadow: var(--shadow-heavy);
+  animation: slideInUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  padding: 20px 30px;
+  border-bottom: 1px solid var(--secondary-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h2 { margin: 0; font-size: 1.5em; }
+.close-btn { background: none; border: none; font-size: 1.8em; cursor: pointer; color: var(--text-secondary); }
+.modal-form { padding: 30px; }
+.modal-body-scrollable { max-height: 70vh; overflow-y: auto; }
+.modal-actions {
+  padding: 20px 30px;
+  border-top: 1px solid var(--secondary-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  background-color: var(--bg-primary);
+}
+.error-text { color: var(--danger-color); margin-top: 10px; }
+.loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Endpoint & Flag Styles */
+.endpoint-list, .past-scans-list { list-style: none; padding: 0; }
+.endpoint-card, .past-scan-item { padding: 15px; border: 1px solid var(--secondary-color); border-radius: 8px; margin-bottom: 10px; }
+.past-scan-item { display: flex; justify-content: space-between; align-items: center; }
+.endpoint-method-path { display: flex; align-items: center; gap: 10px; font-family: monospace; }
+.endpoint-method { font-weight: bold; }
+.endpoint-summary { font-size: 0.9em; color: var(--text-secondary); margin-top: 5px; }
+
+/* Custom Checkbox Toggle for Flags */
+.endpoint-flag-card { padding: 15px; border: 1px solid var(--secondary-color); border-radius: 8px; margin-bottom: 10px; }
+.endpoint-flag-card p { margin: 0 0 10px 0; }
+.flags-container { display: flex; flex-wrap: wrap; gap: 15px; }
+.flag-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em; }
+.flag-label input[type="checkbox"] { display: none; }
+.flag-toggle-switch { position: relative; width: 40px; height: 22px; background-color: var(--secondary-color); border-radius: 11px; transition: background-color 0.2s ease; }
+.flag-toggle-slider { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background-color: white; border-radius: 50%; transition: transform 0.2s ease; }
+.flag-label input[type="checkbox"]:checked + .flag-toggle-switch { background-color: var(--primary-color); }
+.flag-label input[type="checkbox"]:checked + .flag-toggle-switch .flag-toggle-slider { transform: translateX(18px); }
+
+/* Vulnerability & Report Styles */
+.vulnerability-card { border-left-width: 5px; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+.vulnerability-card h3 { margin-top: 0; }
+.severity-high { border-color: var(--danger-color); background-color: rgba(220, 53, 69, 0.05); }
+.severity-medium { border-color: var(--warning-color); background-color: rgba(255, 193, 7, 0.05); }
+.severity-low { border-color: var(--info-color); background-color: rgba(23, 162, 184, 0.05); }
+.no-vulnerabilities { text-align: center; padding: 30px; }

@@ -202,7 +202,6 @@ const Dashboard = () => {
             color: darkMode ? "#fff" : "#222",
             userSelect: "none"
           }}>
-            AT-AT
           </span>
         </div>
 

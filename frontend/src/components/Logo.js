@@ -2,10 +2,12 @@ import React, { useContext } from "react";
 import { ThemeContext } from "../App";
 import logoBlue from "../img/logo-blue.png";
 import logoWhite from "../img/logo-white.png";
+import ATAT from "../img/ATAT_logo.png";
 
 const Logo = ({ className = "", style = {}, ...props }) => {
   const { darkMode } = useContext(ThemeContext);
-const logoSrc = darkMode ? logoWhite : logoBlue;
+  const logoSrc = darkMode ? logoWhite : logoBlue;
+
   return (
     <a
       href="https://bitm.co.za"
@@ -21,6 +23,11 @@ const logoSrc = darkMode ? logoWhite : logoBlue;
         className={`logo-img ${className}`}
         style={{ height: 70, ...style }}
         {...props}
+      />
+      <img
+        src={ATAT}
+        alt="AT-AT Logo"
+        style={{ height: 70, marginLeft: 8 }}
       />
     </a>
   );

@@ -362,7 +362,6 @@ if (isLoading && apis.length === 0) {
             <header className="manage-apis-header">
                 <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Logo />
-                  <span style={{fontWeight: 700, fontSize: 24, letterSpacing: 2, userSelect: "none"}}>AT-AT</span>
                 </div>
                 <nav className="manage-apis-nav">
                     <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>

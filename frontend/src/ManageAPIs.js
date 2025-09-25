@@ -134,7 +134,7 @@ const apiService = {
   }
 };
 
-
+export { apiService };
 
 const AVAILABLE_FLAGS = ["BOLA", "BKEN_AUTH", "BOPLA", "URC", "BFLA", "UABF", "SSRF", "SEC_MISC", "IIM", "UCAPI", "SKIP"];
 const SCAN_TYPES = ["OWASP_API_10", "Sensitive Data Exposure", "Broken Authentication", "SQL Injection"];
@@ -845,5 +845,6 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
         </Modal>
     )
 };
+
 
 export default ManageAPIs;

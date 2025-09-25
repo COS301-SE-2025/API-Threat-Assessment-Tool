@@ -6,7 +6,7 @@ import Logo from "./components/Logo";
 import './ManageAPIs.css';
 
 
-// --- API Service Functions ---
+
 const apiService = {
   async fetchUserApis(userId) {
     if (!userId) throw new Error("User ID is required.");
@@ -584,7 +584,7 @@ const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     );
 };
 
-// In ManageAPIs.js, replace the EndpointFlagsModal component
+
 
 const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
     const { api, scanProfile } = data;
@@ -739,7 +739,7 @@ const EditApiModal = ({ api, onClose, onSave }) => {
     );
 };
 
-// In ManageAPIs.js, replace the ScheduleScanModal component
+
 
 const ScheduleScanModal = ({ api, onClose, showMessage }) => {
     const { currentUser } = useAuth();

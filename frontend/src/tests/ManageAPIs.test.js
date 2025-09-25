@@ -128,6 +128,8 @@ afterEach(() => {
 
 describe('ManageAPIs Component - Working Additional Tests', () => {
   
+
+  
   // test('shows import modal when import button clicked', async () => {
   //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
     
@@ -435,7 +437,153 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
       expect(screen.queryByText('Test API 2')).not.toBeInTheDocument();
     });
   });
+
+
+test('shows import modal when import button clicked', async () => {
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  
+  await waitFor(() => {
+    expect(screen.getByText('Test API 1')).toBeInTheDocument();
+  });
+  
+  const importButton = screen.getByText('⬆️ Import API Spec');
+  fireEvent.click(importButton);
+  
+  await waitFor(() => {
+    expect(screen.getByText('Upload an OpenAPI or Swagger file (.json, .yaml, .yml)')).toBeInTheDocument();
+  });
 });
+
+
+
+
+
+
+test('theme toggle button exists', async () => {
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  
+  await waitFor(() => {
+    expect(screen.getByText('Test API 1')).toBeInTheDocument();
+  });
+  
+  expect(screen.getByTitle('Toggle Theme')).toBeInTheDocument();
+});
+
+
+
+
+
+
+
+test('theme toggle button triggers toggle function', async () => {
+  const mockToggle = jest.fn();
+  
+  render(
+    <BrowserRouter>
+      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: mockToggle }}>
+        <ManageAPIs />
+      </ThemeContext.Provider>
+    </BrowserRouter>
+  );
+  
+  await waitFor(() => {
+    expect(screen.getByText('Test API 1')).toBeInTheDocument();
+  });
+  
+  const themeButton = screen.getByTitle('Toggle Theme');
+  fireEvent.click(themeButton);
+  
+  expect(mockToggle).toHaveBeenCalled();
+});
+
+test('message auto-clears after timeout', async () => {
+  jest.useFakeTimers();
+  
+  fetch.mockRejectedValueOnce(new Error('Test error'));
+  
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  
+  await waitFor(() => {
+    expect(screen.getByText(/Error fetching APIs: Test error/)).toBeInTheDocument();
+  });
+  
+  // Fast-forward time past the 4000ms timeout
+  jest.advanceTimersByTime(4000);
+  
+  await waitFor(() => {
+    expect(screen.queryByText(/Error fetching APIs: Test error/)).not.toBeInTheDocument();
+  });
+  
+  jest.useRealTimers();
+});
+
+// ---------------- UI / Component Tests ----------------
+
+test('Import modal closes when close button clicked', async () => {
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  fireEvent.click(await screen.findByText('⬆️ Import API Spec'));
+  expect(screen.getByText(/Upload an OpenAPI/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('×'));
+  await waitFor(() => expect(screen.queryByText(/Upload an OpenAPI/i)).not.toBeInTheDocument());
+});
+
+// test('Import modal shows error on failed upload', async () => {
+//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
+//   fireEvent.click(await screen.findByText('⬆️ Import API Spec'));
+//   const fileInput = screen.getByLabelText(/Drag & drop/i).closest('label').previousSibling;
+//   const file = new File(['bad'], 'bad.json', { type: 'application/json' });
+//   Object.defineProperty(fileInput, 'files', { value: [file] });
+//   fireEvent.change(fileInput);
+//   fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ success: false, message: 'File too large' }) });
+//   fireEvent.click(screen.getByText('Import'));
+//   await waitFor(() => expect(screen.getByText('File too large')).toBeInTheDocument());
+// });
+
+// test('Schedule modal opens and shows no active schedule', async () => {
+//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
+//   fireEvent.click(await screen.findByText('🗓️ Schedule'));
+//   expect(await screen.findByText(/No active schedule/i)).toBeInTheDocument();
+// });
+
+// test('History modal opens and lists past scans', async () => {
+//   fetch.mockResolvedValueOnce({
+//     ok: true,
+//     json: async () => ({
+//       success: true,
+//       data: { scans: [{ id: 'scan1', status: 'completed', completed_at: '2023-01-01T10:00:00Z' }] },
+//     }),
+//   });
+//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
+//   fireEvent.click(await screen.findByText('📜 History'));
+//   expect(await screen.findByText(/scan1/i)).toBeInTheDocument();
+// });
+
+
+
+test('Statistics card filter toggles off', async () => {
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  const card = await screen.findByText('APIs with Issues');
+  fireEvent.click(card);
+  expect(card.closest('.stat-card')).toHaveClass('active');
+  fireEvent.click(card);
+  expect(card.closest('.stat-card')).not.toHaveClass('active');
+});
+
+test('Loading state appears initially', () => {
+  render(<TestWrapper><ManageAPIs /></TestWrapper>);
+  expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+});
+test('importApiFile throws if no params', async () => {
+  await expect(apiService.importApiFile()).rejects.toThrow('A file and user ID are required.');
+});
+
+test('updateApiDetails throws if updates missing', async () => {
+  fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: false, message: 'No updates' }) });
+  await expect(apiService.updateApiDetails(1, 1, {})).rejects.toThrow('No updates');
+});
+
+});
+
 
 describe('apiService unit tests', () => {
   beforeEach(() => {
@@ -450,7 +598,7 @@ describe('apiService unit tests', () => {
         data: { apis: [{ id: 1, name: 'API1' }] },
       }),
     });
-    
+     
     const result = await apiService.fetchUserApis('user1');
     expect(result).toEqual([{ id: 1, name: 'API1' }]);
     expect(fetch).toHaveBeenCalledWith('/api/apis?user_id=user1');

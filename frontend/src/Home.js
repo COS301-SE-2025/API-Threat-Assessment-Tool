@@ -169,7 +169,6 @@ const Home = () => {
             color: darkMode ? "#fff" : "#222",
             userSelect: "none"
           }}>
-            AT-AT
           </span>
         </div>
         <nav className="home-nav">

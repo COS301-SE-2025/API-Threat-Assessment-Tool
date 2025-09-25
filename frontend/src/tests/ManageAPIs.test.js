@@ -1,9 +1,224 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation, Link } from 'react-router-dom';
 import ManageAPIs, { apiService } from '../ManageAPIs';
+import { useAuth } from '../AuthContext';
+import { ThemeContext } from '../App';
+
+// Mock dependencies
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: jest.fn(),
+  useLocation: () => ({ pathname: '/manage-apis' }),
+  Link: ({ children, ...props }) => <a {...props}>{children}</a>,
+}));
+
+jest.mock('../AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+
+jest.mock('../App', () => {
+  const React = jest.requireActual('react');
+  return {
+    ThemeContext: React.createContext({
+      darkMode: false,
+      toggleDarkMode: jest.fn(),
+    }),
+  };
+});
+
+// Mock IntersectionObserver
+class MockIntersectionObserver {
+  constructor(callback, options) {
+    this.callback = callback;
+    this.options = options;
+  }
+  observe(element) {
+    // Immediately trigger the callback to make elements visible
+    this.callback([{
+      target: element,
+      isIntersecting: true,
+      intersectionRatio: 1
+    }]);
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
+// Set up IntersectionObserver mock before tests
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  configurable: true,
+  value: MockIntersectionObserver,
+});
+
+Object.defineProperty(global, 'IntersectionObserver', {
+  writable: true,
+  configurable: true,
+  value: MockIntersectionObserver,
+});
+
 // Mock fetch globally
 global.fetch = jest.fn();
+
+const mockApis = [
+  {
+    id: 'api-1',
+    name: 'Test API 1',
+    vulnerabilitiesFound: 5,
+    lastScanned: '2023-01-01T10:00:00Z',
+    created_at: '2023-01-01T09:00:00Z',
+    status: 'Active',
+  },
+  {
+    id: 'api-2',
+    name: 'Test API 2',
+    vulnerabilitiesFound: 0,
+    lastScanned: 'Never',
+    created_at: '2023-01-02T09:00:00Z',
+    status: 'Inactive',
+  },
+];
+
+const mockAuthUser = {
+  currentUser: {
+    id: 'user123',
+    username: 'testuser',
+    firstName: 'Test',
+    lastName: 'User'
+  },
+  logout: jest.fn(),
+  getUserFullName: () => 'Test User',
+  isAuthenticated: () => true,
+  getUserInitials: () => 'TU'
+};
+
+const TestWrapper = ({ children }) => {
+  return (
+    <BrowserRouter>
+      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: jest.fn() }}>
+        {children}
+      </ThemeContext.Provider>
+    </BrowserRouter>
+  );
+};
+
+// Reset all mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+  
+  // Reset useAuth mock
+  useAuth.mockReturnValue(mockAuthUser);
+  
+  // Reset fetch mock with proper response structure
+  fetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({ 
+      success: true, 
+      data: { 
+        apis: mockApis 
+      } 
+    }),
+  });
+
+  // Clear any existing DOM content
+  document.body.innerHTML = '';
+});
+
+// Clean up after each test
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+describe('ManageAPIs Component Tests', () => {
+  test('renders and displays APIs from fetch', async () => {
+    // Render the component
+    render(
+      <TestWrapper>
+        <ManageAPIs />
+      </TestWrapper>
+    );
+
+    // Wait for the loading to complete and APIs to be displayed
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API 1')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    // Check that both API names are rendered
+    expect(screen.getByText('Test API 1')).toBeInTheDocument();
+    expect(screen.getByText('Test API 2')).toBeInTheDocument();
+    
+    // Check for vulnerabilities text (note: includes emoji in actual component)
+    await waitFor(() => {
+      expect(screen.getByText('⚠️ 5 vulnerabilities found')).toBeInTheDocument();
+    });
+
+    // Verify fetch was called with correct parameters
+    expect(fetch).toHaveBeenCalledWith('/api/apis?user_id=user123');
+  });
+
+  test('displays loading state initially', () => {
+    // Mock a delayed response
+    fetch.mockImplementation(() => 
+      new Promise(resolve => 
+        setTimeout(() => resolve({
+          ok: true,
+          json: async () => ({ success: true, data: { apis: [] } })
+        }), 100)
+      )
+    );
+
+    render(
+      <TestWrapper>
+        <ManageAPIs />
+      </TestWrapper>
+    );
+
+    // Should show loading initially
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  test('handles empty API list', async () => {
+    // Mock empty response
+    fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ 
+        success: true, 
+        data: { 
+          apis: [] 
+        } 
+      }),
+    });
+
+    render(
+      <TestWrapper>
+        <ManageAPIs />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('No APIs Match Your Criteria')).toBeInTheDocument();
+    });
+  });
+
+  test('handles fetch error', async () => {
+    // Mock fetch error
+    fetch.mockRejectedValue(new Error('Failed to fetch APIs.'));
+
+    render(
+      <TestWrapper>
+        <ManageAPIs />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Error fetching APIs/)).toBeInTheDocument();
+    });
+  });
+});
 
 describe('apiService unit tests', () => {
   beforeEach(() => {
@@ -11,6 +226,32 @@ describe('apiService unit tests', () => {
   });
 
   test('fetchUserApis returns API list on success', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { apis: [{ id: 1, name: 'API1' }] },
+      }),
+    });
+    
+    const result = await apiService.fetchUserApis('user1');
+    expect(result).toEqual([{ id: 1, name: 'API1' }]);
+    expect(fetch).toHaveBeenCalledWith('/api/apis?user_id=user1');
+  });
+
+  test('fetchUserApis throws error on failure', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    });
+    
+    await expect(apiService.fetchUserApis('user1')).rejects.toThrow('Failed to fetch APIs.');
+  });
+
+  test('fetchUserApis throws error when user ID is missing', async () => {
+    await expect(apiService.fetchUserApis()).rejects.toThrow('User ID is required.');
+  });
+    test('fetchUserApis returns API list on success', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -523,7 +764,4 @@ test('getScanStatus throws default polling error when no message provided', asyn
   });
   await expect(apiService.getScanStatus(1)).rejects.toThrow('Polling for scan results failed');
 });
-
-
-
 });

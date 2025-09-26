@@ -90,14 +90,119 @@ def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
     return USER_STORE[user_id]["scans"][api_id]
 
 # === Dashboard ===
-def dashboard_overview(request): 
-    return server_error("Not yet implemented")
+def dashboard_overview(request):
+    """
+    Gathers and returns a comprehensive overview of the user's security posture.
+    """
+    user_id = request.get("data", {}).get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    try:
+        # 1. Get all APIs for the user
+        user_apis = db_manager.select("apis", columns="id, name", filters={"user_id": user_id})
+        if not user_apis:
+            return success({
+                "total_apis": 0, "total_scans": 0, "total_vulnerabilities": 0,
+                "critical_vulnerabilities": 0, "vulnerabilities_by_severity": {},
+                "recent_scans": [], "scan_activity_weekly": [], "top_vuln_types": []
+            })
+
+        api_ids = [api['id'] for api in user_apis]
+        api_name_map = {api['id']: api['name'] for api in user_apis}
+
+        # 2. Get all scans for those APIs
+        all_scans = db_manager.select("scans", columns="id, api_id, status, completed_at", filters={"api_id": api_ids})
+        
+        completed_scans = [s for s in all_scans if s['status'] == 'completed' and s.get('completed_at')]
+        scan_ids = [scan['id'] for scan in completed_scans]
+        
+        total_vulnerabilities = 0
+        critical_vulnerabilities = 0
+        vulnerabilities_by_severity = defaultdict(int)
+        top_vuln_types = defaultdict(int)
+
+        if scan_ids:
+            # 3. Get all scan results for completed scans
+            all_results = db_manager.select(
+                "scan_results",
+                columns="severity, vulnerability_name",
+                filters={"scan_id": scan_ids}
+            )
+            total_vulnerabilities = len(all_results)
+            for res in all_results:
+                severity = res.get("severity", "UNKNOWN").upper()
+                vulnerabilities_by_severity[severity] += 1
+                if severity == "CRITICAL": # Assuming 'CRITICAL' is a possible value
+                    critical_vulnerabilities += 1
+                
+                vuln_name = res.get("vulnerability_name", "Unknown Vulnerability")
+                if vuln_name:
+                    top_vuln_types[vuln_name] += 1
+        
+        # 4. Prepare recent scans for the dashboard
+        completed_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+        recent_scans = []
+        for scan in completed_scans[:5]: # Get top 5
+            scan_results_count = db_manager.select("scan_results", columns="id", filters={"scan_id": scan['id']})
+            recent_scans.append({
+                "id": scan['id'],
+                "apiName": api_name_map.get(scan['api_id'], "Unknown API"),
+                "date": parse_datetime(scan['completed_at']).isoformat(),
+                "status": scan['status'],
+                "vulnerabilities": len(scan_results_count)
+            })
+
+        # 5. Prepare weekly activity chart data
+        scan_activity_weekly = {day: {'scans': 0, 'vulnerabilities': 0} for day in range(7)}
+        today = datetime.now(timezone.utc).date()
+        start_of_week = today - timedelta(days=today.weekday())
+        
+        for scan in completed_scans:
+            completed_date = parse_datetime(scan['completed_at']).date()
+            if completed_date >= start_of_week:
+                day_index = completed_date.weekday()
+                scan_activity_weekly[day_index]['scans'] += 1
+                scan_vulns = db_manager.select("scan_results", columns="id", filters={"scan_id": scan['id']})
+                scan_activity_weekly[day_index]['vulnerabilities'] += len(scan_vulns)
+        
+        weekly_chart_data = [
+            {'day': d, 'scans': scan_activity_weekly[i]['scans'], 'vulnerabilities': scan_activity_weekly[i]['vulnerabilities']}
+            for i, d in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+        ]
+        
+        # Prepare top vulnerability types
+        sorted_top_vulns = sorted(top_vuln_types.items(), key=lambda item: item[1], reverse=True)[:4]
+        
+        overview_data = {
+            "total_apis": len(user_apis),
+            "total_scans": len(all_scans),
+            "total_vulnerabilities": total_vulnerabilities,
+            "critical_vulnerabilities": vulnerabilities_by_severity.get("CRITICAL", 0),
+            "vulnerabilities_by_severity": dict(vulnerabilities_by_severity),
+            "recent_scans": recent_scans,
+            "scan_activity_weekly": weekly_chart_data,
+            "top_vuln_types": [{"type": v[0], "count": v[1]} for v in sorted_top_vulns]
+        }
+
+        return success(overview_data)
+
+    except Exception as e:
+        log_with_timestamp(f"Error in dashboard_overview: {e}")
+        return server_error(str(e))
+
 
 def dashboard_metrics(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard, as 'dashboard_overview' provides all necessary data.
+    # It is kept here as a placeholder.
+    log_with_timestamp("dashboard.metrics call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
 
 def dashboard_alerts(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard.
+    log_with_timestamp("dashboard.alerts call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
+
 
 # In main.py
 
@@ -763,6 +868,104 @@ def stop_scan(request):
         return bad_request("Missing 'report_id'")
     return success({f"Stop request received for report {report_id}"})
 
+def share_api(request):
+    """Shares an API with another user by their email address."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    share_with_email = request.get("data", {}).get("email")
+    permission = request.get("data", {}).get("permission", "read")
+
+    if not all([owner_user_id, api_id, share_with_email]):
+        return bad_request("Missing owner_user_id, api_id, or email.")
+
+    # 1. Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API or it does not exist."})
+
+    # 2. Find the user to share with
+    target_user = db_manager.select("users", columns="id", filters={"email": share_with_email})
+    if not target_user:
+        return not_found(f"User with email '{share_with_email}' not found.")
+    
+    target_user_id = target_user[0]['id']
+
+    if target_user_id == owner_user_id:
+        return bad_request("You cannot share an API with yourself.")
+
+    # 3. Check for existing share to either update or insert
+    share_data = {"api_id": api_id, "user_id": target_user_id, "permission": permission}
+    existing_share = db_manager.select("api_access", filters={"api_id": api_id, "user_id": target_user_id})
+    
+    if existing_share:
+        result = db_manager.update("api_access", data={"permission": permission}, filters={"api_id": api_id, "user_id": target_user_id})
+        message = "API share permission updated successfully."
+    else:
+        result = db_manager.insert("api_access", data=share_data)
+        message = "API shared successfully."
+
+    if not result:
+        return server_error("Failed to save API share information.")
+        
+    return success({"message": message})
+
+
+def get_api_shares(request):
+    """Retrieves a list of users an API is shared with."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+
+    if not all([user_id, api_id]):
+        return bad_request("Missing user_id or api_id.")
+        
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view shares for this API."})
+        
+    access_records = db_manager.select("api_access", columns="user_id, permission", filters={"api_id": api_id})
+    if not access_records:
+        return success({"shares": []})
+        
+    user_ids = [rec['user_id'] for rec in access_records]
+    users_info = db_manager.select("users", columns="id, email, first_name, last_name", filters={"id": user_ids})
+    
+    user_map = {user['id']: user for user in users_info}
+    
+    shares = []
+    for rec in access_records:
+        user_info = user_map.get(rec['user_id'])
+        if user_info:
+            shares.append({
+                "user_id": user_info['id'],
+                "email": user_info['email'],
+                "name": f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+                "permission": rec['permission']
+            })
+            
+    return success({"shares": shares})
+
+def revoke_api_access(request):
+    """Revokes a user's access to a specific API."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    revoke_user_id = request.get("data", {}).get("revoke_user_id")
+
+    if not all([owner_user_id, api_id, revoke_user_id]):
+        return bad_request("Missing owner_user_id, api_id, or revoke_user_id.")
+
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API."})
+        
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": revoke_user_id})
+    
+    if not deleted:
+        return not_found("Access record not found for this user and API.")
+        
+    return success({"message": "API access revoked successfully."})
+
 def set_api_key(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
@@ -834,11 +1037,12 @@ def handle_request(request: dict):
         "scan.status": get_scan_status,
         "scan.stop": stop_scan,
         "scan.list": get_all_scans,
-        # --- ADD THESE NEW ROUTES ---
         "scans.schedule.get": get_schedule,
         "scans.schedule.create_or_update": create_or_update_schedule,
         "scans.schedule.delete": delete_schedule,
-        # --- END NEW ROUTES ---
+        "apis.share": share_api,
+        "apis.shares.list": get_api_shares,
+        "apis.shares.revoke": revoke_api_access,
         "templates.list": get_all_templates,
         "templates.details": get_template_details,
         "templates.use": use_template,
@@ -927,5 +1131,4 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
-
 

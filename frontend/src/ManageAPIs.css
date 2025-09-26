@@ -680,7 +680,7 @@
 }
 
 .dark-mode .action-btn.scan {
-  background: var(--success-color);
+  background: #333539;
   border-color: var(--success-color);
 }
 
@@ -690,7 +690,7 @@
 }
 
 .dark-mode .action-btn.scan:hover {
-  background: #1e7e34;
+  background: #479e5b;
 }
 
 /* Empty State */

@@ -13,3 +13,6 @@ Thumbs.db
 
 # Python virtual environment
 venv/
+
+#vodoo magic
+update.sh

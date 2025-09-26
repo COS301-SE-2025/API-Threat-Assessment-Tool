@@ -6,6 +6,7 @@
 
 from models.vulnerability_report import VulnerabilityReport
 from fpdf import FPDF
+from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 class ReportGenerator:
@@ -21,9 +22,12 @@ class ReportGenerator:
             technical_report += f"**Description:** {result.description}\n"
             technical_report += f"**Risk Level:** {result.severity}\n"
             technical_report += f"**Category:** {result.owasp_category}\n"
+            technical_report += f"**Endpoint:** {result.endpoint.path}\n"
+            technical_report += f"**HTTP Method:** {result.endpoint.method}\n"
             technical_report += f"**Recommendation:** {result.recommendation}\n\n"
             technical_report += "---\n\n"
         self.vuln_report.technical_report = technical_report
+
 
     def create_executive_report(self, scan_results):
         executive_report = "Executive Summary:\n"
@@ -95,23 +99,69 @@ class ReportGenerator:
         else:
             raise ValueError("Invalid report type")
 
+    
     def generate_technical_html_report(self, filename, report_data, scan_results):
         score = self.calculate_api_score(scan_results)
-        html_report = "<html><body style='position: relative;'>"
-        html_report += "<img src='BlueVisionLogo.png' alt='Company Logo' style='position: absolute; top: 10px; right: 10px; width: 250px;'>"
-        html_report += "<h1>Vulnerability Report</h1>"
-        html_report += f"<p>Total Vulnerabilities: {len(scan_results)}</p>"
-        html_report += f"<p>API Score: {score}</p>"
+        html_report = f""" 
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Vulnerability Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f0f0f0; line-height: 1.6; }}
+                .container {{ max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 20px; }}
+                .logo {{ position: absolute; top: 10px; right: 10px; width: 250px; }}
+                h1 {{ color: #333; }}
+                h2 {{ margin-top: 40px; color: #444; }}
+                p {{ margin-bottom: 10px; }}
+                .vulnerability {{ margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ddd; }}
+                .severity {{ padding: 5px; border-radius: 4px; color: white; }}
+                .Critical {{ background-color: #800080; }}
+                .High {{ background-color: #FF0000; }}
+                .Medium {{ background-color: #FFA500; }}
+                .Low {{ background-color: #FFFF00; color: black; }}
+                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <img src='BlueVisionLogo.png' alt='Company Logo' class="logo">
+                <div class="header">
+                    <h1>Vulnerability Report</h1>
+                    <p>Total Vulnerabilities: {len(scan_results)}</p>
+                    <p>API Score: {score}</p>
+                </div>
+        """
+
         for i, result in enumerate(scan_results, start=1):
-            html_report += f"<h2>Vulnerability {i}: {result.vulnerability_name}</h2>"
-            html_report += f"<p><strong>Description:</strong> {result.description}</p>"
-            html_report += f"<p><strong>Risk Level:</strong> {result.severity}</p>"
-            html_report += f"<p><strong>Category:</strong> {result.owasp_category}</p>"
-            html_report += f"<p><strong>Recommendation:</strong> {result.recommendation}</p>"
-            html_report += "<hr>"
-        html_report += "</body></html>"
+            html_report += f"""
+                <div class="vulnerability">
+                    <h2>Vulnerability {i}: {result.vulnerability_name}</h2>
+                    <p><strong>Description:</strong> {result.description}</p>
+                    <p><strong>Risk Level:</strong> <span class="severity {result.severity}">{result.severity}</span></p>
+                    <p><strong>Category:</strong> {result.owasp_category}</p>
+                    <p><strong>Endpoint:</strong> {result.endpoint.path}</p>
+                    <p><strong>HTTP Method:</strong> {result.endpoint.method}</p>
+                    <p><strong>Recommendation:</strong> {result.recommendation}</p>
+                </div>
+            """
+
+        html_report += f"""
+            <div class="footer">
+                <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+            </div>
+            </div>
+        </body>
+        </html>
+        """
+
         with open(filename, "w") as f:
             f.write(html_report)
+
+
 
     def generate_technical_pdf_report(self, filename, report_data, scan_results):
         score = self.calculate_api_score(scan_results)
@@ -143,25 +193,56 @@ class ReportGenerator:
             pdf.ln(10)
         pdf.output(filename)
 
-
-
     def generate_executive_html_report(self, filename, report_data, scan_results):
         score = self.calculate_api_score(scan_results)
-        html_report = "<html><body style='position: relative;'>"
-        html_report += "<img src='BlueVisionLogo.png' alt='Company Logo' style='position: absolute; top: 10px; right: 10px; width: 250px;'>"
-        html_report += "<h1>Executive Summary Report</h1>"
-        html_report += f"<p>API Score: {score}</p>"
-        html_report += "<h2>Vulnerability Summary:</h2>"
-        html_report += "<pre>"
-        html_report += report_data
-        html_report += "</pre>"
-        html_report += "<h2>Vulnerability Severity Distribution:</h2>"
-        html_report += "<img src='vulnerability_severity_distribution.png' alt='Vulnerability Severity Distribution'>"
-        html_report += "<h2>Vulnerability Severity Percentage:</h2>"
-        html_report += "<img src='vulnerability_severity_percentage.png' alt='Vulnerability Severity Percentage'>"
-        html_report += "<h2>Vulnerability Type Percentage:</h2>"
-        html_report += "<img src='vulnerability_type_percentage.png' alt='Vulnerability Type Percentage'>"
-        html_report += "</body></html>"
+        html_report = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Executive Summary Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f0f0f0; line-height: 1.6; }}
+                .container {{ max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 20px; }}
+                .logo {{ position: absolute; top: 10px; right: 10px; width: 250px; }}
+                h1 {{ color: #333; }}
+                h2 {{ margin-top: 40px; color: #444; }}
+                pre {{ background-color: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid #ddd; }}
+                .chart {{ margin: 20px 0; text-align: center; }}
+                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <img src='BlueVisionLogo.png' alt='Company Logo' class="logo">
+                <div class="header">
+                    <h1>Executive Summary Report</h1>
+                    <p>API Score: {score}</p>
+                </div>
+                <h2>Vulnerability Summary:</h2>
+                <pre>{report_data}</pre>
+                <div class="chart">
+                    <h2>Vulnerability Severity Distribution:</h2>
+                    <img src='vulnerability_severity_distribution.png' alt='Vulnerability Severity Distribution'>
+                </div>
+                <div class="chart">
+                    <h2>Vulnerability Severity Percentage:</h2>
+                    <img src='vulnerability_severity_percentage.png' alt='Vulnerability Severity Percentage'>
+                </div>
+                <div class="chart">
+                    <h2>Vulnerability Type Percentage:</h2>
+                    <img src='vulnerability_type_percentage.png' alt='Vulnerability Type Percentage'>
+                </div>
+                <div class="footer">
+                    <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
         with open(filename, "w") as f:
             f.write(html_report)
 
@@ -191,6 +272,7 @@ class ReportGenerator:
         pdf.image('vulnerability_type_percentage.png', x=25, y=50, w=150)
         pdf.output(filename)
 
+   
     def generate_technical_json_report(self, filename, scan_results):
         score = self.calculate_api_score(scan_results)
         report_data = {
@@ -203,10 +285,13 @@ class ReportGenerator:
                 "description": result.description,
                 "severity": result.severity,
                 "owasp_category": result.owasp_category,
+                "endpoint": result.endpoint.path,
+                "http_method": result.endpoint.method,
                 "recommendation": result.recommendation
             })
         with open(filename, "w") as f:
             json.dump(report_data, f, indent=4)
+
 
     def generate_executive_json_report(self, filename, scan_results):
         score = self.calculate_api_score(scan_results)

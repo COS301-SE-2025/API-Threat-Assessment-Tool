@@ -805,40 +805,132 @@ const ScanProgressModal = ({ apiName }) => (
     </div>
 );
 
+// In ManageAPIs.js, replace the entire ScanResultsModal component with this one
+
 const ScanResultsModal = ({ data, onClose }) => {
     const { results, apiName } = data;
+    const scanInfo = results?.results?.scan_info;
     const vulnerabilities = results?.results?.results || [];
+    
+    // State to manage which vulnerability accordion is open
+    const [openVulnerabilityId, setOpenVulnerabilityId] = useState(null);
 
-    const getSeverityClass = (severity) => {
-        switch(severity?.toLowerCase()){
-            case 'high': return 'severity-high';
-            case 'medium': return 'severity-medium';
-            case 'low': return 'severity-low';
-            default: return 'severity-info';
-        }
+    // Helper function to parse the method and path from the 'evidence' string
+    const parseEvidence = (evidence) => {
+        if (!evidence || typeof evidence !== 'string') return { method: 'N/A', path: 'N/A' };
+        const methodMatch = evidence.match(/Method: (.*)/);
+        const pathMatch = evidence.match(/Path: (.*)/);
+        return {
+            method: methodMatch ? methodMatch[1].trim() : 'N/A',
+            path: pathMatch ? pathMatch[1].trim() : 'N/A',
+        };
     };
+
+    // Calculate summary statistics using useMemo for efficiency
+    const summaryStats = useMemo(() => {
+        const stats = { high: 0, medium: 0, low: 0, info: 0 };
+        vulnerabilities.forEach(v => {
+            const severity = v.severity?.toLowerCase() || 'info';
+            if (stats.hasOwnProperty(severity)) {
+                stats[severity]++;
+            } else {
+                stats.info++;
+            }
+        });
+        
+        let duration = 'N/A';
+        if (scanInfo?.started_at && scanInfo?.completed_at) {
+            const start = new Date(scanInfo.started_at);
+            const end = new Date(scanInfo.completed_at);
+            const seconds = (end - start) / 1000;
+            duration = `${seconds.toFixed(2)} seconds`;
+        }
+
+        return { counts: stats, total: vulnerabilities.length, duration };
+    }, [vulnerabilities, scanInfo]);
+
+    const getSeverityClass = (severity) => `severity-${severity?.toLowerCase() || 'info'}`;
     
     return (
         <Modal onClose={onClose} title={`📊 Scan Report for ${apiName}`}>
-             <div className="modal-form modal-body-scrollable">
-                {vulnerabilities.length > 0 ? (
-                    vulnerabilities.map((vuln, i) => (
-                        <div key={i} className={`vulnerability-card ${getSeverityClass(vuln.severity)}`}>
-                            <h3>{vuln.vulnerability_name}</h3>
-                            <p><strong>Severity:</strong> {vuln.severity}</p>
-                            <p><strong>Endpoint:</strong> {vuln.endpoint_path} ({vuln.endpoint_method})</p>
-                            <p><strong>Description:</strong> {vuln.description}</p>
-                            <p><strong>Recommendation:</strong> {vuln.recommendation}</p>
+            <div className="modal-form modal-body-scrollable report-modal">
+                <div className="report-summary">
+                    <div className="summary-grid">
+                        <div className="summary-card total">
+                            <span className="summary-value">{summaryStats.total}</span>
+                            <span className="summary-label">Total Vulnerabilities</span>
                         </div>
-                    ))
-                ) : (
-                    <div className="no-vulnerabilities">
-                        <h3>✅ No Vulnerabilities Found</h3>
-                        <p>Great job! This scan did not find any vulnerabilities.</p>
+                        <div className="summary-card high">
+                            <span className="summary-value">{summaryStats.counts.high}</span>
+                            <span className="summary-label">High Severity</span>
+                        </div>
+                        <div className="summary-card medium">
+                            <span className="summary-value">{summaryStats.counts.medium}</span>
+                            <span className="summary-label">Medium Severity</span>
+                        </div>
+                        <div className="summary-card low">
+                            <span className="summary-value">{summaryStats.counts.low}</span>
+                            <span className="summary-label">Low Severity</span>
+                        </div>
                     </div>
-                )}
+                    {scanInfo && (
+                        <div className="scan-metadata">
+                            <span>Scanned on: {new Date(scanInfo.completed_at).toLocaleString()}</span>
+                            <span>Duration: {summaryStats.duration}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="vulnerability-accordion">
+                    {vulnerabilities.length > 0 ? (
+                        vulnerabilities.map(vuln => {
+                            const { method, path } = parseEvidence(vuln.evidence);
+                            const isOpen = openVulnerabilityId === vuln.id;
+                            return (
+                                <div key={vuln.id} className={`vulnerability-item ${isOpen ? 'open' : ''}`}>
+                                    <div className="vulnerability-header" onClick={() => setOpenVulnerabilityId(isOpen ? null : vuln.id)}>
+                                        <span className={`severity-badge ${getSeverityClass(vuln.severity)}`}>{vuln.severity}</span>
+                                        <span className="vuln-name">{vuln.vulnerability_name}</span>
+                                        <span className="vuln-path">{path}</span>
+                                        <span className="accordion-toggle">{isOpen ? '−' : '+'}</span>
+                                    </div>
+                                    {isOpen && (
+                                        <div className="vulnerability-details">
+                                            <div className="detail-block">
+                                                <strong>Description:</strong>
+                                                <p>{vuln.description}</p>
+                                            </div>
+                                            <div className="detail-block">
+                                                <strong>Recommendation:</strong>
+                                                <p>{vuln.recommendation}</p>
+                                            </div>
+                                            <div className="detail-block half-width">
+                                                <strong>Method:</strong>
+                                                <p><code>{method}</code></p>
+                                            </div>
+                                             <div className="detail-block half-width">
+                                                <strong>CVSS Score:</strong>
+                                                <p>{vuln.cvss_score || 'N/A'}</p>
+                                            </div>
+                                            <div className="detail-block">
+                                                <strong>Full Evidence:</strong>
+                                                <pre><code>{vuln.evidence}</code></pre>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })
+                    ) : (
+                        <div className="no-vulnerabilities">
+                            <h3>✅ No Vulnerabilities Found</h3>
+                            <p>Great job! This scan did not find any vulnerabilities.</p>
+                        </div>
+                    )}
+                </div>
              </div>
              <div className="modal-actions">
+                 <button className="action-btn" disabled>Download Report</button>
                  <button onClick={onClose} className="save-btn">Close</button>
              </div>
         </Modal>

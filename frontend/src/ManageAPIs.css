@@ -1807,3 +1807,214 @@
     min-width: auto;
   }
 }
+
+/* Add these styles for the redesigned Scan Report Modal */
+
+.report-modal .modal-body-scrollable {
+    background-color: var(--bg-primary);
+}
+
+.report-summary {
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    
+    /* --- FIX: Ensure vertical layout --- */
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* This creates consistent spacing */
+}
+
+
+.summary-grid {
+    display: grid;
+    /* This creates a responsive grid: 2 columns on small screens, up to 4 on larger ones */
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+}
+
+
+.summary-card {
+    display: flex; /* Use flexbox for better internal control */
+    flex-direction: column; /* Stack the number and label vertically */
+    gap: 4px; /* Add a small space between the number and label */
+    padding: 15px;
+    background-color: var(--bg-primary); /* Give the card a slightly different background */
+    border-radius: var(--border-radius-small);
+    border-top: 4px solid; /* Use a top border for a cleaner look */
+    /* text-align is no longer needed as flexbox handles alignment */
+}
+
+.summary-card.total { border-color: var(--primary-color); }
+.summary-card.high { border-color: var(--danger-color); }
+.summary-card.medium { border-color: var(--warning-color); }
+.summary-card.low { border-color: var(--info-color); }
+
+
+.summary-value {
+    font-size: 1.75em; /* Reduced font size for a cleaner look */
+    font-weight: 700;
+    line-height: 1.1; /* Tighter line height */
+    color: var(--text-primary);
+}
+
+.summary-label {
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.scan-metadata {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 20px; /* Increased padding */
+    border-top: 1px solid var(--secondary-color);
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    
+    /* --- FIX: Remove margin handled by parent 'gap' --- */
+    margin-top: 0; 
+}
+
+/* Accordion Styles */
+.vulnerability-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vulnerability-item {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--secondary-color);
+    overflow: hidden;
+    transition: all 0.2s ease-in-out;
+}
+.vulnerability-item.open {
+    box-shadow: var(--shadow-light);
+}
+
+
+.vulnerability-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    cursor: pointer;
+    background-color: var(--bg-secondary);
+}
+
+.vulnerability-header:hover {
+    background-color: var(--bg-primary);
+}
+
+.severity-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+}
+.severity-badge.high { background-color: var(--danger-color); }
+.severity-badge.medium { background-color: var(--warning-color); }
+.severity-badge.low { background-color: var(--info-color); }
+.severity-badge.info { background-color: var(--text-secondary); }
+
+
+.vuln-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.vuln-path {
+    font-family: monospace;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    justify-self: flex-end;
+}
+
+.accordion-toggle {
+    font-size: 1.5em;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.vulnerability-details {
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid var(--secondary-color);
+    animation: fadeIn 0.3s ease;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.detail-block {
+    width: 100%;
+}
+.detail-block.half-width {
+    width: calc(50% - 8px);
+}
+.detail-block strong {
+    color: var(--text-primary);
+}
+.detail-block p {
+    margin: 5px 0 0 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.detail-block pre {
+    background-color: var(--bg-primary);
+    padding: 10px;
+    border-radius: var(--border-radius-small);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* In ManageAPIs.css, REPLACE your existing summary styles with this more robust version */
+
+.report-modal .summary-grid {
+    display: flex; /* Use Flexbox for robust alignment */
+    flex-wrap: wrap; /* Allow cards to wrap to the next line on small screens */
+    gap: 15px;
+    width: 100%;
+}
+
+.report-modal .summary-card {
+    flex: 1; /* Allows cards to grow and shrink evenly */
+    min-width: 140px; /* Each card will be at least this wide before wrapping */
+    
+    /* --- The rest of the styling remains the same --- */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 15px;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius-small);
+    border-top: 4px solid;
+}
+
+.summary-card.total { border-color: var(--primary-color); }
+.summary-card.high { border-color: var(--danger-color); }
+.summary-card.medium { border-color: var(--warning-color); }
+.summary-card.low { border-color: var(--info-color); }
+
+.summary-value {
+    font-size: 1.75em;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+
+.summary-label {
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text-secondary);
+}

@@ -4,7 +4,15 @@ const path = require('path');
 const fs = require('fs');
 const MockEngine = require('../mocks/engineMock');
 
-// Create a helper to generate test files
+/**
+ * Main Workflow Integration Tests
+ * 
+ * Core workflow tests that verify the complete API management lifecycle
+ * from import to scan execution. This file focuses on the essential
+ * end-to-end workflow scenarios.
+ */
+
+// Test utilities
 const createTestFile = (filename, content) => {
   const tempDir = path.join(__dirname, '../temp');
   if (!fs.existsSync(tempDir)) {
@@ -15,31 +23,48 @@ const createTestFile = (filename, content) => {
   return filePath;
 };
 
-// Mock Supabase and other dependencies
+const cleanupTestFile = (filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    console.warn(`Failed to cleanup test file: ${err.message}`);
+  }
+};
+
+// Mock dependencies
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
     from: jest.fn(() => ({
-      select: jest.fn(() => ({ eq: jest.fn(), ilike: jest.fn() })),
-      insert: jest.fn(() => ({ select: jest.fn() }))
+      select: jest.fn(() => ({ 
+        eq: jest.fn(() => ({ single: jest.fn() })), 
+        ilike: jest.fn() 
+      })),
+      insert: jest.fn(() => ({ select: jest.fn() })),
+      update: jest.fn(() => ({ eq: jest.fn() })),
+      upsert: jest.fn()
     })),
     auth: { signOut: jest.fn() }
   }))
 }));
 
-describe('API Workflow Integration Tests', () => {
+describe('Main Workflow Integration Tests', () => {
   let app;
   let mockEngine;
   let testApiSpec;
 
   beforeAll(async () => {
     // Start mock engine
-    mockEngine = new MockEngine(global.TEST_CONFIG.ENGINE_PORT);
+    const testPort = global.TEST_CONFIG?.ENGINE_PORT || 9012;
+    mockEngine = new MockEngine(testPort);
     await mockEngine.start();
 
-    // Set up test environment
-    process.env.ENGINE_PORT = global.TEST_CONFIG.ENGINE_PORT;
+    // Configure environment
+    process.env.ENGINE_PORT = testPort;
+    process.env.NODE_ENV = 'test';
     
-    // Clear require cache and load app
+    // Load app
     const indexPath = path.join(__dirname, '../../index.js');
     delete require.cache[indexPath];
     app = require('../../index.js');
@@ -48,71 +73,32 @@ describe('API Workflow Integration Tests', () => {
     testApiSpec = {
       openapi: '3.0.0',
       info: {
-        title: 'Test Integration API',
+        title: 'Main Workflow Test API',
         version: '1.0.0',
-        description: 'API for integration testing'
+        description: 'API for testing complete workflow'
       },
-      servers: [
-        { url: 'https://api.test.com/v1' }
-      ],
+      servers: [{ url: 'https://api.test.com/v1' }],
       paths: {
         '/users': {
           get: {
-            summary: 'Get all users',
+            summary: 'Get users',
             description: 'Retrieve a list of all users',
-            tags: ['users'],
-            responses: {
-              '200': {
-                description: 'List of users',
-                content: {
-                  'application/json': {
-                    schema: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/User' }
-                    }
-                  }
-                }
-              }
-            }
+            tags: ['users', 'public'],
+            responses: { '200': { description: 'Success' } }
           },
           post: {
             summary: 'Create user',
             description: 'Create a new user',
-            tags: ['users'],
-            requestBody: {
-              required: true,
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/User' }
-                }
-              }
-            },
-            responses: {
-              '201': { description: 'User created' },
-              '400': { description: 'Invalid input' }
-            }
+            tags: ['users', 'create'],
+            responses: { '201': { description: 'Created' } }
           }
         },
         '/test': {
           get: {
             summary: 'Test endpoint',
-            description: 'Test endpoint for API validation',
+            description: 'Test endpoint for validation',
             tags: ['test'],
-            responses: {
-              '200': { description: 'Test successful' }
-            }
-          }
-        }
-      },
-      components: {
-        schemas: {
-          User: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              email: { type: 'string', format: 'email' }
-            }
+            responses: { '200': { description: 'Success' } }
           }
         }
       }
@@ -132,72 +118,237 @@ describe('API Workflow Integration Tests', () => {
   });
 
   beforeEach(() => {
-    // Reset mock engine data before each test
     mockEngine.reset();
   });
 
-  describe('Complete API Management Workflow', () => {
-    let importedApiId;
-    
-    test('Step 1: Import API specification', async () => {
-      // Create temporary API spec file
-      const testFile = createTestFile('integration-test-api.json', JSON.stringify(testApiSpec));
-
-      const response = await request(app)
+  describe('Complete End-to-End Workflow', () => {
+    test('Should execute complete workflow: Import → Configure → Scan → Results', async () => {
+      // Step 1: Import API
+      const testFile = createTestFile('workflow-api.json', JSON.stringify(testApiSpec));
+      const importResponse = await request(app)
         .post('/api/import')
         .attach('file', testFile)
         .expect(200);
+      cleanupTestFile(testFile);
 
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'API imported successfully',
-        data: {
-          api_id: expect.any(String),
-          filename: 'integration-test-api.json'
-        }
-      });
+      expect(importResponse.body.data.api_id).toBeDefined();
+      const apiId = importResponse.body.data.api_id;
 
-      importedApiId = response.body.data.api_id;
+      // Step 2: Verify API is accessible
+      const apisResponse = await request(app)
+        .get('/api/apis')
+        .expect(200);
 
-      // Clean up test file
-      fs.unlinkSync(testFile);
-    });
+      expect(apisResponse.body.data.apis).toHaveLength(1);
 
-    test('Step 2: List imported endpoints', async () => {
-      const response = await request(app)
+      // Step 3: List and configure endpoints
+      const endpointsResponse = await request(app)
         .post('/api/endpoints')
         .send({})
         .expect(200);
 
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Endpoints retrieved successfully',
-        data: {
-          endpoints: expect.arrayContaining([
-            expect.objectContaining({
-              path: '/users',
-              method: 'GET',
-              summary: expect.any(String)
-            }),
-            expect.objectContaining({
-              path: '/users',
-              method: 'POST',
-              summary: expect.any(String)
-            }),
-            expect.objectContaining({
-              path: '/test',
-              method: 'GET',
-              summary: expect.any(String)
-            })
-          ])
-        }
-      });
+      expect(endpointsResponse.body.data.endpoints).toHaveLength(3);
 
-      expect(response.body.data.endpoints).toHaveLength(3);
+      // Step 4: Add tags to endpoints
+      await request(app)
+        .post('/api/endpoints/tags/add')
+        .send({
+          path: '/users',
+          method: 'GET',
+          tags: ['workflow-test', 'authenticated']
+        })
+        .expect(200);
+
+      // Step 5: Set API key
+      await request(app)
+        .post('/api/apis/key/set')
+        .send({
+          api_key: 'workflow-test-key-123'
+        })
+        .expect(200);
+
+      // Step 6: Create and start scan
+      await request(app)
+        .post('/api/scan/create')
+        .send({
+          client_id: apiId,
+          scan_profile: 'OWASP_API_10'
+        })
+        .expect(200);
+
+      const scanResponse = await request(app)
+        .post('/api/scan/start')
+        .send({
+          api_name: 'workflow-test-api',
+          scan_profile: 'OWASP_API_10'
+        })
+        .expect(200);
+
+      const scanId = scanResponse.body.data.scan_id;
+
+      // Step 7: Monitor scan progress
+      const progressResponse = await request(app)
+        .get('/api/scan/progress')
+        .query({ scan_id: scanId })
+        .expect(200);
+
+      expect(progressResponse.body.data.scan_id).toBe(scanId);
+
+      // Step 8: Get scan results
+      const resultsResponse = await request(app)
+        .get('/api/scan/results')
+        .query({ scan_id: scanId })
+        .expect(200);
+
+      expect(resultsResponse.body.data.result).toBeDefined();
+      expect(Array.isArray(resultsResponse.body.data.result)).toBe(true);
+
+      // Step 9: Verify modifications persist
+      const finalEndpointsResponse = await request(app)
+        .post('/api/endpoints')
+        .send({})
+        .expect(200);
+
+      const modifiedEndpoint = finalEndpointsResponse.body.data.endpoints.find(
+        ep => ep.path === '/users' && ep.method === 'GET'
+      );
+
+      expect(modifiedEndpoint.tags).toContain('workflow-test');
+      expect(modifiedEndpoint.tags).toContain('authenticated');
     });
 
-    test('Step 3: Get details for specific endpoint', async () => {
-      const response = await request(app)
+    test('Should handle workflow with multiple APIs', async () => {
+      // Import first API
+      const api1File = createTestFile('workflow-api1.json', JSON.stringify({
+        ...testApiSpec,
+        info: { ...testApiSpec.info, title: 'API 1', version: '1.0.0' }
+      }));
+      
+      await request(app)
+        .post('/api/import')
+        .attach('file', api1File)
+        .expect(200);
+      cleanupTestFile(api1File);
+
+      // Import second API
+      const api2File = createTestFile('workflow-api2.json', JSON.stringify({
+        ...testApiSpec,
+        info: { ...testApiSpec.info, title: 'API 2', version: '2.0.0' }
+      }));
+      
+      await request(app)
+        .post('/api/import')
+        .attach('file', api2File)
+        .expect(200);
+      cleanupTestFile(api2File);
+
+      // Note: Mock engine only supports one global API at a time
+      // So we verify the last imported API is active
+      const apisResponse = await request(app)
+        .get('/api/apis')
+        .expect(200);
+
+      expect(apisResponse.body.data.apis).toHaveLength(1);
+      expect(apisResponse.body.data.apis[0].title).toBe('Imported Test API');
+    });
+  });
+
+  describe('Error Recovery and Resilience', () => {
+    test('Should recover from engine connectivity issues', async () => {
+      // Test connection first
+      await request(app)
+        .get('/api/connection/test')
+        .expect(200);
+
+      // Simulate engine failure
+      mockEngine.setErrorMode(true);
+
+      const failedResponse = await request(app)
+        .get('/api/connection/test')
+        .expect(500);
+
+      expect(failedResponse.body.success).toBe(false);
+
+      // Restore engine
+      mockEngine.setErrorMode(false);
+
+      const recoveredResponse = await request(app)
+        .get('/api/connection/test')
+        .expect(200);
+
+      expect(recoveredResponse.body.success).toBe(true);
+    });
+
+    test('Should handle partial workflow failures gracefully', async () => {
+      // Import API successfully
+      const testFile = createTestFile('failure-test-api.json', JSON.stringify(testApiSpec));
+      await request(app)
+        .post('/api/import')
+        .attach('file', testFile)
+        .expect(200);
+      cleanupTestFile(testFile);
+
+      // Try to perform operations on non-existent endpoints
+      const invalidTagResponse = await request(app)
+        .post('/api/endpoints/tags/add')
+        .send({
+          path: '/nonexistent',
+          method: 'GET',
+          tags: ['test']
+        })
+        .expect(500);
+
+      expect(invalidTagResponse.body.success).toBe(false);
+
+      // Verify that valid operations still work
+      const validTagResponse = await request(app)
+        .post('/api/endpoints/tags/add')
+        .send({
+          path: '/users',
+          method: 'GET',
+          tags: ['recovery-test']
+        })
+        .expect(200);
+
+      expect(validTagResponse.body.success).toBe(true);
+    });
+  });
+
+  describe('Data Consistency and State Management', () => {
+    test('Should maintain consistent state across operations', async () => {
+      // Import API
+      const testFile = createTestFile('consistency-api.json', JSON.stringify(testApiSpec));
+      await request(app)
+        .post('/api/import')
+        .attach('file', testFile)
+        .expect(200);
+      cleanupTestFile(testFile);
+
+      // Perform multiple modifications
+      await request(app)
+        .post('/api/endpoints/tags/add')
+        .send({
+          path: '/users',
+          method: 'GET',
+          tags: ['consistent-tag']
+        })
+        .expect(200);
+
+      await request(app)
+        .post('/api/endpoints/flags/add')
+        .send({
+          endpoint_id: 'endpoint_1',
+          flags: 'CONSISTENT_FLAG'
+        })
+        .expect(200);
+
+      // Verify state is consistent across different queries
+      const endpointsResponse = await request(app)
+        .post('/api/endpoints')
+        .send({})
+        .expect(200);
+
+      const detailsResponse = await request(app)
         .post('/api/endpoints/details')
         .send({
           endpoint_id: 'endpoint_1',
@@ -206,251 +357,19 @@ describe('API Workflow Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Endpoint details retrieved successfully',
-        data: {
-          id: 'endpoint_1',
-          path: '/users',
-          method: 'GET',
-          summary: 'Get all users',
-          description: 'Retrieve a list of all users',
-          tags: expect.any(Array)
-        }
-      });
-    });
-
-    test('Step 4: Add tags to endpoint', async () => {
-      const response = await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: ['public', 'v1', 'production']
-        })
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Tags added successfully',
-        data: {
-          tags: expect.arrayContaining(['public', 'v1', 'production'])
-        }
-      });
-    });
-
-    test('Step 5: List all tags in system', async () => {
-      // First ensure we add the tags from previous step
-      await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: ['public', 'v1', 'production']
-        })
-        .expect(200);
-
-      const response = await request(app)
-        .get('/api/tags')
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Tags retrieved successfully',
-        data: {
-          tags: expect.arrayContaining(['public', 'v1', 'production'])
-        }
-      });
-    });
-
-    test('Step 6: Remove specific tags from endpoint', async () => {
-      // First add the tags
-      await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: ['public', 'v1', 'production']
-        })
-        .expect(200);
-
-      // Then remove one tag
-      const response = await request(app)
-        .post('/api/endpoints/tags/remove')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: ['v1']
-        })
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Tags removed successfully'
-      });
-
-      // Verify v1 tag was removed but others remain
-      expect(response.body.data.tags).toContain('public');
-      expect(response.body.data.tags).toContain('production');
-      expect(response.body.data.tags).not.toContain('v1');
-    });
-
-    test('Step 7: Replace all tags on endpoint', async () => {
-      // First add some initial tags
-      await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: ['old1', 'old2']
-        })
-        .expect(200);
-
-      const newTags = ['api', 'secure', 'authenticated'];
-      
-      const response = await request(app)
-        .post('/api/endpoints/tags/replace')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: newTags
-        })
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: 'Tags replaced successfully',
-        data: {
-          tags: newTags
-        }
-      });
-
-      // Verify old tags are gone and new tags are present
-      expect(response.body.data.tags).toEqual(expect.arrayContaining(newTags));
-      expect(response.body.data.tags).not.toContain('old1');
-      expect(response.body.data.tags).not.toContain('old2');
-    });
-
-    test('Step 8: Verify endpoint changes in listing', async () => {
-      // First set the expected tags
-      const expectedTags = ['api', 'secure', 'authenticated'];
-      await request(app)
-        .post('/api/endpoints/tags/replace')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: expectedTags
-        })
-        .expect(200);
-
-      // Then verify they appear in the listing
-      const response = await request(app)
-        .post('/api/endpoints')
-        .send({})
-        .expect(200);
-
-      const usersGetEndpoint = response.body.data.endpoints.find(
-        ep => ep.path === '/users' && ep.method === 'GET'
-      );
-
-      expect(usersGetEndpoint).toBeDefined();
-      expect(usersGetEndpoint.tags).toEqual(
-        expect.arrayContaining(expectedTags)
-      );
-    });
-  });
-
-  describe('Error Handling in Workflow', () => {
-    test('Should handle invalid endpoint details request', async () => {
-      const response = await request(app)
-        .post('/api/endpoints/details')
-        .send({
-          endpoint_id: 'nonexistent',
-          path: '/nonexistent',
-          method: 'GET'
-        })
-        .expect(500);
-
-      expect(response.body.success).toBe(false);
-    });
-
-    test('Should handle missing required parameters for tag operations', async () => {
-      const response = await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          tags: ['test']
-          // Missing path and method
-        })
-        .expect(400);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        message: 'Missing path or method'
-      });
-    });
-
-    test('Should handle invalid tags format', async () => {
-      const response = await request(app)
-        .post('/api/endpoints/tags/add')
-        .send({
-          path: '/users',
-          method: 'GET',
-          tags: 'not-an-array'
-        })
-        .expect(400);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        message: 'Missing tags (must be array)'
-      });
-    });
-  });
-
-  describe('Concurrent Operations', () => {
-    test('Should handle multiple tag operations on different endpoints', async () => {
-      // Add different tags to different endpoints simultaneously
-      const operations = [
-        request(app)
-          .post('/api/endpoints/tags/add')
-          .send({
-            path: '/users',
-            method: 'GET',
-            tags: ['user-read', 'public']
-          }),
-        request(app)
-          .post('/api/endpoints/tags/add')
-          .send({
-            path: '/users',
-            method: 'POST',
-            tags: ['user-write', 'admin']
-          }),
-        request(app)
-          .post('/api/endpoints/tags/add')
-          .send({
-            path: '/test',
-            method: 'GET',
-            tags: ['testing', 'debug']
-          })
-      ];
-
-      const responses = await Promise.all(operations);
-      
-      // All operations should succeed
-      responses.forEach(response => {
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
-      });
-
-      // Verify all tags are present in the system
       const tagsResponse = await request(app)
         .get('/api/tags')
         .expect(200);
 
-      expect(tagsResponse.body.data.tags).toEqual(
-        expect.arrayContaining([
-          'user-read', 'public', 'user-write', 'admin', 'testing', 'debug'
-        ])
+      // Verify consistency
+      const endpoint = endpointsResponse.body.data.endpoints.find(
+        ep => ep.id === 'endpoint_1'
       );
+
+      expect(endpoint.tags).toContain('consistent-tag');
+      expect(endpoint.flags).toContain('CONSISTENT_FLAG');
+      expect(detailsResponse.body.data.tags).toContain('consistent-tag');
+      expect(tagsResponse.body.data.tags).toContain('consistent-tag');
     });
   });
 });

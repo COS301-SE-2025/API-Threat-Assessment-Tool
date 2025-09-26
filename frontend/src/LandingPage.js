@@ -157,7 +157,7 @@ const LandingPage = () => {
           </nav>
           <div className="header-actions">
             <button onClick={toggleDarkMode} className="theme-toggle" title="Toggle Theme">
-              {darkMode ? '☀️' : '🌙'}
+              <span className="theme-icon">{darkMode ? '☀️' : '🌙'}</span>
             </button>
             <Link to="/login" className="login-link">Login</Link>
             <Link to="/signup" className="signup-btn">Get Started Free</Link>

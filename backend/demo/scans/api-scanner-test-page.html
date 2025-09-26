@@ -625,7 +625,7 @@
 
         async function sendCommand(command, data = {}) {
             return new Promise((resolve, reject) => {
-                const ws = new WebSocket(`ws://localhost:8080`);
+                const ws = new WebSocket(`ws://localhost:7777`);
                 const request = JSON.stringify({ command, data });
                 let responseData = '';
                 

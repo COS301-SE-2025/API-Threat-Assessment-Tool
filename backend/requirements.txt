@@ -10,3 +10,4 @@ fpdf
 fastapi
 httpx
 uvicorn
+supabase

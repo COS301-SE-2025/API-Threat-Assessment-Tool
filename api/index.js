@@ -240,16 +240,41 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
 let _tx = null, _label = 'none';
 function bool(v){ return /^(1|true|yes)$/i.test(String(v||'')); }
 function int(v, d){ const n = parseInt(v,10); return Number.isFinite(n) ? n : d; }
-
 async function pickTransport() {
   if (_tx) return _tx;
 
-  // Defaults for SendGrid
-  const HOST   =  'smtp.sendgrid.net';
-  const PORT   =  587;
+  // 1) Gmail via OAuth2 (preferred when env present)
+  if (process.env.GMAIL_REFRESH_TOKEN) {
+    try {
+      _tx = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+          type: 'OAuth2',
+          user: process.env.GMAIL_USER,          // e.g. at.at.noreply@gmail.com
+          clientId: process.env.GMAIL_CLIENT_ID,
+          clientSecret: process.env.GMAIL_CLIENT_SECRET,
+          refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+        },
+      });
+      await _tx.verify();
+      _label = 'gmail:oauth2:465';
+      console.log(`📧 using Gmail OAuth2 (${_label})`);
+      return _tx;
+    } catch (e) {
+      console.error('Gmail OAuth2 verify failed:', e.message);
+      _tx = null; // fall through to other options
+    }
+  }
+
+  // 2) SendGrid (your existing setup)
+  const HOST   = 'smtp.sendgrid.net';
+  const PORT   = 587;
   const SECURE = PORT === 465;
-  const USER   = 'apikey';        // SendGrid requires literal "apikey"
-  const PASS   = process.env.SMTP_PASS;                     
+  const USER   = 'apikey';
+  const PASS   = process.env.SMTP_PASS; // keep exactly as you had
+
   if (PASS) {
     try {
       _tx = nodemailer.createTransport({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
@@ -263,9 +288,9 @@ async function pickTransport() {
     }
   }
 
-  // optional dev fallback incase email fails
+  // 3) Dev fallback (unchanged)
   try {
-    const dev = nodemailer.createTransport({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
+    const dev = nodemailer.createTransport({ host: '127.0.0.1', port: 1025, secure: false, tls: { rejectUnauthorized: false } });
     await dev.verify();
     _tx = dev; _label = 'dev:1025';
     console.log('📧 using transport: dev1025');
@@ -276,8 +301,10 @@ async function pickTransport() {
   return null;
 }
 
-const FROM_ADDR = 'AT-AT <at.at.noreply@gmail.com>'; // <-- must match your SendGrid Single Sender exactly
 
+const FROM_ADDR =
+  process.env.FROM_ADDR ||
+  (process.env.GMAIL_USER ? `AT-AT <${process.env.GMAIL_USER}>` : 'AT-AT <at.at.noreply@gmail.com>');
 async function sendResetEmail(to, resetUrl, ttlMins = 60) {
   const subject = 'AT-AT: Reset your password';
   const text = `Reset your password (expires in ${ttlMins} minutes):\n${resetUrl}\n`;

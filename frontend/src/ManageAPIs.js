@@ -664,36 +664,46 @@ const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     );
 };
 
+// In ManageAPIs.js, replace the entire EndpointFlagsModal component with this one
+
 const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
     const { api, scanProfile } = data;
     const { currentUser } = useAuth();
-    const [endpoints, setEndpoints] = useState([]);
+    
+    // State for the master list of endpoints
+    const [allEndpoints, setAllEndpoints] = useState([]);
+    
+    // New state for search and pagination
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const endpointsPerPage = 20;
+
     const [loading, setLoading] = useState(true);
     const [startScanLoading, setStartScanLoading] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
         apiService.fetchApiEndpoints(api.id, currentUser.id)
-            .then(setEndpoints)
+            .then(setAllEndpoints)
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
     }, [api.id, currentUser.id]);
-    
+
     const handleFlagChange = (endpointId, flag, isEnabled) => {
-        const originalEndpoints = JSON.parse(JSON.stringify(endpoints));
-        const updatedEndpoints = endpoints.map(ep => {
+        const originalEndpoints = JSON.parse(JSON.stringify(allEndpoints));
+        const updatedEndpoints = allEndpoints.map(ep => {
             if (ep.id === endpointId) {
                 const newFlags = isEnabled ? [...(ep.flags || []), flag] : (ep.flags || []).filter(f => f !== flag);
                 return { ...ep, flags: newFlags };
             }
             return ep;
         });
-        setEndpoints(updatedEndpoints);
+        setAllEndpoints(updatedEndpoints); // Update the master list
         
         apiService.updateEndpointFlag(api.id, currentUser.id, endpointId, flag, isEnabled ? 'add' : 'remove')
             .catch(err => {
                 showMessage(`Failed to update flag: ${err.message}`, 'error');
-                setEndpoints(originalEndpoints);
+                setAllEndpoints(originalEndpoints); // Revert on failure
             });
     };
     
@@ -702,12 +712,44 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
         await onScanStart(api, scanProfile);
     };
 
+    // Memoized calculation for filtered endpoints
+    const filteredEndpoints = useMemo(() => {
+        if (!searchTerm) {
+            return allEndpoints;
+        }
+        const lowercasedSearch = searchTerm.toLowerCase();
+        return allEndpoints.filter(ep => 
+            ep.path.toLowerCase().includes(lowercasedSearch) ||
+            ep.method.toLowerCase().includes(lowercasedSearch)
+        );
+    }, [allEndpoints, searchTerm]);
+
+    // Memoized calculation for the current page's endpoints
+    const paginatedEndpoints = useMemo(() => {
+        const startIndex = (currentPage - 1) * endpointsPerPage;
+        return filteredEndpoints.slice(startIndex, startIndex + endpointsPerPage);
+    }, [filteredEndpoints, currentPage]);
+
+    const totalPages = Math.ceil(filteredEndpoints.length / endpointsPerPage);
+
     return (
         <Modal onClose={onClose} title="🚩 Configure Flags for Scan">
+            <div className="flags-modal-header">
+                <input
+                    type="text"
+                    placeholder="Search by method or path..."
+                    className="search-input"
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1); // Reset to page 1 on new search
+                    }}
+                />
+            </div>
             <div className="modal-form modal-body-scrollable">
-                {loading ? <p>Loading...</p> : error ? <p className="error-text">{error}</p> :
+                {loading ? <div className="loader"></div> : error ? <p className="error-text">{error}</p> :
                     <div className="endpoint-flags-list">
-                        {endpoints.map(ep => (
+                        {paginatedEndpoints.length > 0 ? paginatedEndpoints.map(ep => (
                             <div key={ep.id} className="endpoint-flag-card">
                                 <p><strong>{ep.method}</strong> {ep.path}</p>
                                 <div className="flags-container">
@@ -720,21 +762,36 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
                                     ))}
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p>No endpoints match your search.</p>
+                        )}
                     </div>
                 }
             </div>
-              <div className="modal-actions">
-                <button className="action-btn" disabled style={{marginRight: 'auto'}}>Save as Template</button>
-                <button onClick={onClose} className="cancel-btn">Cancel</button>
-                <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>
-                    {startScanLoading ? 'Starting...' : 'Start Scan'}
-                </button>
+            <div className="modal-actions space-between">
+                <div className="pagination-controls">
+                    {totalPages > 1 && (
+                        <>
+                            <button onClick={() => setCurrentPage(p => p - 1)} className="pagination-btn" disabled={currentPage === 1}>
+                                ← Prev
+                            </button>
+                            <span>Page {currentPage} of {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => p + 1)} className="pagination-btn" disabled={currentPage === totalPages}>
+                                Next →
+                            </button>
+                        </>
+                    )}
+                </div>
+                <div className="main-actions">
+                    <button onClick={onClose} className="cancel-btn">Cancel</button>
+                    <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>
+                        {startScanLoading ? 'Starting...' : 'Start Scan'}
+                    </button>
+                </div>
             </div>
         </Modal>
     );
 };
-
 const ScanProgressModal = ({ apiName }) => (
     <div className="modal-overlay">
         <div className="modal-content">
@@ -748,40 +805,132 @@ const ScanProgressModal = ({ apiName }) => (
     </div>
 );
 
+// In ManageAPIs.js, replace the entire ScanResultsModal component with this one
+
 const ScanResultsModal = ({ data, onClose }) => {
     const { results, apiName } = data;
+    const scanInfo = results?.results?.scan_info;
     const vulnerabilities = results?.results?.results || [];
+    
+    // State to manage which vulnerability accordion is open
+    const [openVulnerabilityId, setOpenVulnerabilityId] = useState(null);
 
-    const getSeverityClass = (severity) => {
-        switch(severity?.toLowerCase()){
-            case 'high': return 'severity-high';
-            case 'medium': return 'severity-medium';
-            case 'low': return 'severity-low';
-            default: return 'severity-info';
-        }
+    // Helper function to parse the method and path from the 'evidence' string
+    const parseEvidence = (evidence) => {
+        if (!evidence || typeof evidence !== 'string') return { method: 'N/A', path: 'N/A' };
+        const methodMatch = evidence.match(/Method: (.*)/);
+        const pathMatch = evidence.match(/Path: (.*)/);
+        return {
+            method: methodMatch ? methodMatch[1].trim() : 'N/A',
+            path: pathMatch ? pathMatch[1].trim() : 'N/A',
+        };
     };
+
+    // Calculate summary statistics using useMemo for efficiency
+    const summaryStats = useMemo(() => {
+        const stats = { high: 0, medium: 0, low: 0, info: 0 };
+        vulnerabilities.forEach(v => {
+            const severity = v.severity?.toLowerCase() || 'info';
+            if (stats.hasOwnProperty(severity)) {
+                stats[severity]++;
+            } else {
+                stats.info++;
+            }
+        });
+        
+        let duration = 'N/A';
+        if (scanInfo?.started_at && scanInfo?.completed_at) {
+            const start = new Date(scanInfo.started_at);
+            const end = new Date(scanInfo.completed_at);
+            const seconds = (end - start) / 1000;
+            duration = `${seconds.toFixed(2)} seconds`;
+        }
+
+        return { counts: stats, total: vulnerabilities.length, duration };
+    }, [vulnerabilities, scanInfo]);
+
+    const getSeverityClass = (severity) => `severity-${severity?.toLowerCase() || 'info'}`;
     
     return (
         <Modal onClose={onClose} title={`📊 Scan Report for ${apiName}`}>
-             <div className="modal-form modal-body-scrollable">
-                {vulnerabilities.length > 0 ? (
-                    vulnerabilities.map((vuln, i) => (
-                        <div key={i} className={`vulnerability-card ${getSeverityClass(vuln.severity)}`}>
-                            <h3>{vuln.vulnerability_name}</h3>
-                            <p><strong>Severity:</strong> {vuln.severity}</p>
-                            <p><strong>Endpoint:</strong> {vuln.endpoint_path} ({vuln.endpoint_method})</p>
-                            <p><strong>Description:</strong> {vuln.description}</p>
-                            <p><strong>Recommendation:</strong> {vuln.recommendation}</p>
+            <div className="modal-form modal-body-scrollable report-modal">
+                <div className="report-summary">
+                    <div className="summary-grid">
+                        <div className="summary-card total">
+                            <span className="summary-value">{summaryStats.total}</span>
+                            <span className="summary-label">Total Vulnerabilities</span>
                         </div>
-                    ))
-                ) : (
-                    <div className="no-vulnerabilities">
-                        <h3>✅ No Vulnerabilities Found</h3>
-                        <p>Great job! This scan did not find any vulnerabilities.</p>
+                        <div className="summary-card high">
+                            <span className="summary-value">{summaryStats.counts.high}</span>
+                            <span className="summary-label">High Severity</span>
+                        </div>
+                        <div className="summary-card medium">
+                            <span className="summary-value">{summaryStats.counts.medium}</span>
+                            <span className="summary-label">Medium Severity</span>
+                        </div>
+                        <div className="summary-card low">
+                            <span className="summary-value">{summaryStats.counts.low}</span>
+                            <span className="summary-label">Low Severity</span>
+                        </div>
                     </div>
-                )}
+                    {scanInfo && (
+                        <div className="scan-metadata">
+                            <span>Scanned on: {new Date(scanInfo.completed_at).toLocaleString()}</span>
+                            <span>Duration: {summaryStats.duration}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="vulnerability-accordion">
+                    {vulnerabilities.length > 0 ? (
+                        vulnerabilities.map(vuln => {
+                            const { method, path } = parseEvidence(vuln.evidence);
+                            const isOpen = openVulnerabilityId === vuln.id;
+                            return (
+                                <div key={vuln.id} className={`vulnerability-item ${isOpen ? 'open' : ''}`}>
+                                    <div className="vulnerability-header" onClick={() => setOpenVulnerabilityId(isOpen ? null : vuln.id)}>
+                                        <span className={`severity-badge ${getSeverityClass(vuln.severity)}`}>{vuln.severity}</span>
+                                        <span className="vuln-name">{vuln.vulnerability_name}</span>
+                                        <span className="vuln-path">{path}</span>
+                                        <span className="accordion-toggle">{isOpen ? '−' : '+'}</span>
+                                    </div>
+                                    {isOpen && (
+                                        <div className="vulnerability-details">
+                                            <div className="detail-block">
+                                                <strong>Description:</strong>
+                                                <p>{vuln.description}</p>
+                                            </div>
+                                            <div className="detail-block">
+                                                <strong>Recommendation:</strong>
+                                                <p>{vuln.recommendation}</p>
+                                            </div>
+                                            <div className="detail-block half-width">
+                                                <strong>Method:</strong>
+                                                <p><code>{method}</code></p>
+                                            </div>
+                                             <div className="detail-block half-width">
+                                                <strong>CVSS Score:</strong>
+                                                <p>{vuln.cvss_score || 'N/A'}</p>
+                                            </div>
+                                            <div className="detail-block">
+                                                <strong>Full Evidence:</strong>
+                                                <pre><code>{vuln.evidence}</code></pre>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })
+                    ) : (
+                        <div className="no-vulnerabilities">
+                            <h3>✅ No Vulnerabilities Found</h3>
+                            <p>Great job! This scan did not find any vulnerabilities.</p>
+                        </div>
+                    )}
+                </div>
              </div>
              <div className="modal-actions">
+                 <button className="action-btn" disabled>Download Report</button>
                  <button onClick={onClose} className="save-btn">Close</button>
              </div>
         </Modal>

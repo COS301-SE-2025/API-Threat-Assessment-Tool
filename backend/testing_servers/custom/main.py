@@ -32,14 +32,18 @@ def custom_openapi():
     )
 
     # Merge servers
-    openapi_schema["servers"] = [
-        {
-            "url": "http://localhost:8000",
-            "description": "OWASP Testing server"
-        }
-    ]
+# In main.py, inside the custom_openapi() function
 
-    # Merge into components
+# In main.py, inside the custom_openapi() function
+
+        # Merge servers
+        openapi_schema["servers"] = [
+            {
+                "url": "http://apithreatassessment.co.za/owasp_test",
+                "description": "OWASP Testing server"
+            }
+        ]
+            # Merge into components
     components = openapi_schema.setdefault("components", {})
 
     # Merge securitySchemes

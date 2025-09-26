@@ -238,33 +238,57 @@ def import_file(request):
         log_with_timestamp(f"Error in import_file: {e}")
         return server_error(str(e))
 
+# In main.py, replace the entire get_all_apis function with this new version.
+
 def get_all_apis(request):
     user_id = request.get("data", {}).get("user_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
-    # 1. Check for a cached response first (keeps subsequent refreshes fast)
-    if USER_STORE.get(user_id) and "api_list_cache" in USER_STORE[user_id]:
-        log_with_timestamp(f"Serving API list for user {user_id} from cache.")
-        return response(HTTPCode.SUCCESS, {"apis": USER_STORE[user_id]["api_list_cache"]})
-
-    log_with_timestamp(f"No cache. Optimizing API list fetch for user {user_id}.")
+    # The API list is now dynamic, so we should not cache it this way.
+    # The cache will be invalidated on share/revoke actions if needed, but for now, let's remove it for simplicity.
+    log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
+    
     try:
-        # STEP 1: Get all of the user's APIs in a single query.
-        user_apis = db_manager.select("apis", columns="id, name, version, imported_on", filters={"user_id": user_id})
-        if not user_apis:
+        # STEP 1: Get APIs OWNED BY the user.
+        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"user_id": user_id})
+        for api in owned_apis_data:
+            api['permission'] = 'owner' # Mark as owner
+
+        # STEP 2: Get APIs SHARED WITH the user.
+        shared_access_records = db_manager.select("api_access", columns="api_id, permission", filters={"user_id": user_id})
+        shared_api_ids = [rec['api_id'] for rec in shared_access_records]
+        
+        shared_apis_data = []
+        if shared_api_ids:
+            # Get the details for the shared APIs
+            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"id": shared_api_ids})
+            
+            # Create maps for efficient lookups
+            permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
+            owner_ids = {api['user_id'] for api in shared_apis_details}
+            owners = db_manager.select("users", columns="id, first_name, last_name", filters={"id": list(owner_ids)})
+            owner_map = {owner['id']: f"{owner['first_name']} {owner['last_name']}".strip() for owner in owners}
+            
+            for api in shared_apis_details:
+                api['permission'] = permission_map.get(api['id'], 'read')
+                api['owner_name'] = owner_map.get(api['user_id'], 'Unknown Owner')
+                shared_apis_data.append(api)
+
+        # STEP 3: Combine lists and prepare for fetching scan data.
+        all_user_apis = owned_apis_data + shared_apis_data
+        if not all_user_apis:
             return response(HTTPCode.SUCCESS, {"apis": []})
 
-        api_ids = [api['id'] for api in user_apis]
+        all_api_ids = [api['id'] for api in all_user_apis]
 
-        # STEP 2: Batch fetch all completed scans for ALL those APIs in a single query.
+        # STEP 4: Batch fetch all scan and result data for ALL accessible APIs.
         all_completed_scans = db_manager.select(
             "scans",
             columns="id, api_id, completed_at",
-            filters={"api_id": api_ids, "status": "completed"}
+            filters={"api_id": all_api_ids, "status": "completed"}
         )
-
-        # Group scans by api_id for quick lookups later
+        
         scans_by_api_id = defaultdict(list)
         for scan in all_completed_scans:
             scans_by_api_id[scan['api_id']].append(scan)
@@ -273,57 +297,49 @@ def get_all_apis(request):
         results_count_by_scan_id = defaultdict(int)
 
         if scan_ids_to_check:
-            # STEP 3: Batch fetch results for ALL relevant scans in a single query.
-            all_scan_results = db_manager.select(
-                "scan_results",
-                columns="scan_id", # We only need scan_id to count them
-                filters={"scan_id": scan_ids_to_check}
-            )
-            # Count the vulnerabilities for each scan in memory
+            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": scan_ids_to_check})
             for result in all_scan_results:
                 results_count_by_scan_id[result['scan_id']] += 1
 
-        # STEP 4: Build the final response by processing the fetched data in memory.
+        # STEP 5: Build the final response list.
         api_list_for_frontend = []
-        for api in user_apis:
+        for api in all_user_apis:
             api_id = api['id']
             vulnerabilities_found = 0
             last_scanned = "Never"
             scan_status = "Ready"
 
-            # Find the latest scan for this specific API from our in-memory data
             if api_id in scans_by_api_id:
                 api_scans = scans_by_api_id[api_id]
-                # Sort just this small list of scans for this API
-                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]) if isinstance(s["completed_at"], str) else s["completed_at"], reverse=True)
+                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
                 latest_scan = api_scans[0]
                 
                 scan_status = "Completed"
-                completed_at = latest_scan.get("completed_at")
-                dt_obj = parse_datetime(completed_at) if isinstance(completed_at, str) else completed_at
-                last_scanned = dt_obj.isoformat().split('T')[0]
-                
-                # Look up the vulnerability count from our in-memory data
+                last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
                 vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
 
-            imported_on_ts = api.get("imported_on")
-            created_at_iso = None
-            if imported_on_ts:
-                dt_obj = parse_datetime(imported_on_ts) if isinstance(imported_on_ts, str) else imported_on_ts
-                created_at_iso = dt_obj.isoformat()
+            dt_obj = parse_datetime(api.get("imported_on"))
+            created_at_iso = dt_obj.isoformat()
 
-            api_list_for_frontend.append({"id": api_id, "api_id": api_id, "name": api.get("name"), "version": api.get("version"), "created_at": created_at_iso, "vulnerabilitiesFound": vulnerabilities_found, "lastScanned": last_scanned, "scanStatus": scan_status})
+            api_list_for_frontend.append({
+                "id": api_id,
+                "api_id": api_id,
+                "name": api.get("name"),
+                "version": api.get("version"),
+                "created_at": created_at_iso,
+                "vulnerabilitiesFound": vulnerabilities_found,
+                "lastScanned": last_scanned,
+                "scanStatus": scan_status,
+                "permission": api['permission'], # Pass permission to frontend
+                "owner_name": api.get('owner_name') # Pass owner name if it exists
+            })
         
-        # Store the generated list in the cache for next time
-        if user_id not in USER_STORE:
-            USER_STORE[user_id] = {}
-        USER_STORE[user_id]["api_list_cache"] = api_list_for_frontend
-
         return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
 
     except Exception as e:
         log_with_timestamp(f"Error in get_all_apis: {e}")
         return server_error(str(e))
+        
 
 def create_api(request): 
     return server_error("Not yet implemented")
@@ -960,6 +976,20 @@ def revoke_api_access(request):
         
     return success({"message": "API access revoked successfully."})
 
+# Add this new function to main.py
+def leave_api_share(request):
+    """Allows a user to remove their own access from a shared API."""
+    user_id = request.get("data", {}).get("user_id") # The user who is leaving
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": user_id})
+    if not deleted:
+        return not_found("API access record not found for this user. Nothing to remove.")
+    
+    return success({"message": "You have successfully left the API share."})
+
 def set_api_key(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
@@ -1037,6 +1067,7 @@ def handle_request(request: dict):
         "apis.share": share_api,
         "apis.shares.list": get_api_shares,
         "apis.shares.revoke": revoke_api_access,
+        "apis.shares.leave": leave_api_share, 
         "templates.list": get_all_templates,
         "templates.details": get_template_details,
         "templates.use": use_template,

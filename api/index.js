@@ -674,6 +674,7 @@ app.get('/', (req, res) => {
       getReportDetails: 'GET /api/reports/details',
       downloadReport: 'POST /api/reports/download',
       deleteShare: 'DELETE /api/apis/share',
+      leaveShare: 'DELETE /api/apis/leave-share',
       getShare: 'GET /api/apis/shares',
       postShare: 'POST /api/apis/share',
       connectionTest: 'GET /api/connection/test'
@@ -2945,6 +2946,26 @@ app.delete('/api/apis/share', async (req, res) => {
     }
   } catch (err) {
     sendError(res, 'Revoke access error', err.message, 500);
+  }
+});
+
+app.delete('/api/apis/leave-share', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.body;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.leave',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Successfully left API share.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to leave share.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Leave share error', err.message, 500);
   }
 });
 

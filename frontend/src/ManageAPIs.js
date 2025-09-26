@@ -664,36 +664,46 @@ const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     );
 };
 
+// In ManageAPIs.js, replace the entire EndpointFlagsModal component with this one
+
 const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
     const { api, scanProfile } = data;
     const { currentUser } = useAuth();
-    const [endpoints, setEndpoints] = useState([]);
+    
+    // State for the master list of endpoints
+    const [allEndpoints, setAllEndpoints] = useState([]);
+    
+    // New state for search and pagination
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const endpointsPerPage = 20;
+
     const [loading, setLoading] = useState(true);
     const [startScanLoading, setStartScanLoading] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
         apiService.fetchApiEndpoints(api.id, currentUser.id)
-            .then(setEndpoints)
+            .then(setAllEndpoints)
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
     }, [api.id, currentUser.id]);
-    
+
     const handleFlagChange = (endpointId, flag, isEnabled) => {
-        const originalEndpoints = JSON.parse(JSON.stringify(endpoints));
-        const updatedEndpoints = endpoints.map(ep => {
+        const originalEndpoints = JSON.parse(JSON.stringify(allEndpoints));
+        const updatedEndpoints = allEndpoints.map(ep => {
             if (ep.id === endpointId) {
                 const newFlags = isEnabled ? [...(ep.flags || []), flag] : (ep.flags || []).filter(f => f !== flag);
                 return { ...ep, flags: newFlags };
             }
             return ep;
         });
-        setEndpoints(updatedEndpoints);
+        setAllEndpoints(updatedEndpoints); // Update the master list
         
         apiService.updateEndpointFlag(api.id, currentUser.id, endpointId, flag, isEnabled ? 'add' : 'remove')
             .catch(err => {
                 showMessage(`Failed to update flag: ${err.message}`, 'error');
-                setEndpoints(originalEndpoints);
+                setAllEndpoints(originalEndpoints); // Revert on failure
             });
     };
     
@@ -702,12 +712,44 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
         await onScanStart(api, scanProfile);
     };
 
+    // Memoized calculation for filtered endpoints
+    const filteredEndpoints = useMemo(() => {
+        if (!searchTerm) {
+            return allEndpoints;
+        }
+        const lowercasedSearch = searchTerm.toLowerCase();
+        return allEndpoints.filter(ep => 
+            ep.path.toLowerCase().includes(lowercasedSearch) ||
+            ep.method.toLowerCase().includes(lowercasedSearch)
+        );
+    }, [allEndpoints, searchTerm]);
+
+    // Memoized calculation for the current page's endpoints
+    const paginatedEndpoints = useMemo(() => {
+        const startIndex = (currentPage - 1) * endpointsPerPage;
+        return filteredEndpoints.slice(startIndex, startIndex + endpointsPerPage);
+    }, [filteredEndpoints, currentPage]);
+
+    const totalPages = Math.ceil(filteredEndpoints.length / endpointsPerPage);
+
     return (
         <Modal onClose={onClose} title="🚩 Configure Flags for Scan">
+            <div className="flags-modal-header">
+                <input
+                    type="text"
+                    placeholder="Search by method or path..."
+                    className="search-input"
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1); // Reset to page 1 on new search
+                    }}
+                />
+            </div>
             <div className="modal-form modal-body-scrollable">
-                {loading ? <p>Loading...</p> : error ? <p className="error-text">{error}</p> :
+                {loading ? <div className="loader"></div> : error ? <p className="error-text">{error}</p> :
                     <div className="endpoint-flags-list">
-                        {endpoints.map(ep => (
+                        {paginatedEndpoints.length > 0 ? paginatedEndpoints.map(ep => (
                             <div key={ep.id} className="endpoint-flag-card">
                                 <p><strong>{ep.method}</strong> {ep.path}</p>
                                 <div className="flags-container">
@@ -720,21 +762,36 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
                                     ))}
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p>No endpoints match your search.</p>
+                        )}
                     </div>
                 }
             </div>
-              <div className="modal-actions">
-                <button className="action-btn" disabled style={{marginRight: 'auto'}}>Save as Template</button>
-                <button onClick={onClose} className="cancel-btn">Cancel</button>
-                <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>
-                    {startScanLoading ? 'Starting...' : 'Start Scan'}
-                </button>
+            <div className="modal-actions space-between">
+                <div className="pagination-controls">
+                    {totalPages > 1 && (
+                        <>
+                            <button onClick={() => setCurrentPage(p => p - 1)} className="pagination-btn" disabled={currentPage === 1}>
+                                ← Prev
+                            </button>
+                            <span>Page {currentPage} of {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => p + 1)} className="pagination-btn" disabled={currentPage === totalPages}>
+                                Next →
+                            </button>
+                        </>
+                    )}
+                </div>
+                <div className="main-actions">
+                    <button onClick={onClose} className="cancel-btn">Cancel</button>
+                    <button onClick={handleScanButtonClick} className="save-btn" disabled={startScanLoading}>
+                        {startScanLoading ? 'Starting...' : 'Start Scan'}
+                    </button>
+                </div>
             </div>
         </Modal>
     );
 };
-
 const ScanProgressModal = ({ apiName }) => (
     <div className="modal-overlay">
         <div className="modal-content">

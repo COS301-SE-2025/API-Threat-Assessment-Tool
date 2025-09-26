@@ -1864,7 +1864,7 @@ app.post('/api/import', async (req, res) => {
       const fileName = req.file.originalname;
       const tempPath = req.file.path;
       
-      const filesDir = path.join(__dirname, 'Files');
+      const filesDir = path.join(__dirname, '../backend', 'Files');
       if (!fs.existsSync(filesDir)) {
         fs.mkdirSync(filesDir, { recursive: true });
       }

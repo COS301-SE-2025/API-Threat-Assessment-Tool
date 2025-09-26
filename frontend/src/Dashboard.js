@@ -196,7 +196,7 @@ const Dashboard = () => {
                       <div className="meta-item"><span className="meta-label">Status</span><span className={`status-badge ${scan.status}`}>{scan.status}</span></div>
                       <div className="meta-item"><span className="meta-label">Vulnerabilities</span><span className="vuln-count">{scan.vulnerabilities}</span></div>
                     </div>
-                    <div className="scan-actions"><Link to={`/report/${scan.id}`} className="action-btn primary">View Report</Link></div>
+
                   </div>
                 ))}
               </div>

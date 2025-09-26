@@ -92,14 +92,14 @@ def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
 # === Dashboard ===
 def dashboard_overview(request):
     """
-    Gathers and returns a comprehensive overview of the user's security posture.
+    Gathers and returns a comprehensive, optimized overview of the user's security posture.
     """
     user_id = request.get("data", {}).get("user_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
     try:
-        # 1. Get all APIs for the user
+        # STEP 1: Get all of the user's APIs in a single query.
         user_apis = db_manager.select("apis", columns="id, name", filters={"user_id": user_id})
         if not user_apis:
             return success({
@@ -111,69 +111,63 @@ def dashboard_overview(request):
         api_ids = [api['id'] for api in user_apis]
         api_name_map = {api['id']: api['name'] for api in user_apis}
 
-        # 2. Get all scans for those APIs
+        # STEP 2: Get all scans for those APIs.
         all_scans = db_manager.select("scans", columns="id, api_id, status, completed_at", filters={"api_id": api_ids})
-        
         completed_scans = [s for s in all_scans if s['status'] == 'completed' and s.get('completed_at')]
         scan_ids = [scan['id'] for scan in completed_scans]
         
-        total_vulnerabilities = 0
-        critical_vulnerabilities = 0
+        # Initialize metrics
         vulnerabilities_by_severity = defaultdict(int)
         top_vuln_types = defaultdict(int)
+        vuln_count_by_scan_id = defaultdict(int)
+        total_vulnerabilities = 0
 
         if scan_ids:
-            # 3. Get all scan results for completed scans
+            # STEP 3: BATCH FETCH all results for ALL completed scans in a single query.
             all_results = db_manager.select(
                 "scan_results",
-                columns="severity, vulnerability_name",
+                columns="scan_id, severity, vulnerability_name", # Added scan_id
                 filters={"scan_id": scan_ids}
             )
+            
+            # STEP 4: Process all results in memory ONCE to build our lookup maps.
             total_vulnerabilities = len(all_results)
             for res in all_results:
                 severity = res.get("severity", "UNKNOWN").upper()
-                vulnerabilities_by_severity[severity] += 1
-                if severity == "CRITICAL": # Assuming 'CRITICAL' is a possible value
-                    critical_vulnerabilities += 1
-                
                 vuln_name = res.get("vulnerability_name", "Unknown Vulnerability")
+                
+                vulnerabilities_by_severity[severity] += 1
                 if vuln_name:
                     top_vuln_types[vuln_name] += 1
+                vuln_count_by_scan_id[res['scan_id']] += 1
         
-        # 4. Prepare recent scans for the dashboard
+        # STEP 5: Prepare recent scans using the in-memory map (NO NEW DB CALLS).
         completed_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
         recent_scans = []
-        for scan in completed_scans[:5]: # Get top 5
-            scan_results_count = db_manager.select("scan_results", columns="id", filters={"scan_id": scan['id']})
+        for scan in completed_scans[:5]:
             recent_scans.append({
                 "id": scan['id'],
                 "apiName": api_name_map.get(scan['api_id'], "Unknown API"),
                 "date": parse_datetime(scan['completed_at']).isoformat(),
                 "status": scan['status'],
-                "vulnerabilities": len(scan_results_count)
+                "vulnerabilities": vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
             })
 
-        # 5. Prepare weekly activity chart data
-        scan_activity_weekly = {day: {'scans': 0, 'vulnerabilities': 0} for day in range(7)}
+        # STEP 6: Prepare weekly activity using the in-memory map (NO NEW DB CALLS).
+        weekly_chart_data_map = {day: {'scans': 0, 'vulnerabilities': 0} for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}
         today = datetime.now(timezone.utc).date()
-        start_of_week = today - timedelta(days=today.weekday())
         
         for scan in completed_scans:
             completed_date = parse_datetime(scan['completed_at']).date()
-            if completed_date >= start_of_week:
-                day_index = completed_date.weekday()
-                scan_activity_weekly[day_index]['scans'] += 1
-                scan_vulns = db_manager.select("scan_results", columns="id", filters={"scan_id": scan['id']})
-                scan_activity_weekly[day_index]['vulnerabilities'] += len(scan_vulns)
+            if completed_date > (today - timedelta(days=7)):
+                day_name = completed_date.strftime('%a')
+                weekly_chart_data_map[day_name]['scans'] += 1
+                weekly_chart_data_map[day_name]['vulnerabilities'] += vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
         
-        weekly_chart_data = [
-            {'day': d, 'scans': scan_activity_weekly[i]['scans'], 'vulnerabilities': scan_activity_weekly[i]['vulnerabilities']}
-            for i, d in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-        ]
-        
-        # Prepare top vulnerability types
+        weekly_chart_data = [{'day': day, **data} for day, data in weekly_chart_data_map.items()]
+
+        # Prepare final payload
         sorted_top_vulns = sorted(top_vuln_types.items(), key=lambda item: item[1], reverse=True)[:4]
-        
         overview_data = {
             "total_apis": len(user_apis),
             "total_scans": len(all_scans),

@@ -171,7 +171,7 @@ const apiService = {
 export { apiService };
 
 const AVAILABLE_FLAGS = ["BOLA", "BKEN_AUTH", "BOPLA", "URC", "BFLA", "UABF", "SSRF", "SEC_MISC", "IIM", "UCAPI", "SKIP"];
-const SCAN_TYPES = ["OWASP_API_10", "Sensitive Data Exposure", "Broken Authentication", "SQL Injection"];
+const SCAN_TYPES = ["Default OWASP API Top 10 Scan"];
 
 const StatCard = ({ icon, number, label, onClick, active }) => (
     <div className={`stat-card ${onClick ? 'interactive' : ''} ${active ? 'active' : ''}`} onClick={onClick}>

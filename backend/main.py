@@ -90,14 +90,113 @@ def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
     return USER_STORE[user_id]["scans"][api_id]
 
 # === Dashboard ===
-def dashboard_overview(request): 
-    return server_error("Not yet implemented")
+def dashboard_overview(request):
+    """
+    Gathers and returns a comprehensive, optimized overview of the user's security posture.
+    """
+    user_id = request.get("data", {}).get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    try:
+        # STEP 1: Get all of the user's APIs in a single query.
+        user_apis = db_manager.select("apis", columns="id, name", filters={"user_id": user_id})
+        if not user_apis:
+            return success({
+                "total_apis": 0, "total_scans": 0, "total_vulnerabilities": 0,
+                "critical_vulnerabilities": 0, "vulnerabilities_by_severity": {},
+                "recent_scans": [], "scan_activity_weekly": [], "top_vuln_types": []
+            })
+
+        api_ids = [api['id'] for api in user_apis]
+        api_name_map = {api['id']: api['name'] for api in user_apis}
+
+        # STEP 2: Get all scans for those APIs.
+        all_scans = db_manager.select("scans", columns="id, api_id, status, completed_at", filters={"api_id": api_ids})
+        completed_scans = [s for s in all_scans if s['status'] == 'completed' and s.get('completed_at')]
+        scan_ids = [scan['id'] for scan in completed_scans]
+        
+        # Initialize metrics
+        vulnerabilities_by_severity = defaultdict(int)
+        top_vuln_types = defaultdict(int)
+        vuln_count_by_scan_id = defaultdict(int)
+        total_vulnerabilities = 0
+
+        if scan_ids:
+            # STEP 3: BATCH FETCH all results for ALL completed scans in a single query.
+            all_results = db_manager.select(
+                "scan_results",
+                columns="scan_id, severity, vulnerability_name", # Added scan_id
+                filters={"scan_id": scan_ids}
+            )
+            
+            # STEP 4: Process all results in memory ONCE to build our lookup maps.
+            total_vulnerabilities = len(all_results)
+            for res in all_results:
+                severity = res.get("severity", "UNKNOWN").upper()
+                vuln_name = res.get("vulnerability_name", "Unknown Vulnerability")
+                
+                vulnerabilities_by_severity[severity] += 1
+                if vuln_name:
+                    top_vuln_types[vuln_name] += 1
+                vuln_count_by_scan_id[res['scan_id']] += 1
+        
+        # STEP 5: Prepare recent scans using the in-memory map (NO NEW DB CALLS).
+        completed_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+        recent_scans = []
+        for scan in completed_scans[:5]:
+            recent_scans.append({
+                "id": scan['id'],
+                "apiName": api_name_map.get(scan['api_id'], "Unknown API"),
+                "date": parse_datetime(scan['completed_at']).isoformat(),
+                "status": scan['status'],
+                "vulnerabilities": vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
+            })
+
+        # STEP 6: Prepare weekly activity using the in-memory map (NO NEW DB CALLS).
+        weekly_chart_data_map = {day: {'scans': 0, 'vulnerabilities': 0} for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}
+        today = datetime.now(timezone.utc).date()
+        
+        for scan in completed_scans:
+            completed_date = parse_datetime(scan['completed_at']).date()
+            if completed_date > (today - timedelta(days=7)):
+                day_name = completed_date.strftime('%a')
+                weekly_chart_data_map[day_name]['scans'] += 1
+                weekly_chart_data_map[day_name]['vulnerabilities'] += vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
+        
+        weekly_chart_data = [{'day': day, **data} for day, data in weekly_chart_data_map.items()]
+
+        # Prepare final payload
+        sorted_top_vulns = sorted(top_vuln_types.items(), key=lambda item: item[1], reverse=True)[:4]
+        overview_data = {
+            "total_apis": len(user_apis),
+            "total_scans": len(all_scans),
+            "total_vulnerabilities": total_vulnerabilities,
+            "critical_vulnerabilities": vulnerabilities_by_severity.get("CRITICAL", 0),
+            "vulnerabilities_by_severity": dict(vulnerabilities_by_severity),
+            "recent_scans": recent_scans,
+            "scan_activity_weekly": weekly_chart_data,
+            "top_vuln_types": [{"type": v[0], "count": v[1]} for v in sorted_top_vulns]
+        }
+
+        return success(overview_data)
+
+    except Exception as e:
+        log_with_timestamp(f"Error in dashboard_overview: {e}")
+        return server_error(str(e))
+
 
 def dashboard_metrics(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard, as 'dashboard_overview' provides all necessary data.
+    # It is kept here as a placeholder.
+    log_with_timestamp("dashboard.metrics call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
 
 def dashboard_alerts(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard.
+    log_with_timestamp("dashboard.alerts call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
+
 
 # In main.py
 
@@ -139,33 +238,57 @@ def import_file(request):
         log_with_timestamp(f"Error in import_file: {e}")
         return server_error(str(e))
 
+# In main.py, replace the entire get_all_apis function with this new version.
+
 def get_all_apis(request):
     user_id = request.get("data", {}).get("user_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
-    # 1. Check for a cached response first (keeps subsequent refreshes fast)
-    if USER_STORE.get(user_id) and "api_list_cache" in USER_STORE[user_id]:
-        log_with_timestamp(f"Serving API list for user {user_id} from cache.")
-        return response(HTTPCode.SUCCESS, {"apis": USER_STORE[user_id]["api_list_cache"]})
-
-    log_with_timestamp(f"No cache. Optimizing API list fetch for user {user_id}.")
+    # The API list is now dynamic, so we should not cache it this way.
+    # The cache will be invalidated on share/revoke actions if needed, but for now, let's remove it for simplicity.
+    log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
+    
     try:
-        # STEP 1: Get all of the user's APIs in a single query.
-        user_apis = db_manager.select("apis", columns="id, name, version, imported_on", filters={"user_id": user_id})
-        if not user_apis:
+        # STEP 1: Get APIs OWNED BY the user.
+        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"user_id": user_id})
+        for api in owned_apis_data:
+            api['permission'] = 'owner' # Mark as owner
+
+        # STEP 2: Get APIs SHARED WITH the user.
+        shared_access_records = db_manager.select("api_access", columns="api_id, permission", filters={"user_id": user_id})
+        shared_api_ids = [rec['api_id'] for rec in shared_access_records]
+        
+        shared_apis_data = []
+        if shared_api_ids:
+            # Get the details for the shared APIs
+            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"id": shared_api_ids})
+            
+            # Create maps for efficient lookups
+            permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
+            owner_ids = {api['user_id'] for api in shared_apis_details}
+            owners = db_manager.select("users", columns="id, first_name, last_name", filters={"id": list(owner_ids)})
+            owner_map = {owner['id']: f"{owner['first_name']} {owner['last_name']}".strip() for owner in owners}
+            
+            for api in shared_apis_details:
+                api['permission'] = permission_map.get(api['id'], 'read')
+                api['owner_name'] = owner_map.get(api['user_id'], 'Unknown Owner')
+                shared_apis_data.append(api)
+
+        # STEP 3: Combine lists and prepare for fetching scan data.
+        all_user_apis = owned_apis_data + shared_apis_data
+        if not all_user_apis:
             return response(HTTPCode.SUCCESS, {"apis": []})
 
-        api_ids = [api['id'] for api in user_apis]
+        all_api_ids = [api['id'] for api in all_user_apis]
 
-        # STEP 2: Batch fetch all completed scans for ALL those APIs in a single query.
+        # STEP 4: Batch fetch all scan and result data for ALL accessible APIs.
         all_completed_scans = db_manager.select(
             "scans",
             columns="id, api_id, completed_at",
-            filters={"api_id": api_ids, "status": "completed"}
+            filters={"api_id": all_api_ids, "status": "completed"}
         )
-
-        # Group scans by api_id for quick lookups later
+        
         scans_by_api_id = defaultdict(list)
         for scan in all_completed_scans:
             scans_by_api_id[scan['api_id']].append(scan)
@@ -174,57 +297,49 @@ def get_all_apis(request):
         results_count_by_scan_id = defaultdict(int)
 
         if scan_ids_to_check:
-            # STEP 3: Batch fetch results for ALL relevant scans in a single query.
-            all_scan_results = db_manager.select(
-                "scan_results",
-                columns="scan_id", # We only need scan_id to count them
-                filters={"scan_id": scan_ids_to_check}
-            )
-            # Count the vulnerabilities for each scan in memory
+            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": scan_ids_to_check})
             for result in all_scan_results:
                 results_count_by_scan_id[result['scan_id']] += 1
 
-        # STEP 4: Build the final response by processing the fetched data in memory.
+        # STEP 5: Build the final response list.
         api_list_for_frontend = []
-        for api in user_apis:
+        for api in all_user_apis:
             api_id = api['id']
             vulnerabilities_found = 0
             last_scanned = "Never"
             scan_status = "Ready"
 
-            # Find the latest scan for this specific API from our in-memory data
             if api_id in scans_by_api_id:
                 api_scans = scans_by_api_id[api_id]
-                # Sort just this small list of scans for this API
-                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]) if isinstance(s["completed_at"], str) else s["completed_at"], reverse=True)
+                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
                 latest_scan = api_scans[0]
                 
                 scan_status = "Completed"
-                completed_at = latest_scan.get("completed_at")
-                dt_obj = parse_datetime(completed_at) if isinstance(completed_at, str) else completed_at
-                last_scanned = dt_obj.isoformat().split('T')[0]
-                
-                # Look up the vulnerability count from our in-memory data
+                last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
                 vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
 
-            imported_on_ts = api.get("imported_on")
-            created_at_iso = None
-            if imported_on_ts:
-                dt_obj = parse_datetime(imported_on_ts) if isinstance(imported_on_ts, str) else imported_on_ts
-                created_at_iso = dt_obj.isoformat()
+            dt_obj = parse_datetime(api.get("imported_on"))
+            created_at_iso = dt_obj.isoformat()
 
-            api_list_for_frontend.append({"id": api_id, "api_id": api_id, "name": api.get("name"), "version": api.get("version"), "created_at": created_at_iso, "vulnerabilitiesFound": vulnerabilities_found, "lastScanned": last_scanned, "scanStatus": scan_status})
+            api_list_for_frontend.append({
+                "id": api_id,
+                "api_id": api_id,
+                "name": api.get("name"),
+                "version": api.get("version"),
+                "created_at": created_at_iso,
+                "vulnerabilitiesFound": vulnerabilities_found,
+                "lastScanned": last_scanned,
+                "scanStatus": scan_status,
+                "permission": api['permission'], # Pass permission to frontend
+                "owner_name": api.get('owner_name') # Pass owner name if it exists
+            })
         
-        # Store the generated list in the cache for next time
-        if user_id not in USER_STORE:
-            USER_STORE[user_id] = {}
-        USER_STORE[user_id]["api_list_cache"] = api_list_for_frontend
-
         return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
 
     except Exception as e:
         log_with_timestamp(f"Error in get_all_apis: {e}")
         return server_error(str(e))
+        
 
 def create_api(request): 
     return server_error("Not yet implemented")
@@ -763,6 +878,118 @@ def stop_scan(request):
         return bad_request("Missing 'report_id'")
     return success({f"Stop request received for report {report_id}"})
 
+def share_api(request):
+    """Shares an API with another user by their email address."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    share_with_email = request.get("data", {}).get("email")
+    permission = request.get("data", {}).get("permission", "read")
+
+    if not all([owner_user_id, api_id, share_with_email]):
+        return bad_request("Missing owner_user_id, api_id, or email.")
+
+    # 1. Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API or it does not exist."})
+
+    # 2. Find the user to share with
+    target_user = db_manager.select("users", columns="id", filters={"email": share_with_email})
+    if not target_user:
+        return not_found(f"User with email '{share_with_email}' not found.")
+    
+    target_user_id = target_user[0]['id']
+
+    if target_user_id == owner_user_id:
+        return bad_request("You cannot share an API with yourself.")
+
+    # 3. Check for existing share to either update or insert
+    share_data = {"api_id": api_id, "user_id": target_user_id, "permission": permission}
+    existing_share = db_manager.select("api_access", filters={"api_id": api_id, "user_id": target_user_id})
+    
+    if existing_share:
+        result = db_manager.update("api_access", data={"permission": permission}, filters={"api_id": api_id, "user_id": target_user_id})
+        message = "API share permission updated successfully."
+    else:
+        result = db_manager.insert("api_access", data=share_data)
+        message = "API shared successfully."
+
+    if not result:
+        return server_error("Failed to save API share information.")
+        
+    return success({"message": message})
+
+
+def get_api_shares(request):
+    """Retrieves a list of users an API is shared with."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+
+    if not all([user_id, api_id]):
+        return bad_request("Missing user_id or api_id.")
+        
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view shares for this API."})
+        
+    access_records = db_manager.select("api_access", columns="user_id, permission", filters={"api_id": api_id})
+    if not access_records:
+        return success({"shares": []})
+        
+    user_ids = [rec['user_id'] for rec in access_records]
+    users_info = db_manager.select("users", columns="id, email, first_name, last_name", filters={"id": user_ids})
+    
+    user_map = {user['id']: user for user in users_info}
+    
+    shares = []
+    for rec in access_records:
+        user_info = user_map.get(rec['user_id'])
+        if user_info:
+            shares.append({
+                "user_id": user_info['id'],
+                "email": user_info['email'],
+                "name": f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+                "permission": rec['permission']
+            })
+            
+    return success({"shares": shares})
+
+def revoke_api_access(request):
+    """Revokes a user's access to a specific API."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    revoke_user_id = request.get("data", {}).get("revoke_user_id")
+
+    if not all([owner_user_id, api_id, revoke_user_id]):
+        return bad_request("Missing owner_user_id, api_id, or revoke_user_id.")
+
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API."})
+        
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": revoke_user_id})
+    
+    if not deleted:
+        return not_found("Access record not found for this user and API.")
+        
+    return success({"message": "API access revoked successfully."})
+
+# Add this new function to main.py
+def leave_api_share(request):
+    """Allows a user to remove their own access from a shared API."""
+    user_id = request.get("data", {}).get("user_id") # The user who is leaving
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": user_id})
+    if not deleted:
+        return not_found("API access record not found for this user. Nothing to remove.")
+    
+    return success({"message": "You have successfully left the API share."})
+
 def set_api_key(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
@@ -834,11 +1061,13 @@ def handle_request(request: dict):
         "scan.status": get_scan_status,
         "scan.stop": stop_scan,
         "scan.list": get_all_scans,
-        # --- ADD THESE NEW ROUTES ---
         "scans.schedule.get": get_schedule,
         "scans.schedule.create_or_update": create_or_update_schedule,
         "scans.schedule.delete": delete_schedule,
-        # --- END NEW ROUTES ---
+        "apis.share": share_api,
+        "apis.shares.list": get_api_shares,
+        "apis.shares.revoke": revoke_api_access,
+        "apis.shares.leave": leave_api_share, 
         "templates.list": get_all_templates,
         "templates.details": get_template_details,
         "templates.use": use_template,
@@ -927,5 +1156,4 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
-
 

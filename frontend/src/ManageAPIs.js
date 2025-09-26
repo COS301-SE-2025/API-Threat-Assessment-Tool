@@ -1,11 +1,9 @@
-import React, { useState, useContext, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import Logo from "./components/Logo";
 import './ManageAPIs.css';
-
-
 
 const apiService = {
   async fetchUserApis(userId) {
@@ -131,7 +129,43 @@ const apiService = {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'Failed to delete schedule');
     return data;
-  }
+  },
+  async shareApi(ownerId, apiId, email, permission) {
+    const res = await fetch('/api/apis/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_user_id: ownerId, api_id: apiId, email, permission }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to share API');
+    return data;
+  },
+  async getApiShares(userId, apiId) {
+    const res = await fetch(`/api/apis/shares?user_id=${userId}&api_id=${apiId}`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch shared users');
+    return data.data.shares || [];
+  },
+  async revokeApiAccess(ownerId, apiId, revokeUserId) {
+    const res = await fetch('/api/apis/share', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_user_id: ownerId, api_id: apiId, revoke_user_id: revokeUserId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to revoke access');
+    return data;
+  },
+  async leaveApiShare(userId, apiId) {
+    const res = await fetch('/api/apis/leave-share', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, api_id: apiId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Failed to leave share');
+    return data;
+  },
 };
 
 export { apiService };
@@ -147,33 +181,47 @@ const StatCard = ({ icon, number, label, onClick, active }) => (
     </div>
 );
 
-const ApiCard = ({ api, onScan, onDelete, onViewEndpoints, onViewPastScans, onEdit, onSchedule }) => (    <div className="api-card">
-        <div className="api-card-header">
-            <h4 className="api-name">{api.name}</h4>
-            <span className={`api-status ${api.vulnerabilitiesFound > 0 ? 'warning' : 'active'}`}>
-                {api.scanStatus || 'Ready'}
-            </span>
+const ApiCard = ({ api, onScan, onViewEndpoints, onViewPastScans, onManageOwner, onManageShared }) => {
+    const isOwner = api.permission === 'owner';
+
+    return (
+        <div className="api-card">
+            <div className="api-card-header">
+                <div className="api-name-owner">
+                    <h4 className="api-name">{api.name}</h4>
+                    {!isOwner && <span className="api-owner-badge">Shared by {api.owner_name}</span>}
+                </div>
+                <span className={`api-status ${api.vulnerabilitiesFound > 0 ? 'warning' : 'active'}`}>
+                    {api.scanStatus || 'Ready'}
+                </span>
+            </div>
+            <div className="api-description">ID: {api.id}</div>
+            <div className="api-meta">
+                <span>Created: {new Date(api.created_at || api.imported_on).toLocaleDateString()}</span>
+                <span>Last Scan: {api.lastScanned}</span>
+            </div>
+            {api.vulnerabilitiesFound > 0 && (
+                 <div className="vulnerabilities-found">
+                    ⚠️ {api.vulnerabilitiesFound} vulnerabilities found
+                 </div>
+            )}
+            <div className="api-card-actions redesigned">
+                {isOwner ? (
+                    <>
+                        <button onClick={() => onScan(api)} className="action-btn scan">⚙️ New Scan</button>
+                        <button onClick={() => onViewEndpoints(api)} className="action-btn endpoints">📂 Endpoints</button>
+                        <button onClick={() => onViewPastScans(api)} className="action-btn history">📜 History</button>
+                        <button onClick={() => onManageOwner(api)} className="action-btn manage-btn">Manage ▾</button>
+                    </>
+                ) : (
+                    <button onClick={() => onManageShared(api)} className="action-btn manage-shared-btn">
+                        🛠️ Manage
+                    </button>
+                )}
+            </div>
         </div>
-        <div className="api-description">ID: {api.id}</div>
-        <div className="api-meta">
-            <span>Created: {new Date(api.created_at || api.imported_on).toLocaleDateString()}</span>
-            <span>Last Scan: {api.lastScanned}</span>
-        </div>
-        {api.vulnerabilitiesFound > 0 && (
-             <div className="vulnerabilities-found">
-                ⚠️ {api.vulnerabilitiesFound} vulnerabilities found
-             </div>
-        )}
-        <div className="api-card-actions">
-            <button onClick={() => onScan(api)} className="action-btn scan">⚙️ New Scan</button>
-            <button onClick={() => onViewEndpoints(api)} className="action-btn endpoints">📂 Endpoints</button>
-            <button onClick={() => onViewPastScans(api)} className="action-btn history">📜 History</button>
-            <button onClick={() => onSchedule(api)} className="action-btn schedule">🗓️ Schedule</button>
-            <button onClick={() => onEdit(api)} className="action-btn edit">✏️ Edit</button>
-            <button onClick={() => onDelete(api)} className="action-btn delete">🗑️ Delete</button>
-        </div>
-    </div>
-);
+    );
+};
 
 const ManageAPIs = () => {
     const navigate = useNavigate();
@@ -187,10 +235,14 @@ const ManageAPIs = () => {
     const [isVisible, setIsVisible] = useState({});
     const [modal, setModal] = useState({ type: null, data: null });
     
-    // State for Search, Sort, and Filter
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('name');
     const [activeFilter, setActiveFilter] = useState(null);
+
+    const showMessage = useCallback((text, type = 'info', duration = 4000) => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage({ text: '', type: '' }), duration);
+    }, []);
 
     const fetchApis = useCallback(async () => {
         if (!currentUser?.id) return;
@@ -203,7 +255,7 @@ const ManageAPIs = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [currentUser?.id]);
+    }, [currentUser?.id, showMessage]);
 
     useEffect(() => { fetchApis(); }, [fetchApis]);
     
@@ -224,11 +276,6 @@ const ManageAPIs = () => {
             logout();
             navigate('/login', { replace: true });
         }
-    };
-
-    const showMessage = (text, type = 'info', duration = 4000) => {
-        setMessage({ text, type });
-        setTimeout(() => setMessage({ text: '', type: '' }), duration);
     };
 
     const handleUpdateApi = async (apiId, updates) => {
@@ -262,18 +309,19 @@ const ManageAPIs = () => {
                 if (sortBy === 'vulnerabilities') {
                     return (b.vulnerabilitiesFound || 0) - (a.vulnerabilitiesFound || 0);
                 }
-                return a.name.localeCompare(b.name); // Default sort by name
+                return a.name.localeCompare(b.name);
             });
     }, [apis, searchTerm, sortBy, activeFilter]);
 
     const handleDelete = async (api) => {
-        // The window.confirm check is removed to delete directly.
-        try {
-            await apiService.deleteApi(api.id, currentUser.id);
-            showMessage(`API "${api.name}" deleted successfully.`, 'success');
-            fetchApis();
-        } catch (error) {
-            showMessage(`Error: ${error.message}`, 'error');
+        if (window.confirm(`Are you sure you want to permanently delete "${api.name}"? This action cannot be undone.`)) {
+            try {
+                await apiService.deleteApi(api.id, currentUser.id);
+                showMessage(`API "${api.name}" deleted successfully.`, 'success');
+                fetchApis();
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
         }
     };
 
@@ -337,13 +385,13 @@ const ManageAPIs = () => {
         }
     };
 
-const apiStats = useMemo(() => ({
+    const apiStats = useMemo(() => ({
         total: apis.length,
         active: apis.filter(api => api.status === 'Active').length,
         issuesFound: apis.filter(api => (api.vulnerabilitiesFound || 0) > 0).length,
     }), [apis]);
 
-if (isLoading && apis.length === 0) {
+    if (isLoading && apis.length === 0) {
         return <div className="loading-full-page">Loading...</div>;
     }
     
@@ -354,10 +402,43 @@ if (isLoading && apis.length === 0) {
             {modal.type === 'import' && <ImportModal onClose={() => setModal({ type: null, data: null })} onImport={handleImport} />}
             {modal.type === 'endpoints' && <EndpointsModal api={modal.data} onClose={() => setModal({ type: null, data: null })} />}
             {modal.type === 'scanProfile' && <ScanProfileModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onProfileSelected={handleProfileSelected} />}
-            {modal.type === 'endpointFlags' && <EndpointFlagsModal data={modal.data} onClose={() => setModal({ type: null, data: null })} onScanStart={handleStartScan} showMessage={showMessage} />}            {modal.type === 'scanProgress' && <ScanProgressModal apiName={modal.data.apiName} />}
+            {modal.type === 'endpointFlags' && <EndpointFlagsModal data={modal.data} onClose={() => setModal({ type: null, data: null })} onScanStart={handleStartScan} showMessage={showMessage} />}
+            {modal.type === 'scanProgress' && <ScanProgressModal apiName={modal.data.apiName} />}
             {modal.type === 'scanResults' && <ScanResultsModal data={modal.data} onClose={() => setModal({type:null, data:null})} />}
             {modal.type === 'pastScans' && <PastScansModal api={modal.data} onClose={() => setModal({type:null, data:null})} onViewReport={handleViewSpecificReport} />}
-            {modal.type === 'schedule' && <ScheduleScanModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}            {modal.type === 'editApi' && <EditApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onSave={handleUpdateApi} />}
+            {modal.type === 'schedule' && <ScheduleScanModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}
+            {modal.type === 'editApi' && <EditApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onSave={handleUpdateApi} />}
+            {modal.type === 'share' && <ShareApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}
+            {modal.type === 'manageOwner' &&
+                <OwnerManageModal
+                    api={modal.data}
+                    onClose={() => setModal({ type: null, data: null })}
+                    onAction={(action) => {
+                        const apiData = modal.data;
+                        // Close current modal first, then open the new one after a short delay for smooth transition
+                        setModal({ type: null, data: null }); 
+                        setTimeout(() => {
+                            if (action === 'edit') setModal({ type: 'editApi', data: apiData });
+                            if (action === 'share') setModal({ type: 'share', data: apiData });
+                            if (action === 'schedule') setModal({ type: 'schedule', data: apiData });
+                            if (action === 'delete') handleDelete(apiData);
+                        }, 150);
+                    }}
+                />
+            }
+            {modal.type === 'manageShared' && 
+                <SharedApiManageModal 
+                    api={modal.data} 
+                    onClose={() => setModal({ type: null, data: null })} 
+                    showMessage={showMessage}
+                    fetchApis={fetchApis}
+                    onAction={(action) => {
+                        if (action === 'scan') handleStartScanFlow(modal.data);
+                        if (action === 'endpoints') setModal({type: 'endpoints', data: modal.data});
+                        if (action === 'history') handleViewPastScans(modal.data);
+                    }}
+                />
+            }
 
             <header className="manage-apis-header">
                 <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -435,16 +516,15 @@ if (isLoading && apis.length === 0) {
                                 </div>
                             ) : (
                                 filteredAndSortedApis.map(api => 
-                                        <ApiCard 
-                                          key={api.id} 
-                                          api={api}
-                                          onEdit={() => setModal({ type: 'editApi', data: api })}
-                                          onSchedule={() => setModal({ type: 'schedule', data: api })}
-                                          onScan={handleStartScanFlow}
-                                          onDelete={handleDelete}
-                                          onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
-                                          onViewPastScans={handleViewPastScans}
-                                      />
+                                    <ApiCard 
+                                        key={api.id} 
+                                        api={api}
+                                        onScan={handleStartScanFlow}
+                                        onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
+                                        onViewPastScans={handleViewPastScans}
+                                        onManageOwner={() => setModal({ type: 'manageOwner', data: api })}
+                                        onManageShared={() => setModal({ type: 'manageShared', data: api })}
+                                    />
                                 )
                             )}
                          </div>
@@ -584,8 +664,6 @@ const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     );
 };
 
-
-
 const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
     const { api, scanProfile } = data;
     const { currentUser } = useAuth();
@@ -612,7 +690,6 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
         });
         setEndpoints(updatedEndpoints);
         
-        // This now uses showMessage instead of alert
         apiService.updateEndpointFlag(api.id, currentUser.id, endpointId, flag, isEnabled ? 'add' : 'remove')
             .catch(err => {
                 showMessage(`Failed to update flag: ${err.message}`, 'error');
@@ -657,6 +734,7 @@ const EndpointFlagsModal = ({ data, onClose, onScanStart, showMessage }) => {
         </Modal>
     );
 };
+
 const ScanProgressModal = ({ apiName }) => (
     <div className="modal-overlay">
         <div className="modal-content">
@@ -710,7 +788,6 @@ const ScanResultsModal = ({ data, onClose }) => {
     );
 };
 
-
 const EditApiModal = ({ api, onClose, onSave }) => {
     const [name, setName] = useState(api.name);
     const [baseUrl, setBaseUrl] = useState(api.base_url || '');
@@ -739,8 +816,6 @@ const EditApiModal = ({ api, onClose, onSave }) => {
     );
 };
 
-
-
 const ScheduleScanModal = ({ api, onClose, showMessage }) => {
     const { currentUser } = useAuth();
     const [schedule, setSchedule] = useState(null);
@@ -760,17 +835,16 @@ const ScheduleScanModal = ({ api, onClose, showMessage }) => {
     const handleScheduleSave = (frequency) => {
         apiService.saveSchedule(api.id, currentUser.id, frequency, true)
             .then(fetchSchedule)
-            .catch(err => showMessage(err.message, 'error')); // Use showMessage
+            .catch(err => showMessage(err.message, 'error'));
     };
 
     const handleScheduleDelete = () => {
-        // The window.confirm check is removed to disable directly.
         apiService.deleteSchedule(api.id, currentUser.id)
             .then(() => {
                 setSchedule(null)
                 showMessage('Schedule disabled successfully.', 'success');
             })
-            .catch(err => showMessage(err.message, 'error')); // Use showMessage
+            .catch(err => showMessage(err.message, 'error'));
     };
 
     return (
@@ -826,7 +900,7 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
                 {error && <p className="error-text">{error}</p>}
                 {!loading && !error && (
                     <ul className="past-scans-list">
-                    {scans.length > 0 && scans.map(scan => (
+                    {scans.length > 0 ? scans.map(scan => (
                         <li key={scan.id} className="past-scan-item">
                             <div>
                                 <p className="scan-date"><strong>Date:</strong> {new Date(scan.completed_at).toLocaleString()}</p>
@@ -838,7 +912,7 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
                                 <button className="action-btn download-report" disabled>Technical Report</button>
                             </div>
                           </li>
-                      ))}
+                      )) : <p>No past scans found.</p>}
                     </ul>
                 )}
             </div>
@@ -846,5 +920,192 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
     )
 };
 
+const ShareApiModal = ({ api, onClose, showMessage }) => {
+    const { currentUser } = useAuth();
+    const [shares, setShares] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [email, setEmail] = useState('');
+    const [permission, setPermission] = useState('read');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const fetchShares = useCallback(async () => {
+        if (!api || !currentUser) return;
+        setIsLoading(true);
+        try {
+            const currentShares = await apiService.getApiShares(currentUser.id, api.id);
+            setShares(currentShares);
+        } catch (error) {
+            showMessage(`Error fetching shares: ${error.message}`, 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [api, currentUser, showMessage]);
+
+    useEffect(() => {
+        fetchShares();
+    }, [fetchShares]);
+
+    const handleShare = async (e) => {
+        e.preventDefault();
+        if (!email) {
+            showMessage('Please enter an email address.', 'error');
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const result = await apiService.shareApi(currentUser.id, api.id, email, permission);
+            showMessage(result.message || `API shared with ${email} successfully!`, 'success');
+            setEmail('');
+            fetchShares();
+        } catch (error) {
+            showMessage(`Error sharing API: ${error.message}`, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRevoke = async (revokeUserId, revokeUserEmail) => {
+        if (window.confirm(`Are you sure you want to revoke access for ${revokeUserEmail}?`)) {
+            try {
+                await apiService.revokeApiAccess(currentUser.id, api.id, revokeUserId);
+                showMessage('Access revoked successfully.', 'success');
+                fetchShares();
+            } catch (error) {
+                showMessage(`Error revoking access: ${error.message}`, 'error');
+            }
+        }
+    };
+
+    return (
+        <Modal onClose={onClose} title={`🤝 Share "${api.name}"`}>
+            <div className="modal-form modal-body-scrollable" style={{padding: '30px'}}>
+                <div className="current-shares">
+                    <h4>Currently Shared With</h4>
+                    {isLoading ? <div className="loader"></div> : (
+                        shares.length > 0 ? (
+                            <ul className="share-list">
+                                {shares.map(share => (
+                                    <li key={share.user_id} className="share-item">
+                                        <div className="share-info">
+                                            <span className="share-name">{share.name || 'N/A'}</span>
+                                            <span className="share-email">{share.email}</span>
+                                        </div>
+                                        <div className="share-actions">
+                                            <span className="share-permission">{share.permission}</span>
+                                            <button onClick={() => handleRevoke(share.user_id, share.email)} className="action-btn delete small-btn">Revoke</button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p>Not shared with anyone yet.</p>
+                        )
+                    )}
+                </div>
+                
+                <div className="divider"></div>
+
+                <form onSubmit={handleShare}>
+                    <h4>Share with New User</h4>
+                    <div className="form-group">
+                        <label htmlFor="share-email">User Email Address</label>
+                        <input
+                            id="share-email"
+                            type="email"
+                            placeholder="user@example.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="share-permission">Permission Level</label>
+                        <select id="share-permission" value={permission} onChange={e => setPermission(e.target.value)}>
+                            <option value="read">Read-Only</option>
+                            <option value="edit">Edit</option>
+                        </select>
+                    </div>
+                    <div className="modal-actions" style={{padding: '20px 0 0 0'}}>
+                        <button type="button" onClick={onClose} className="cancel-btn" disabled={isSubmitting}>Cancel</button>
+                        <button type="submit" className="save-btn" disabled={isSubmitting}>
+                            {isSubmitting ? 'Sharing...' : 'Share API'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+    );
+};
+
+const SharedApiManageModal = ({ api, onClose, onAction, showMessage, fetchApis }) => {
+    const { currentUser } = useAuth();
+
+    const handleLeaveShare = async () => {
+        if (window.confirm(`Are you sure you want to remove your access to "${api.name}"? This action cannot be undone.`)) {
+            try {
+                await apiService.leaveApiShare(currentUser.id, api.id);
+                showMessage('Successfully removed from API.', 'success');
+                fetchApis(); // Refresh the main API list
+                onClose(); // Close the modal
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+    };
+
+    return (
+        <Modal onClose={onClose} title={`Manage Shared API: ${api.name}`}>
+            <div className="modal-form" style={{padding: '30px'}}>
+                <div className="share-details-container">
+                    <p>This API is shared with you by <strong>{api.owner_name}</strong>.</p>
+                    <p>Your permission level is: <strong>{api.permission}</strong>.</p>
+                </div>
+                <div className="divider"></div>
+                <h4>Available Actions</h4>
+                <div className="shared-api-actions">
+                    <button onClick={() => { onAction('scan'); onClose(); }} className="action-btn scan large-btn">⚙️ Run New Scan</button>
+                    <button onClick={() => { onAction('endpoints'); onClose(); }} className="action-btn endpoints large-btn">📂 View Endpoints</button>
+                    <button onClick={() => { onAction('history'); onClose(); }} className="action-btn history large-btn">📜 View History</button>
+                </div>
+                <div className="divider"></div>
+                <h4>Leave Share</h4>
+                <p>If you no longer need access to this API, you can remove it from your list. You will need to be invited again by the owner to regain access.</p>
+                <div className="modal-actions" style={{justifyContent: 'center'}}>
+                    <button onClick={handleLeaveShare} className="delete-confirm-btn">Leave API Share</button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const OwnerManageModal = ({ api, onClose, onAction }) => (
+    <Modal onClose={onClose} title={`Manage API: ${api.name}`} maxWidth="500px">
+        <div className="modal-form" style={{ padding: '10px 30px 30px 30px' }}>
+            <p className="modal-subtitle">Select a configuration option to proceed.</p>
+            <div className="manage-actions-grid">
+                <button className="manage-action-btn" onClick={() => onAction('edit')}>
+                    <span className="manage-action-icon">✏️</span>
+                    <span className="manage-action-text">Edit Details</span>
+                </button>
+                <button className="manage-action-btn" onClick={() => onAction('share')}>
+                    <span className="manage-action-icon">🤝</span>
+                    <span className="manage-action-text">Share Access</span>
+                </button>
+                <button className="manage-action-btn" onClick={() => onAction('schedule')}>
+                    <span className="manage-action-icon">🗓️</span>
+                    <span className="manage-action-text">Schedule Scan</span>
+                </button>
+            </div>
+            <div className="divider"></div>
+            <div className="danger-zone">
+                <h4>Danger Zone</h4>
+                <p>This action is permanent and cannot be undone.</p>
+                <button className="delete-confirm-btn full-width" onClick={() => onAction('delete')}>
+                    🗑️ Delete this API
+                </button>
+            </div>
+        </div>
+    </Modal>
+);
 
 export default ManageAPIs;

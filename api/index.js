@@ -673,6 +673,10 @@ app.get('/', (req, res) => {
       listReports: 'GET /api/reports/list',
       getReportDetails: 'GET /api/reports/details',
       downloadReport: 'POST /api/reports/download',
+      deleteShare: 'DELETE /api/apis/share',
+      leaveShare: 'DELETE /api/apis/leave-share',
+      getShare: 'GET /api/apis/shares',
+      postShare: 'POST /api/apis/share',
       connectionTest: 'GET /api/connection/test'
     }
   });
@@ -1549,10 +1553,18 @@ app.post('/api/auth/google', async (req, res) => {
 // Dashboard Overview (dashboard.overview)
 app.get('/api/dashboard/overview', async (req, res) => {
   try {
+    const user_id = req.query.user_id;
+    console.log("Dashboard overview user_id:", user_id);
+
+    if (!user_id) {
+      return sendError(res, 'User ID is required.', null, 400);
+    }
+    
     const engineResponse = await sendToEngine({
       command: 'dashboard.overview',
-      data: {}
+      data: { user_id }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Dashboard overview retrieved successfully', engineResponse.data);
     } else {
@@ -2871,6 +2883,89 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) {
     console.error('reset-password error:', err);
     return sendError(res, 'Internal server error', err.message, 500);
+  }
+});
+
+// Share API with another user
+app.post('/api/apis/share', async (req, res) => {
+  try {
+    const { owner_user_id, api_id, email, permission } = req.body;
+    if (!owner_user_id || !api_id || !email) {
+      return sendError(res, 'owner_user_id, api_id, and email are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.share',
+      data: { owner_user_id, api_id, email, permission }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, engineResponse.data?.message || 'API shared successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to share API.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Share API error', err.message, 500);
+  }
+});
+
+// Get users an API is shared with
+app.get('/api/apis/shares', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.query;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.list',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Shared users retrieved successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to retrieve shared users.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get shares error', err.message, 500);
+  }
+});
+
+// Revoke API access from a user
+app.delete('/api/apis/share', async (req, res) => {
+  try {
+    const { owner_user_id, api_id, revoke_user_id } = req.body;
+    if (!owner_user_id || !api_id || !revoke_user_id) {
+      return sendError(res, 'owner_user_id, api_id, and revoke_user_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.revoke',
+      data: { owner_user_id, api_id, revoke_user_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Access revoked successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to revoke access.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Revoke access error', err.message, 500);
+  }
+});
+
+app.delete('/api/apis/leave-share', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.body;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.leave',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Successfully left API share.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to leave share.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Leave share error', err.message, 500);
   }
 });
 

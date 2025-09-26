@@ -1129,7 +1129,7 @@ app.put('/api/user/extended-profile', authenticateToken, async (req, res) => {
 // EXISTING AUTHENTICATION ROUTES
 // ==========================================================
 
-app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res) => {
+app.post('/api/auth/signup', createRateLimit(100, 60 * 60 * 1000), async (req, res) => {
   try {
     const { email, password, username, firstName, lastName } = req.body;
     const validation = validateSignupData(req.body);
@@ -1170,7 +1170,7 @@ app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res
   }
 });
 
-app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
+app.post('/api/auth/login', createRateLimit(200, 15 * 60 * 1000), async (req, res) =>{
   try {
     const { username, email, password } = req.body;
     if ((!username && !email) || !password) return sendError(res, 'Missing credentials', null, 400);
@@ -1237,7 +1237,7 @@ app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res
 // NEW: GOOGLE OAUTH LOGIN ENDPOINT
 // ==========================================================
 
-app.post('/api/auth/google-login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
+app.post('/api/auth/google-login', createRateLimit(200, 15 * 60 * 1000), async (req, res) =>  {
   try {
     const {
       email,

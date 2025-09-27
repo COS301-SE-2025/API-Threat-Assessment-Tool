@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   const [oAuthProcessing, setOAuthProcessing] = useState(false);
 
   // Base API URL - matches your backend
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     const fetchProfile = async () => {

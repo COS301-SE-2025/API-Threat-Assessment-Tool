@@ -1009,7 +1009,7 @@ app.put('/api/user/extended-profile', authenticateToken, async (req, res) => {
 // EXISTING AUTHENTICATION ROUTES
 // ==========================================================
 
-app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res) => {
+app.post('/api/auth/signup', createRateLimit(100, 60 * 60 * 1000), async (req, res) => {
   try {
     const { email, password, username, firstName, lastName } = req.body;
     const validation = validateSignupData(req.body);
@@ -1050,7 +1050,7 @@ app.post('/api/auth/signup', createRateLimit(5, 60 * 60 * 1000), async (req, res
   }
 });
 
-app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res) => {
+app.post('/api/auth/login', createRateLimit(200, 15 * 60 * 1000), async (req, res) =>{
   try {
     const { username, email, password } = req.body;
     if ((!username && !email) || !password) return sendError(res, 'Missing credentials', null, 400);
@@ -1112,6 +1112,228 @@ app.post('/api/auth/login', createRateLimit(10, 15 * 60 * 1000), async (req, res
     sendError(res, 'Login error', err.message, 500);
   }
 });
+
+// ==========================================================
+// NEW: GOOGLE OAUTH LOGIN ENDPOINT
+// ==========================================================
+
+app.post('/api/auth/google-login', createRateLimit(200, 15 * 60 * 1000), async (req, res) =>  {
+  try {
+    const {
+      email,
+      firstName,
+      lastName,
+      name,
+      profilePicture,
+      googleId,
+      provider = 'google'
+    } = req.body;
+
+    console.log('🔍 Google OAuth attempt:', { email, googleId: googleId?.substring(0, 10) + '...' });
+
+    // Validate required fields
+    if (!email || !googleId) {
+      return sendError(res, 'Missing required Google user data', null, 400);
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return sendError(res, 'Invalid email format', null, 400);
+    }
+
+    // Check if user exists by email
+    const { data: existingUsers, error: searchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email.trim().toLowerCase());
+
+    if (searchError) {
+      console.error('❌ User search error:', searchError);
+      return sendError(res, 'Database error during user lookup', searchError.message, 500);
+    }
+
+    let user;
+
+    if (existingUsers && existingUsers.length > 0) {
+      // User exists - update Google info and last login
+      user = existingUsers[0];
+      
+      console.log('👤 Updating existing user:', user.email);
+
+      const updateData = {
+        google_id: googleId,
+        auth_provider: provider,
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Update profile picture if provided and not already set
+      if (profilePicture && !user.profile_picture) {
+        updateData.profile_picture = profilePicture;
+      }
+
+      // Update names if they weren't set before
+      if (!user.first_name && firstName) {
+        updateData.first_name = firstName.trim();
+      }
+      if (!user.last_name && lastName) {
+        updateData.last_name = lastName.trim();
+      }
+
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id)
+        .select('*')
+        .single();
+
+      if (updateError) {
+        console.error('❌ User update error:', updateError);
+        return sendError(res, 'Failed to update user', updateError.message, 500);
+      }
+
+      user = updatedUser;
+
+    } else {
+      // Create new user from Google data
+      console.log('✨ Creating new user from Google data');
+      
+      // Generate a unique username from email
+      let baseUsername = email.split('@')[0].toLowerCase();
+      let username = baseUsername;
+      
+      // Check if username already exists and make it unique
+      const { data: existingUsernames } = await supabase
+        .from('users')
+        .select('username')
+        .ilike('username', `${baseUsername}%`);
+
+      if (existingUsernames && existingUsernames.length > 0) {
+        username = `${baseUsername}_${Date.now()}`;
+      }
+
+      const userData = {
+        id: crypto.randomUUID(),
+        email: email.trim().toLowerCase(),
+        first_name: firstName ? firstName.trim() : '',
+        last_name: lastName ? lastName.trim() : '',
+        username: username,
+        profile_picture: profilePicture || '',
+        google_id: googleId,
+        auth_provider: provider,
+        email_confirmed: true, // Google emails are verified
+        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Random secure password
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), // Added this field
+        last_login: new Date().toISOString()
+      };
+
+      console.log('📝 Inserting user data:', { ...userData, password: '[HIDDEN]' });
+
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([userData])
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('❌ User creation error:', createError);
+        
+        // Handle specific errors
+        if (createError.code === '23505') {
+          if (createError.message.includes('email')) {
+            return sendError(res, 'An account with this email already exists', null, 409);
+          }
+          if (createError.message.includes('username')) {
+            // Retry with a more unique username
+            userData.username = `${baseUsername}_${crypto.randomBytes(4).toString('hex')}`;
+            
+            const { data: retryUser, error: retryError } = await supabase
+              .from('users')
+              .insert([userData])
+              .select('*')
+              .single();
+
+            if (retryError) {
+              console.error('❌ Retry user creation error:', retryError);
+              return sendError(res, 'Failed to create user account', retryError.message, 500);
+            }
+            user = retryUser;
+          } else {
+            return sendError(res, 'Duplicate entry error', createError.message, 409);
+          }
+        } else {
+          return sendError(res, 'Failed to create user account', createError.message, 500);
+        }
+      } else {
+        user = newUser;
+      }
+
+      console.log('✅ User created successfully:', user.email);
+    }
+
+    // Generate JWT token
+    if (!process.env.JWT_SECRET) {
+      console.error('❌ JWT_SECRET not configured');
+      return sendError(res, 'Server configuration error', null, 500);
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' } // Longer expiry for OAuth users
+    );
+
+    // Log successful login activity (optional)
+    try {
+      await supabase
+        .from('user_activity_log')
+        .insert([{
+          user_id: user.id,
+          action: 'google_login',
+          description: 'User logged in via Google OAuth',
+          ip_address: req.ip || 'unknown',
+          user_agent: req.get('User-Agent') || 'unknown',
+          metadata: { provider, googleId: googleId.substring(0, 10) + '...' }
+        }]);
+    } catch (logError) {
+      console.warn('⚠️ Failed to log Google login activity:', logError.message);
+      // Don't fail the login if activity logging fails
+    }
+
+    // Return user data in the format expected by frontend
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      username: user.username,
+      profilePicture: user.profile_picture,
+      authProvider: user.auth_provider,
+      emailConfirmed: user.email_confirmed,
+      createdAt: user.created_at,
+      lastLogin: user.last_login
+    };
+
+    console.log('🎉 Google login successful for:', user.email);
+
+    sendSuccess(res, 'Google login successful', {
+      token,
+      user: userResponse
+    });
+
+  } catch (error) {
+    console.error('💥 Google login error:', error);
+    sendError(res, 'Google login failed', error.message, 500);
+  }
+});
+
+// ==========================================================
+// REST OF EXISTING ROUTES CONTINUE HERE...
+// ==========================================================
 
 app.post('/api/auth/logout', async (req, res) => {
   try {
@@ -1424,18 +1646,28 @@ app.post('/api/import', upload.single('file'), async (req, res) => {
       return sendError(res, 'No file uploaded', null, 400);
     }
 
-    const fileName = req.file.originalname;
-    const tempPath = req.file.path;
-    
-    const filesDir = path.join(__dirname, 'Files');
-    if (!fs.existsSync(filesDir)) {
-      fs.mkdirSync(filesDir, { recursive: true });
-    }
-    
-    const finalPath = path.join(filesDir, fileName);
-    fs.renameSync(tempPath, finalPath);
-    
-    console.log(`📁 File saved to: ${finalPath}`);
+      const { user_id } = req.body;
+      
+      const userIdValidation = validateUserId(user_id);
+      if (!userIdValidation.isValid) {
+        // Clean up the uploaded file if validation fails
+        if (req.file && req.file.path) fs.unlinkSync(req.file.path);
+        return sendError(res, userIdValidation.error, null, 400);
+      }
+
+      // The rest of your original logic from this route goes here...
+      const fileName = req.file.originalname;
+      const tempPath = req.file.path;
+      
+      const filesDir = path.join(__dirname, '../backend', 'Files');
+      if (!fs.existsSync(filesDir)) {
+        fs.mkdirSync(filesDir, { recursive: true });
+      }
+      
+      const finalPath = path.join(filesDir, fileName);
+      fs.renameSync(tempPath, finalPath);
+      
+      console.log(`📁 File saved to: ${finalPath}`);
 
     const engineRequest = {
       command: "apis.import_file",

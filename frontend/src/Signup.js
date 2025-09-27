@@ -358,21 +358,13 @@ const Signup = () => {
                   />
                   <span className="checkbox-text">
                     I agree to the{' '}
-                    <button 
-                      type="button" 
-                      className="terms-link" 
-                      onClick={() => console.log('Terms of Service')}
-                    >
+                    <Link to="/terms" className="terms-link">
                       Terms of Service
-                    </button>
+                    </Link>
                     {' '}and{' '}
-                    <button 
-                      type="button" 
-                      className="terms-link" 
-                      onClick={() => console.log('Privacy Policy')}
-                    >
+                    <Link to="/privacy" className="terms-link">
                       Privacy Policy
-                    </button>
+                    </Link>
                   </span>
                 </label>
               </div>
@@ -408,20 +400,10 @@ const Signup = () => {
         <footer className="signup-footer">
           <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
           <div className="footer-links">
-            <button 
-              type="button" 
-              onClick={() => console.log('Privacy Policy')} 
-              className="footer-link-btn"
-            >
-              Privacy Policy
-            </button>
-            <button 
-              type="button" 
-              onClick={() => console.log('Terms of Service')} 
-              className="footer-link-btn"
-            >
-              Terms of Service
-            </button>
+            <Link to="/privacy" className="footer-link-btn">Privacy Policy</Link>
+            <Link to="/terms" className="footer-link-btn">Terms of Service</Link>
+            <Link to="/security" className="footer-link-btn">Security</Link>
+            <Link to="/contact" className="footer-link-btn">Contact Us</Link>
           </div>
         </footer>
       </div>

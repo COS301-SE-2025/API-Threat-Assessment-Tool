@@ -195,6 +195,7 @@ export const AuthProvider = ({ children }) => {
         console.log('Extracted token and user, storing...');
         
         localStorage.setItem('at_at_token', newToken);
+        localStorage.setItem('currentUser_id', user.id); 
         setToken(newToken);
         setCurrentUser(user);
         console.log('Token and user state updated');

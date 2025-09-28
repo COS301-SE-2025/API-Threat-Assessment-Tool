@@ -55,7 +55,6 @@ export default function ForgotPassword() {
           <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Logo />
             <span style={{ fontWeight: 700, fontSize: 24, letterSpacing: 2, color: darkMode ? "#fff" : "#222", userSelect: "none" }}>
-              AT-AT
             </span>
           </div>
           <div className="user-info">

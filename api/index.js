@@ -659,6 +659,9 @@ app.get('/', (req, res) => {
       scanProgress: 'GET /api/scan/progress',
       stopScan: 'POST /api/scan/stop',
       scanResults: 'GET /api/scan/results',
+      getSchedule: 'GET /api/scans/schedule',
+      saveSchedule: 'POST /api/scans/schedule',
+      deleteSchedule: 'DELETE /api/scans/schedule',
       listScans: 'GET /api/scan/list',
       listTemplates: 'GET /api/templates/list',
       getTemplateDetails: 'GET /api/templates/details',
@@ -670,6 +673,10 @@ app.get('/', (req, res) => {
       listReports: 'GET /api/reports/list',
       getReportDetails: 'GET /api/reports/details',
       downloadReport: 'POST /api/reports/download',
+      deleteShare: 'DELETE /api/apis/share',
+      leaveShare: 'DELETE /api/apis/leave-share',
+      getShare: 'GET /api/apis/shares',
+      postShare: 'POST /api/apis/share',
       connectionTest: 'GET /api/connection/test'
     }
   });
@@ -1546,10 +1553,18 @@ app.post('/api/auth/google', async (req, res) => {
 // Dashboard Overview (dashboard.overview)
 app.get('/api/dashboard/overview', async (req, res) => {
   try {
+    const user_id = req.query.user_id;
+    console.log("Dashboard overview user_id:", user_id);
+
+    if (!user_id) {
+      return sendError(res, 'User ID is required.', null, 400);
+    }
+    
     const engineResponse = await sendToEngine({
       command: 'dashboard.overview',
-      data: {}
+      data: { user_id }
     });
+    
     if (engineResponse.code === 200) {
       sendSuccess(res, 'Dashboard overview retrieved successfully', engineResponse.data);
     } else {
@@ -1677,7 +1692,7 @@ app.get('/api/apis/details', async (req, res) => {
 // Update API (apis.update) - UPDATED: Now requires user_id
 app.put('/api/apis/update', async (req, res) => {
   try {
-    const { api_id, name, description, user_id } = req.body;
+    const { api_id, user_id, updates } = req.body;
     
     // Validate required parameters
     if (!api_id) {
@@ -1694,8 +1709,7 @@ app.put('/api/apis/update', async (req, res) => {
       data: { 
         api_id: api_id.trim(),
         user_id: user_id.trim(),
-        name, 
-        description 
+        updates
       }
     });
     
@@ -1850,7 +1864,7 @@ app.post('/api/import', async (req, res) => {
       const fileName = req.file.originalname;
       const tempPath = req.file.path;
       
-      const filesDir = path.join(__dirname, 'Files');
+      const filesDir = path.join(__dirname, '../backend', 'Files');
       if (!fs.existsSync(filesDir)) {
         fs.mkdirSync(filesDir, { recursive: true });
       }
@@ -2501,7 +2515,7 @@ app.get('/api/scan/results', async (req, res) => {
 // List All Scans (scan.list) - UPDATED: Now requires user_id
 app.get('/api/scan/list', async (req, res) => {
   try {
-    const { user_id } = req.query;
+    const { user_id, api_id } = req.query;
     
     // Validate required user_id parameter
     const userIdValidation = validateUserId(user_id);
@@ -2511,7 +2525,7 @@ app.get('/api/scan/list', async (req, res) => {
 
     const engineResponse = await sendToEngine({
       command: 'scan.list',
-      data: { user_id: user_id.trim() }
+      data: { user_id: user_id.trim(), api_id: api_id.trim() }
     });
     
     if (engineResponse.code === 200) {
@@ -2521,6 +2535,66 @@ app.get('/api/scan/list', async (req, res) => {
     }
   } catch (err) {
     sendError(res, 'List scans error', err.message, 500);
+  }
+});
+
+app.get('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.query;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.get',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule retrieved successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to retrieve schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get schedule error', err.message, 500);
+  }
+});
+
+app.post('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id, frequency, is_enabled } = req.body;
+    if (!user_id || !api_id || !frequency) {
+      return sendError(res, 'user_id, api_id, and frequency are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.create_or_update',
+      data: { user_id, api_id, frequency, is_enabled }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule saved successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to save schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Save schedule error', err.message, 500);
+  }
+});
+
+app.delete('/api/scans/schedule', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.body;
+     if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'scans.schedule.delete',
+      data: { user_id, api_id }
+    });
+     if (engineResponse.code === 200) {
+      sendSuccess(res, 'Schedule deleted successfully.', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to delete schedule.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Delete schedule error', err.message, 500);
   }
 });
 
@@ -2809,6 +2883,89 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) {
     console.error('reset-password error:', err);
     return sendError(res, 'Internal server error', err.message, 500);
+  }
+});
+
+// Share API with another user
+app.post('/api/apis/share', async (req, res) => {
+  try {
+    const { owner_user_id, api_id, email, permission } = req.body;
+    if (!owner_user_id || !api_id || !email) {
+      return sendError(res, 'owner_user_id, api_id, and email are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.share',
+      data: { owner_user_id, api_id, email, permission }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, engineResponse.data?.message || 'API shared successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to share API.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Share API error', err.message, 500);
+  }
+});
+
+// Get users an API is shared with
+app.get('/api/apis/shares', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.query;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.list',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Shared users retrieved successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to retrieve shared users.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Get shares error', err.message, 500);
+  }
+});
+
+// Revoke API access from a user
+app.delete('/api/apis/share', async (req, res) => {
+  try {
+    const { owner_user_id, api_id, revoke_user_id } = req.body;
+    if (!owner_user_id || !api_id || !revoke_user_id) {
+      return sendError(res, 'owner_user_id, api_id, and revoke_user_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.revoke',
+      data: { owner_user_id, api_id, revoke_user_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Access revoked successfully.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to revoke access.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Revoke access error', err.message, 500);
+  }
+});
+
+app.delete('/api/apis/leave-share', async (req, res) => {
+  try {
+    const { user_id, api_id } = req.body;
+    if (!user_id || !api_id) {
+      return sendError(res, 'user_id and api_id are required.', null, 400);
+    }
+    const engineResponse = await sendToEngine({
+      command: 'apis.shares.leave',
+      data: { user_id, api_id }
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Successfully left API share.', engineResponse.data);
+    } else {
+      sendError(res, engineResponse.data?.message || 'Failed to leave share.', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Leave share error', err.message, 500);
   }
 });
 

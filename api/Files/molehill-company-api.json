@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Company API",
+    "description": "API for Company's internal systems",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/api/v1/hr/employees/list": {
+      "get": {
+        "tags": [
+          "HR",
+          "v1"
+        ],
+        "summary": "List employees",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/it/servers/status": {
+      "get": {
+        "tags": [
+          "IT",
+          "v1"
+        ],
+        "summary": "Get server status",
+        "responses": {
+          "200": {
+            "description": "Server status with potential sensitive data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "adminCredentials": {
+                      "type": "object",
+                      "properties": {
+                        "username": {
+                          "type": "string"
+                        },
+                        "password": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

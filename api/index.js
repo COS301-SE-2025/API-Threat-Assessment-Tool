@@ -337,10 +337,12 @@ function consumeResetToken(token) {
   return rec;
 }
 // Optional background cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
-}, 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
+  }, 60 * 1000);
+}
 // -----------------------------------------------------
 // Engine management functions
 const isEngineRunning = () => {
@@ -897,7 +899,7 @@ app.get('/api/user/preferences', authenticateToken, async (req, res) => {
           },
         };
       } else {
-        prefsData = newPrefs;
+        const prefsData = newPrefs;
       }
     }
 
@@ -2773,10 +2775,6 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
-//////////////
-//Forget Password
-//////////////
-// POST /api/auth/forgot-password
 
 //////////////
 // Forget Password
@@ -2784,7 +2782,7 @@ app.get('/api/connection/test', async (req, res) => {
 
 // POST /api/auth/forgot-password
 app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
-  const generic = 'If that account exists, we sent a reset link.';
+  const generic = 'If that account exists, we sent a reset link. Make sure to check your spam folder if you can not find it.';
   try {
     const { email } = req.body || {};
     if (!email) return sendSuccess(res, generic);

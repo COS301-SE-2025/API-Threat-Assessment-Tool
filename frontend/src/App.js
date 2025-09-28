@@ -18,6 +18,7 @@ import PublicTemplates from "./PublicTemplates";
 import ScanReport from "./ScanReport";
 import ImportAPI from "./ImportAPI";
 import ForgotPassword from "./ForgotPassword";
+import PrivacyPolicy from './PrivacyPolicy';
 import Recover from "./Recover";
 // Import the scan simulation module
 import { ScanSimulation } from "./scanSimulation";
@@ -138,6 +139,7 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route 
                   path="/documentation" 
                   element={

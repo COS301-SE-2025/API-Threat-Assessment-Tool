@@ -747,12 +747,7 @@ const Settings = () => {
                         )}
                       </div>
                       <div className="avatar-actions">
-                        <button type="button" className="btn btn-outline">
-                          Change Photo
-                        </button>
-                        <button type="button" className="btn btn-text">
-                          Remove
-                        </button>
+
                       </div>
                     </div>
                   </div>
@@ -1135,44 +1130,6 @@ const Settings = () => {
                             checked={formData.notifications.emailDigest}
                             onChange={(e) =>
                               handleNestedChange('notifications', 'emailDigest', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="notification-group">
-                      <h3 className="group-title">📱 Mobile Notifications</h3>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>SMS Alerts</h4>
-                          <p>Text messages for urgent security issues</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.smsAlerts}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'smsAlerts', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>Product Updates</h4>
-                          <p>New features, updates, and product announcements</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.productUpdates}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'productUpdates', e.target.checked)
                             }
                             disabled={isSaving}
                           />

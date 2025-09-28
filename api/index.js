@@ -337,10 +337,12 @@ function consumeResetToken(token) {
   return rec;
 }
 // Optional background cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
-}, 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
+  }, 60 * 1000);
+}
 // -----------------------------------------------------
 // Engine management functions
 const isEngineRunning = () => {
@@ -897,7 +899,7 @@ app.get('/api/user/preferences', authenticateToken, async (req, res) => {
           },
         };
       } else {
-        prefsData = newPrefs;
+        const prefsData = newPrefs;
       }
     }
 

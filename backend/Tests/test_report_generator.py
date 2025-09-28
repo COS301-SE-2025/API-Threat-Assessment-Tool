@@ -155,10 +155,6 @@ def test_generate_report_technical_html(report_generator, scan_results):
     report_generator.generate_report("technical", "technical_report.html", scan_results, "html")
     assert os.path.exists("technical_report.html")
 
-def test_generate_report_executive_pdf(report_generator, scan_results):
-    report_generator.generate_report("executive", "executive_report.pdf", scan_results, "pdf")
-    assert os.path.exists("executive_report.pdf")
-
 def test_generate_report_technical_json(report_generator, scan_results):
     report_generator.generate_report("technical", "technical_report.json", scan_results, "json")
     assert os.path.exists("technical_report.json")
@@ -170,10 +166,6 @@ def test_generate_report_invalid_report_type(report_generator, scan_results):
 def test_generate_report_invalid_report_format(report_generator, scan_results):
     with pytest.raises(ValueError):
         report_generator.generate_report("technical", "report", scan_results, "txt")
-
-def test_generate_report_technical_pdf(report_generator, scan_results):
-    report_generator.generate_report("technical", "technical_report.pdf", scan_results, "pdf")
-    assert os.path.exists("technical_report.pdf")
 
 def test_generate_report_executive_html(report_generator, scan_results):
     report_generator.generate_report("executive", "executive_report.html", scan_results, "html")

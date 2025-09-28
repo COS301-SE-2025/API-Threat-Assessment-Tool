@@ -1233,14 +1233,15 @@ const Settings = () => {
         </section>
       </main>
 
-      <footer className="settings-footer">
-        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Help Center</a>
-        </div>
-      </footer>
+<footer className="manage-apis-footer">
+                <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+                        <div className="footer-links">
+                          <Link to="/privacy">Privacy Policy</Link>
+                          <Link to="/terms">Terms of Service</Link>
+                          <Link to="/documentation">Documentation</Link>
+                          <Link to="/contact">Contact Us</Link>
+                        </div>
+            </footer>
     </div>
   );
 };

@@ -1253,3 +1253,38 @@ button:focus {
   }
 }
 
+.manage-apis-footer {
+  text-align: center;
+  padding: 30px 20px;
+  background: #3a3a3a;
+  color: #f0f0f0;
+  font-size: 0.9em;
+  border-top: 1px solid #4a4a4a;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .manage-apis-footer {
+  background: #2a2a2a;
+  color: #d0d0d0;
+  border-top: 1px solid #3a3a3a;
+}
+.footer-links {
+  margin-top: 15px;
+}
+.footer-links a {
+  color: #f0f0f0;
+  margin: 0 15px;
+  text-decoration: none;
+  transition: var(--transition);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+.dark-mode .footer-links a {
+  color: #d0d0d0;
+}
+.footer-links a:hover {
+  color: var(--primary-light);
+  background: rgba(107, 70, 193, 0.1);
+}
+.dark-mode .footer-links a:hover {
+  background: rgba(138, 99, 210, 0.15);
+}

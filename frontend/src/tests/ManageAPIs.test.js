@@ -908,3 +908,88 @@ test('getScanStatus throws default polling error when no message provided', asyn
   await expect(apiService.getScanStatus(1)).rejects.toThrow('Polling for scan results failed');
 });
 });
+
+describe('ManageAPIs Component - Working Additional Tests', () => {
+
+  test('displays error message in UI when initial API fetch fails (success: false)', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: false, message: 'Failed to authenticate user.' }),
+    });
+
+    render(<TestWrapper><ManageAPIs /></TestWrapper>);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to authenticate user/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Test API 1')).not.toBeInTheDocument();
+  });
+  test('filter by issues shows "No APIs Match" when no API has issues', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          apis: [
+            { id: 'api-3', name: 'No Issues', vulnerabilitiesFound: 0, lastScanned: '2023-01-01T10:00:00Z', status: 'Active' },
+          ],
+        },
+      }),
+    });
+    
+    render(<TestWrapper><ManageAPIs /></TestWrapper>);
+    
+    await waitFor(() => {
+      expect(screen.getByText('No Issues')).toBeInTheDocument();
+    });
+    
+    const issuesCard = screen.getByText('APIs with Issues').parentElement;
+    fireEvent.click(issuesCard);
+    
+    await waitFor(() => {
+      expect(issuesCard).toHaveClass('active');
+      expect(screen.queryByText('No Issues')).not.toBeInTheDocument();
+      expect(screen.getByText('No APIs Match Your Criteria')).toBeInTheDocument();
+    });
+  });
+  
+  test('sort by Last Scanned changes the displayed API order', async () => {
+    const mockApisSorted = [
+      { id: 'api-3', name: 'Z-Latest', vulnerabilitiesFound: 1, lastScanned: '2025-01-01T10:00:00Z', created_at: '2023-01-03T09:00:00Z', status: 'Active' },
+      ...mockApis
+    ];
+    
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, data: { apis: mockApisSorted } }),
+    });
+    
+    render(<TestWrapper><ManageAPIs /></TestWrapper>);
+    await waitFor(() => {
+      const apiNames = screen.getAllByRole('heading', { level: 4 }).map(h => h.textContent);
+      expect(apiNames[0]).toBe('Test API 1');
+    });
+    const sortSelect = screen.getByDisplayValue('Sort by Name');
+    fireEvent.change(sortSelect, { target: { value: 'lastScanned' } });
+   
+    await waitFor(() => {
+      const apiNames = screen.getAllByRole('heading', { level: 4 }).map(h => h.textContent);
+      expect(apiNames[0]).toBe('Z-Latest'); 
+      expect(apiNames[1]).toBe('Test API 1'); 
+    });
+  });
+});
+
+describe('apiService unit tests', () => {
+  beforeEach(() => {
+    fetch.mockClear();
+  });
+
+  test('deleteApi throws a generic error on network failure (fetch rejected)', async () => {
+    fetch.mockRejectedValueOnce(new Error('Network offline'));
+    
+    await expect(apiService.deleteApi(99, 1)).rejects.toThrow('Network offline');
+  });
+});

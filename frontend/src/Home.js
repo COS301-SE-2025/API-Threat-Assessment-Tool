@@ -131,7 +131,7 @@ const Home = () => {
             </p>
             <div className="cta-buttons">
               <Link to="/manage-apis" className="cta-btn primary">
-                🚀 Start Security Scan
+                🚀 Manage APIs Here
               </Link>
             </div>
           </div>

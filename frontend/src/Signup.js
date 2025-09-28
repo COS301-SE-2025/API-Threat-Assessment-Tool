@@ -402,7 +402,6 @@ const Signup = () => {
           <div className="footer-links">
             <Link to="/privacy" className="footer-link-btn">Privacy Policy</Link>
             <Link to="/terms" className="footer-link-btn">Terms of Service</Link>
-            <Link to="/security" className="footer-link-btn">Security</Link>
             <Link to="/contact" className="footer-link-btn">Contact Us</Link>
           </div>
         </footer>

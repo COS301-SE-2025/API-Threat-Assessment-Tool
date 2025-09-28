@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
-import Cookies from 'js-cookie';
 import Logo from './components/Logo';
 import './Settings.css';
 

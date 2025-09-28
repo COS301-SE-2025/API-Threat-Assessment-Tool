@@ -1288,3 +1288,8 @@ button:focus {
 .dark-mode .footer-links a:hover {
   background: rgba(138, 99, 210, 0.15);
 }
+.animate-on-scroll {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}

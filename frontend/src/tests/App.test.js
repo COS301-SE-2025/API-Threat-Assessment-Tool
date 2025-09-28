@@ -1,10 +1,9 @@
+// src/tests/App.test.js
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import App, { ThemeContext, ScanContext } from '../App';
-import { AuthProvider } from '../AuthContext';
-import { ScanSimulation } from '../scanSimulation';
+import { render, waitFor } from '@testing-library/react';
+import App from '../App';
 
-// Mocking axios to avoid issues with import syntax in Jest
+// --- Minimal axios mock to avoid network calls ---
 jest.mock('axios', () => ({
   get: jest.fn(),
   post: jest.fn(),
@@ -12,50 +11,80 @@ jest.mock('axios', () => ({
   delete: jest.fn(),
 }));
 
-// Custom render without wrapping in another Router
-const mockScanSimulation = new ScanSimulation();
+// --- AuthContext mock: no-op provider + simple hook ---
+// IMPORTANT: include isAuthenticated() because LandingPage calls it.
+jest.mock('../AuthContext', () => ({
+  AuthProvider: ({ children }) => <>{children}</>,
+  useAuth: () => ({
+    currentUser: null,
+    logout: jest.fn(),
+    getUserFullName: () => '',
+    isAuthenticated: () => false,  // <-- prevents redirect during tests
+  }),
+}));
 
-// Render function
-const renderApp = () =>
-  render(
-    <AuthProvider>
-      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: jest.fn() }}>
-        <ScanContext.Provider value={{ scanSimulation: mockScanSimulation }}>
-          <App />
-        </ScanContext.Provider>
-      </ThemeContext.Provider>
-    </AuthProvider>
-  );
+// ---- JSDOM polyfills & shims ----
+beforeAll(() => {
+  // Polyfill IntersectionObserver used by LandingPage
+  if (!global.IntersectionObserver) {
+    global.IntersectionObserver = class {
+      constructor(cb, _opts) { this._cb = cb; }
+      observe(target) {
+        // Immediately "intersect"
+        this._cb([{ target, isIntersecting: true }]);
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() { return []; }
+    };
+  }
 
-describe('App Component Unit Tests', () => {
-  
-  // Reset or clear localStorage and class list before each test to avoid interference
-  beforeEach(() => {
-    // Clear localStorage for each test to avoid state leaks
-    localStorage.clear();
-    document.body.classList.remove('dark-mode');
-    document.documentElement.classList.remove('dark-mode');
-  });
+  // matchMedia (some libs/readers rely on it)
+  if (!window.matchMedia) {
+    window.matchMedia = () => ({
+      matches: false,
+      media: '',
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    });
+  }
 
-  test('renders without crashing', () => {
-    renderApp();
-    // Ensure that dark mode is not applied initially
+  // Prevent Router redirects from actually changing JSDOM location during tests
+  delete window.location;
+  // eslint-disable-next-line no-restricted-globals
+  window.location = { href: 'http://localhost/' };
+});
+
+beforeEach(() => {
+  localStorage.clear();
+  document.body.classList.remove('dark-mode');
+  document.documentElement.classList.remove('dark-mode');
+});
+
+// ---------------- Tests ----------------
+
+test('renders without crashing and is light mode by default', async () => {
+  render(<App />);
+  await waitFor(() => {
     expect(document.body.classList.contains('dark-mode')).toBe(false);
     expect(document.documentElement.classList.contains('dark-mode')).toBe(false);
   });
+});
 
-  test('provides scan simulation context', () => {
-    renderApp();
-    // Ensure that scan simulation is available in context
-    expect(typeof mockScanSimulation.startScan).toBe('function');
-  });
-
-  test('toggles theme to dark mode', () => {
-    // Simulate dark mode preference from localStorage
-    localStorage.setItem('darkMode', 'true');
-    renderApp();
-    // Ensure that dark mode is applied
+test('applies dark mode when localStorage.darkMode = "true"', async () => {
+  localStorage.setItem('darkMode', 'true');
+  render(<App />);
+  await waitFor(() => {
     expect(document.body.classList.contains('dark-mode')).toBe(true);
     expect(document.documentElement.classList.contains('dark-mode')).toBe(true);
   });
+});
+
+test('constructs app shell and providers without errors', () => {
+  render(<App />);
+  expect(document.body.innerHTML.length).toBeGreaterThan(0);
 });

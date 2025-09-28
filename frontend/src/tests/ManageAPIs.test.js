@@ -129,21 +129,7 @@ afterEach(() => {
 describe('ManageAPIs Component - Working Additional Tests', () => {
   
 
-  
-  // test('shows import modal when import button clicked', async () => {
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Test API 1')).toBeInTheDocument();
-  //   });
-    
-  //   const importButton = screen.getByRole('button', { name: /Import API Spec/i });
-  //   fireEvent.click(importButton);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('⬆️ Import API Spec')).toBeInTheDocument();
-  //   });
-  // });
+
 
   test('search input filters APIs', async () => {
     render(<TestWrapper><ManageAPIs /></TestWrapper>);
@@ -195,101 +181,13 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
     window.confirm = originalConfirm;
   });
 
-  // test('delete button calls API', async () => {
-  //   fetch.mockResolvedValueOnce({
-  //     ok: true,
-  //     json: async () => ({ success: true }),
-  //   });
+  test('theme toggle button exists', async () => {
+    render(<TestWrapper><ManageAPIs /></TestWrapper>);
     
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Test API 1')).toBeInTheDocument();
-  //   });
-    
-  //   const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
-  //   fireEvent.click(deleteButtons[0]);
-    
-  //   await waitFor(() => {
-  //     expect(fetch).toHaveBeenCalledWith('/api/apis/delete', expect.objectContaining({
-  //       method: 'DELETE'
-  //     }));
-  //   });
-  // });
-
-
-
- 
-
-  // test('endpoints button calls API and opens modal', async () => {
-  //   fetch.mockResolvedValueOnce({
-  //     ok: true,
-  //     json: async () => ({ success: true, data: { endpoints: [] } }),
-  //   });
-    
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Test API 1')).toBeInTheDocument();
-  //   });
-    
-  //   const endpointsButtons = screen.getAllByRole('button', { name: /Endpoints/i });
-  //   fireEvent.click(endpointsButtons[0]);
-    
-  //   await waitFor(() => {
-  //     expect(fetch).toHaveBeenCalledWith('/api/endpoints', expect.objectContaining({
-  //       method: 'POST'
-  //     }));
-  //   });
-  // });
-
-  // test('schedule button calls API and opens modal', async () => {
-  //   fetch.mockResolvedValueOnce({
-  //     ok: true,
-  //     json: async () => ({ success: true, data: { schedule: null } }),
-  //   });
-    
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Test API 1')).toBeInTheDocument();
-  //   });
-    
-  //   const scheduleButtons = screen.getAllByRole('button', { name: /Schedule/i });
-  //   fireEvent.click(scheduleButtons[0]);
-    
-  //   await waitFor(() => {
-  //     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/scans/schedule'));
-  //   });
-  // });
-
-  // test('history button calls API and opens modal', async () => {
-  //   fetch.mockResolvedValueOnce({
-  //     ok: true,
-  //     json: async () => ({ success: true, data: { scans: [] } }),
-  //   });
-    
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Test API 1')).toBeInTheDocument();
-  //   });
-    
-  //   const historyButtons = screen.getAllByRole('button', { name: /History/i });
-  //   fireEvent.click(historyButtons[0]);
-    
-  //   await waitFor(() => {
-  //     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/scan/list'));
-  //   });
-  // });
-
-  // test('theme toggle button exists', async () => {
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByTitle('Toggle Theme')).toBeInTheDocument();
-  //   });
-  // });
+    await waitFor(() => {
+      expect(screen.getByTitle('Toggle Theme')).toBeInTheDocument();
+    });
+  });
 
   test('displays statistics cards', async () => {
     render(<TestWrapper><ManageAPIs /></TestWrapper>);
@@ -314,21 +212,7 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
     });
   });
 
-  // test('handles missing currentUser', async () => {
-  //   const mockAuthNoUser = {
-  //     currentUser: null,
-  //     logout: jest.fn(),
-  //     getUserFullName: () => 'Guest',
-  //   };
-  //   useAuth.mockReturnValue(mockAuthNoUser);
-    
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   // Component should render without calling fetch
-  //   await waitFor(() => {
-  //     expect(screen.getByText('API')).toBeInTheDocument(); // Part of header
-  //   });
-  // });
+
 
   test('displays user greeting', async () => {
     render(<TestWrapper><ManageAPIs /></TestWrapper>);
@@ -346,40 +230,6 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
       expect(screen.getByText('⚠️ 5 vulnerabilities found')).toBeInTheDocument();
     });
   });
-
-  // test('import modal shows error message', async () => {
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   const importButton = screen.getByRole('button', { name: /Import API Spec/i });
-  //   fireEvent.click(importButton);
-    
-  //   await waitFor(() => {
-  //     const submitButton = screen.getByRole('button', { name: /^Import$/i });
-  //     fireEvent.click(submitButton);
-  //   });
-    
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Please select a file.')).toBeInTheDocument();
-  //   });
-  // });
-
-
-
-  // test('modal close button works', async () => {
-  //   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-  //   const importButton = screen.getByRole('button', { name: /Import API Spec/i });
-  //   fireEvent.click(importButton);
-    
-  //   await waitFor(() => {
-  //     const closeButton = screen.getByRole('button', { name: /×/i });
-  //     fireEvent.click(closeButton);
-  //   });
-    
-  //   await waitFor(() => {
-  //     expect(screen.queryByText(/Upload an OpenAPI/)).not.toBeInTheDocument();
-  //   });
-  // });
 
   test('filter toggle works', async () => {
     render(<TestWrapper><ManageAPIs /></TestWrapper>);
@@ -466,8 +316,7 @@ test('message auto-clears after timeout', async () => {
   await waitFor(() => {
     expect(screen.getByText(/Error fetching APIs: Test error/)).toBeInTheDocument();
   });
-  
-  // Fast-forward time past the 4000ms timeout
+
   jest.advanceTimersByTime(4000);
   
   await waitFor(() => {
@@ -477,7 +326,6 @@ test('message auto-clears after timeout', async () => {
   jest.useRealTimers();
 });
 
-// ---------------- UI / Component Tests ----------------
 
 test('Import modal closes when close button clicked', async () => {
   render(<TestWrapper><ManageAPIs /></TestWrapper>);
@@ -487,36 +335,6 @@ test('Import modal closes when close button clicked', async () => {
   await waitFor(() => expect(screen.queryByText(/Upload an OpenAPI/i)).not.toBeInTheDocument());
 });
 
-// test('Import modal shows error on failed upload', async () => {
-//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-//   fireEvent.click(await screen.findByText('⬆️ Import API Spec'));
-//   const fileInput = screen.getByLabelText(/Drag & drop/i).closest('label').previousSibling;
-//   const file = new File(['bad'], 'bad.json', { type: 'application/json' });
-//   Object.defineProperty(fileInput, 'files', { value: [file] });
-//   fireEvent.change(fileInput);
-//   fetch.mockResolvedValueOnce({ ok: false, json: async () => ({ success: false, message: 'File too large' }) });
-//   fireEvent.click(screen.getByText('Import'));
-//   await waitFor(() => expect(screen.getByText('File too large')).toBeInTheDocument());
-// });
-
-// test('Schedule modal opens and shows no active schedule', async () => {
-//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-//   fireEvent.click(await screen.findByText('🗓️ Schedule'));
-//   expect(await screen.findByText(/No active schedule/i)).toBeInTheDocument();
-// });
-
-// test('History modal opens and lists past scans', async () => {
-//   fetch.mockResolvedValueOnce({
-//     ok: true,
-//     json: async () => ({
-//       success: true,
-//       data: { scans: [{ id: 'scan1', status: 'completed', completed_at: '2023-01-01T10:00:00Z' }] },
-//     }),
-//   });
-//   render(<TestWrapper><ManageAPIs /></TestWrapper>);
-//   fireEvent.click(await screen.findByText('📜 History'));
-//   expect(await screen.findByText(/scan1/i)).toBeInTheDocument();
-// });
 
 
 

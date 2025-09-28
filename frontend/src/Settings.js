@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
-import Cookies from 'js-cookie';
 import Logo from './components/Logo';
 import './Settings.css';
 
@@ -747,12 +746,7 @@ const Settings = () => {
                         )}
                       </div>
                       <div className="avatar-actions">
-                        <button type="button" className="btn btn-outline">
-                          Change Photo
-                        </button>
-                        <button type="button" className="btn btn-text">
-                          Remove
-                        </button>
+
                       </div>
                     </div>
                   </div>
@@ -1142,44 +1136,6 @@ const Settings = () => {
                         </label>
                       </div>
                     </div>
-
-                    <div className="notification-group">
-                      <h3 className="group-title">📱 Mobile Notifications</h3>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>SMS Alerts</h4>
-                          <p>Text messages for urgent security issues</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.smsAlerts}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'smsAlerts', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>Product Updates</h4>
-                          <p>New features, updates, and product announcements</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.productUpdates}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'productUpdates', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="form-actions">
@@ -1276,14 +1232,15 @@ const Settings = () => {
         </section>
       </main>
 
-      <footer className="settings-footer">
-        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Help Center</a>
-        </div>
-      </footer>
+<footer className="manage-apis-footer">
+                <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+                        <div className="footer-links">
+                          <Link to="/privacy">Privacy Policy</Link>
+                          <Link to="/terms">Terms of Service</Link>
+                          <Link to="/documentation">Documentation</Link>
+                          <Link to="/contact">Contact Us</Link>
+                        </div>
+            </footer>
     </div>
   );
 };

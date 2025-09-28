@@ -234,7 +234,6 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
   if (errors) payload.errors = errors;
   res.status(statusCode).json(payload);
 };
-//const RESEND_API_KEY_HARDCODED= 're_iurpVFFD_HM3ySLXSwpiVSCv68ku8UUcJ';
 
 // Forget Password
 // --- Minimal mailer for dev: logs the link ( ---
@@ -285,28 +284,6 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
 module.exports = { sendResetEmail };
 
 
-  /* 2) SendGrid (your existing setup)
-  const HOST   = 'smtp.sendgrid.net';
-  const PORT   = 587;
-  const SECURE = PORT === 465;
-  const USER   = 'apikey';
-  const PASS   = process.env.SMTP_PASS; // keep exactly as you had
-
-  if (PASS) {
-    try {
-      _tx = nodemailer.createTransport({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
-      await _tx.verify();
-      _label = `smtp:${HOST}:${PORT}`;
-      console.log(`📧 using SMTP from .env (${_label})`);
-      return _tx;
-    } catch (e) {
-      console.error('SMTP verify failed:', e.message);
-      _tx = null;
-    }
-  }
-*/
-  // 3) Dev fallback (unchanged)
-  
 const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
 const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 

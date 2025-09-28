@@ -166,8 +166,7 @@ const LandingPage = () => {
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              Secure Your APIs with 
-              <span className="gradient-text"> Confidence </span>
+              Secure Your APIs with Confidence!
             </h1>
             <p className="hero-description">
               Comprehensive API security testing platform that identifies vulnerabilities, 
@@ -340,10 +339,6 @@ const LandingPage = () => {
         </div>
         <div className="footer-bottom">
           <p>© 2025 AT-AT (API Threat Assessment Tool). All rights reserved.</p>
-          <div className="footer-social">
-            <a href="#linkedin" aria-label="LinkedIn">💼</a>
-            <a href="#email" aria-label="Email">📧</a>
-          </div>
         </div>
       </footer>
     </div>

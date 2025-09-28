@@ -21,7 +21,6 @@ const dashboardService = {
   }
 };
 
-
 const Home = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
@@ -35,7 +34,6 @@ const Home = () => {
       dashboardService.getOverview().then(setStats);
     }
   }, [currentUser]);
-
 
   useEffect(() => {
     const observerOptions = {
@@ -96,7 +94,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="home-container">
+    <div className={`home-container ${darkMode ? 'dark-mode' : ''}`}>
       <header className="home-header">
         <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Logo />
@@ -126,7 +124,7 @@ const Home = () => {
             <h1 className="hero-title">Secure Your APIs with <span className="gradient-text">AT-AT</span></h1>
             <p className="hero-description">
               Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {currentUser.firstName}! 
-              Comprehensive API security scanning powered by OWASP standards. Identify vulnerabilities and protect your digital assets.
+              Comprehensive API security scanning with OWASP standards. Identify vulnerabilities and protect your digital assets.
             </p>
              {stats && (
               <div className="hero-stats">
@@ -188,7 +186,12 @@ const Home = () => {
 
       <footer className="home-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Help Center</a></div>
+        <div className="footer-links">
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Service</Link>
+          <Link to="/documentation">Documentation</Link>
+          <Link to="/contact">Contact Us</Link>
+        </div>
       </footer>
     </div>
   );

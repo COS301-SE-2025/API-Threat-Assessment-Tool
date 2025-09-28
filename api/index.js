@@ -13,6 +13,7 @@ const { spawn } = require('child_process');
 require('dotenv').config();
 const supabaseCfg = require('./config/supabase');         // uses your existing file
 const app = express();
+const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 // Supabase config
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -260,88 +261,58 @@ const sendError = (res, message, errors = null, statusCode = 500) => {
   if (errors) payload.errors = errors;
   res.status(statusCode).json(payload);
 };
-//const RESEND_API_KEY_HARDCODED= 're_iurpVFFD_HM3ySLXSwpiVSCv68ku8UUcJ';
 
 // Forget Password
 // --- Minimal mailer for dev: logs the link ( ---
 let _tx = null, _label = 'none';
 function bool(v){ return /^(1|true|yes)$/i.test(String(v||'')); }
 function int(v, d){ const n = parseInt(v,10); return Number.isFinite(n) ? n : d; }
+const GMAIL_USER = 'at.at.noreply@gmail.com';
+const FROM_ADDR  = `AT-AT <${GMAIL_USER}>`;
 
-async function pickTransport() {
-  if (_tx) return _tx;
+async function makeGmailTransport() {
+  const oAuth2 = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+  );
+  oAuth2.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
 
-  // Defaults for SendGrid
-  const HOST   =  'smtp.sendgrid.net';
-  const PORT   =  587;
-  const SECURE = PORT === 465;
-  const USER   = 'apikey';        // SendGrid requires literal "apikey"
-  const PASS   = process.env.SMTP_PASS;                     
-  if (PASS) {
-    try {
-      _tx = nodemailer.createTransporter({ host: HOST, port: PORT, secure: SECURE, auth: { user: USER, pass: PASS } });
-      await _tx.verify();
-      _label = `smtp:${HOST}:${PORT}`;
-      console.log(`📧 using SMTP from .env (${_label})`);
-      return _tx;
-    } catch (e) {
-      console.error('SMTP verify failed:', e.message);
-      _tx = null;
+  const { token: accessToken } = await oAuth2.getAccessToken();
+
+  const tx = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      type: 'OAuth2',
+      user: GMAIL_USER,
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      accessToken
     }
-  }
+  });
 
-  // optional dev fallback incase email fails
-  try {
-    const dev = nodemailer.createTransporter({ host:'127.0.0.1', port:1025, secure:false, tls:{rejectUnauthorized:false} });
-    await dev.verify();
-    _tx = dev; _label = 'dev:1025';
-    console.log('📧 using transport: dev1025');
-    return _tx;
-  } catch {}
-
-  _label = 'none';
-  return null;
+  await tx.verify();
+  return tx;
 }
-
-const FROM_ADDR = 'AT-AT <at.at.noreply@gmail.com>'; // <-- must match your SendGrid Single Sender exactly
 
 async function sendResetEmail(to, resetUrl, ttlMins = 60) {
-  const subject = 'AT-AT: Reset your password';
-  const text = `Reset your password (expires in ${ttlMins} minutes):\n${resetUrl}\n`;
-  const html = `
-    <div style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5">
-      <h2>Reset your password</h2>
-      <p>This link expires in ${ttlMins} minutes.</p>
-      <p><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Reset password</a></p>
-      <p>Or copy this link:</p>
-      <p><a href="${resetUrl}">${resetUrl}</a></p>
-      <hr><p>If you didn't request this, ignore this email.</p>
-    </div>`;
-
-  const tx = await pickTransport();
-  if (tx) {
-    try {
-      console.log(`[MAIL] attempting via ${_label} | from=${FROM_ADDR} to=${to}`);
-      const info = await tx.sendMail({ from: FROM_ADDR, to, subject, text, html });
-      // Nodemailer always returns an info object – log the useful bits to see if it sends successfully:
-      console.log('[MAIL] sent', {
-        messageId: info.messageId,
-        accepted: info.accepted,
-        rejected: info.rejected,
-        response: info.response?.slice(0, 200),
-        envelope: info.envelope
-      });
-      return;
-    } catch (e) {
-      console.error('[MAIL] send error:', e.stack || e.message);
-    }
-  } else {
-    console.warn('[MAIL] no transport available; falling back to console link');
-  }
-
-  console.log(`[DEV:RESET-LINK] ${to}: ${resetUrl}`);
+  const tx = await makeGmailTransport();
+  const info = await tx.sendMail({
+    from: FROM_ADDR,
+    to,
+    subject: 'AT-AT: Reset your password',
+    text: `Reset your password (expires in ${ttlMins} minutes): ${resetUrl}`,
+    html: `<p>Reset link (expires in ${ttlMins} minutes): <a href="${resetUrl}">${resetUrl}</a></p>`
+  });
+  console.log('[MAIL] sent', { accepted: info.accepted, response: info.response });
 }
+module.exports = { sendResetEmail };
 
+
+  // 3) Dev fallback (unchanged)
+  
 const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
 const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 
@@ -1864,7 +1835,7 @@ app.post('/api/import', async (req, res) => {
       const fileName = req.file.originalname;
       const tempPath = req.file.path;
       
-      const filesDir = path.join(__dirname, '../backend', 'Files');
+      const filesDir = path.join(__dirname, 'Files');
       if (!fs.existsSync(filesDir)) {
         fs.mkdirSync(filesDir, { recursive: true });
       }

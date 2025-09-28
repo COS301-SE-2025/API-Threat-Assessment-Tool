@@ -120,28 +120,50 @@ for endpoint in api_client.endpoints:
             print(endpoint.path)
 
 # ==============================================================================
-print("=====================================================================")
-print("==========================\nScan Testing\n==========================")
-print("=====================================================================")
+# print("=====================================================================")
+# print("==========================\nScan Testing\n==========================")
+# print("=====================================================================")
 
-run_scans = True
+# run_scans = True
 
-if(run_scans):
-    scan_manager = ScanManager(api_client)
-    scan_manager.createScan(ScanProfiles.DEFAULT)
-    scan_id = scan_manager.runScan(ScanProfiles.DEFAULT)
+# if(run_scans):
+#     scan_manager = ScanManager(api_client)
+#     scan_id = scan_manager.run_scan(api_id, user_id)
 
-    print(f"Scan complete with id: {scan_id}")
-    print("All scans:")
-    for scanID in scan_manager.get_all_scans():
-        print(f"Scan id: {scanID}")
-        scans = scan_manager.get_scan(scanID)
-        for scan in scans:
-            for scan_endpoint in scan:
-                print(f"\tEndpoint Details:")
-                print(f"\t\tEndpoint: {scan_endpoint.endpoint.path}")
-                print(f"\t\tOWASP Category: {scan_endpoint.owasp_category}")
-                print(f"\t\tDescription: {scan_endpoint.description}")
+#     print(f"Scan complete with id: {scan_id}")
+#     print("All scans:")
+#     for scanID in scan_manager.get_all_scans():
+#         print(f"Scan id: {scanID}")
+#         scans = scan_manager.get_scan(scanID)
+#         for scan in scans:
+#             for scan_endpoint in scan:
+#                 print(f"\tEndpoint Details:")
+#                 print(f"\t\tEndpoint: {scan_endpoint.endpoint.path}")
+#                 print(f"\t\tOWASP Category: {scan_endpoint.owasp_category}")
+#                 print(f"\t\tDescription: {scan_endpoint.description}")
                 # print(f"Evidence: \n------------------------------\n{scan_endpoint.evidence}\n------------------------------\n")
 
 # ==============================================================================
+
+
+
+print("=====================================================================")
+print("==========================\nScan Testing\n==========================")
+print("=====================================================================")
+run_scans = True
+if run_scans:
+    scan_manager = ScanManager(api_client)
+    api_id = "39e81211ec884ffcb0f4e9d476c8a01e"
+    user_id = "818275c2-c7cc-4ea2-97f3-427f3ef5b591"
+    scan_id = scan_manager.run_scan(api_id, user_id)
+    print(f"Scan complete with id: {scan_id}")
+    print("All scans:")
+    scans = scan_manager.get_all_api_scans(api_id)
+    for scan in scans:
+        print(f"Scan id: {scan['id']}")
+        scan_details = scan_manager.get_scan_details(scan['id'])
+        for result in scan_details['results']:
+            print(f"\tEndpoint Details:")
+            print(f"\t\tEndpoint: {result.get('endpoint', 'N/A')}")
+            print(f"\t\tOWASP Category: {result.get('owasp_category', 'N/A')}")
+            print(f"\t\tDescription: {result.get('description', 'N/A')}")

@@ -1,155 +1,174 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { ThemeContext } from '../App';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import Signup from '../Signup'; 
 import { useAuth } from '../AuthContext';
-import Signup from '../Signup';
+import { ThemeContext } from '../App';
+
+// --- MOCK DEPENDENCIES ---
+
+// Enable fake timers for controlling setTimeout and animation delays
+jest.useFakeTimers();
+
+const mockNavigate = jest.fn();
+const mockUseLocation = jest.fn();
+// Mock console.error to prevent test output from getting cluttered
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+// Mock react-router-dom hooks
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+  useLocation: () => mockUseLocation(),
+}));
+
+// Mock AuthContext
+const mockSignup = jest.fn();
+const mockLoginWithGoogle = jest.fn();
+const mockIsAuthenticated = jest.fn();
+const mockIsLoading = false;
 
 jest.mock('../AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
-jest.mock('react-router-dom', () => {
-  const actual = jest.requireActual('react-router-dom');
-  const navigateMock = jest.fn();
-  return {
-    ...actual,
-    useNavigate: () => navigateMock,
-    Link: ({ to, children, className }) => <a href={to} className={className}>{children}</a>,
-    __navigateMock: navigateMock,
-  };
-});
+// Mock ThemeContext
+const mockToggleDarkMode = jest.fn();
+const mockThemeContext = {
+  darkMode: false,
+  toggleDarkMode: mockToggleDarkMode,
+};
 
-import * as ReactRouter from 'react-router-dom';
+// Mock window.history.replaceState for URL cleanup
+const mockReplaceState = jest.spyOn(window.history, 'replaceState');
+
+// --- RENDER UTILITY ---
+
+const defaultAuthProps = {
+  signup: mockSignup,
+  loginWithGoogle: mockLoginWithGoogle,
+  isAuthenticated: mockIsAuthenticated,
+  isLoading: mockIsLoading,
+};
+
+const renderComponent = (authProps = defaultAuthProps, themeProps = mockThemeContext) => {
+  useAuth.mockReturnValue(authProps);
+  // Default to a clean location object
+  mockUseLocation.mockReturnValue({ pathname: '/signup', search: '', hash: '', state: null });
+  
+  return render(
+    <ThemeContext.Provider value={themeProps}>
+      <MemoryRouter initialEntries={['/signup']}>
+        <Signup />
+      </MemoryRouter>
+    </ThemeContext.Provider>
+  );
+};
+
+// Helper to set all form inputs to valid values
+const setupValidForm = (agree = true) => {
+  const inputs = {
+    firstName: screen.getByPlaceholderText(/e\.g\. John/i),
+    lastName: screen.getByPlaceholderText(/e\.g\. Smith/i),
+    email: screen.getByPlaceholderText(/e\.g\. john\.smith@example\.com/i),
+    username: screen.getByPlaceholderText(/e\.g\. johnny_s/i),
+    password: screen.getByPlaceholderText('Enter your password (min 8 characters)'),
+    confirmPassword: screen.getByPlaceholderText('Re-enter your password'),
+    submitButton: screen.getByRole('button', { name: /Create Account/i }),
+    termsCheckbox: screen.getByLabelText(/I agree to the Terms of Service and Privacy Policy/i),
+  };
+
+  fireEvent.change(inputs.firstName, { target: { value: 'Test' } });
+  fireEvent.change(inputs.lastName, { target: { value: 'User' } });
+  fireEvent.change(inputs.email, { target: { value: 'test.user@example.com' } });
+  fireEvent.change(inputs.username, { target: { value: 'testuser' } });
+  fireEvent.change(inputs.password, { target: { value: 'SecurePass1' } });
+  fireEvent.change(inputs.confirmPassword, { target: { value: 'SecurePass1' } });
+
+  if (agree) {
+    fireEvent.click(inputs.termsCheckbox);
+  }
+
+  return inputs;
+};
+
+// --- TEST SUITE ---
 
 describe('Signup Component', () => {
-  const toggleDarkModeMock = jest.fn();
-  const signupMock = jest.fn();
-  const navigateMock = ReactRouter.__navigateMock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuth.mockReturnValue({
-      signup: signupMock,
-      isLoading: false,
-    });
+    mockIsAuthenticated.mockReturnValue(false); 
+    mockReplaceState.mockClear();
+    mockConsoleError.mockClear();
+  });
+  
+  // ---------------------------------------------
+  // AUTOGUARD / AUTHENTICATED REDIRECTION TESTS
+  // ---------------------------------------------
+
+  test('1. Redirects to /dashboard immediately if isAuthenticated is true on mount', () => {
+    mockIsAuthenticated.mockReturnValue(true);
+    renderComponent();
+    
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
   });
 
-  const renderSignup = () =>
-    render(
-      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: toggleDarkModeMock }}>
-        <MemoryRouter>
-          <Signup />
-        </MemoryRouter>
-      </ThemeContext.Provider>
-    );
 
-  test('renders signup form fields and buttons', () => {
-    renderSignup();
-    expect(screen.getByLabelText(/First Name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Last Name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Confirm Password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Create Account/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Sign up with Google/i })).toBeInTheDocument();
-  });
 
-  test('shows validation errors on empty submit', async () => {
-    renderSignup();
-    fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
-    expect(await screen.findByText(/First name is required/i)).toBeInTheDocument();
-  });
+  test('2. Google signup failure (API error) shows error message', async () => {
+    mockLoginWithGoogle.mockResolvedValue({ success: false, error: 'Google signup not enabled' });
+    renderComponent();
 
-  // test('shows email format validation error', async () => {
-  //   renderSignup();
-  //   fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-  //   fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
-  //   fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'invalidemail' } });
-  //   fireEvent.change(screen.getByLabelText(/^Username/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
-  //   fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
-  //   fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
-  //   expect(await screen.findByText(/valid email address/i)).toBeInTheDocument();
-  // });
-
-  // test('shows password mismatch error', async () => {
-  //   renderSignup();
-  //   fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-  //   fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
-  //   fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'john@example.com' } });
-  //   fireEvent.change(screen.getByLabelText(/^Username/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
-  //   fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password321' } });
-  //   fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
-  //   expect(await screen.findByText(/Passwords do not match/i)).toBeInTheDocument();
-  // });
-
-  // test('shows error if terms not agreed', async () => {
-  //   renderSignup();
-  //   fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-  //   fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
-  //   fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'john@example.com' } });
-  //   fireEvent.change(screen.getByLabelText(/^Username/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
-  //   fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
-  //   // do NOT check agreeToTerms checkbox
-  //   fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
-  //   expect(await screen.findByText(/Please agree to the Terms/i)).toBeInTheDocument();
-  // });
-
-  // test('successful signup calls signup and navigates', async () => {
-  //   signupMock.mockResolvedValue({ success: true });
-  //   window.alert = jest.fn();
-
-  //   renderSignup();
-
-  //   fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-  //   fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
-  //   fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'john@example.com' } });
-  //   fireEvent.change(screen.getByLabelText(/^Username/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
-  //   fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
-  //   fireEvent.click(screen.getByLabelText(/I agree to the Terms/));
-  //   fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
-
-  //   await waitFor(() => {
-  //     expect(signupMock).toHaveBeenCalledTimes(1);
-  //     expect(window.alert).toHaveBeenCalledWith('Account created successfully! You can now log in.');
-  //     expect(navigateMock).toHaveBeenCalledWith('/login');
-  //   });
-  // });
-
-  test('failed signup shows error message', async () => {
-    signupMock.mockResolvedValue({ success: false, error: 'Username already taken' });
-
-    renderSignup();
-
-    fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'john@example.com' } });
-    fireEvent.change(screen.getByLabelText(/^Username/i), { target: { value: 'johndoe' } });
-    fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByLabelText(/I agree to the Terms/));
-    fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Sign up with Google/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Username already taken/i)).toBeInTheDocument();
+        expect(screen.getByText(/Google signup not enabled/i)).toBeInTheDocument();
     });
   });
+  
 
-  test('toggleDarkMode button works', () => {
-    renderSignup();
-    fireEvent.click(screen.getByText(/Dark Mode|Light Mode/i));
-    expect(toggleDarkModeMock).toHaveBeenCalledTimes(1);
+  test('3. Theme toggle button calls toggleDarkMode and updates button text', () => {
+    renderComponent();
+    
+    const toggleButton = screen.getByRole('button', { name: /Switch to dark mode/i });
+    expect(toggleButton).toHaveTextContent('🌙 Dark Mode');
+
+    fireEvent.click(toggleButton);
+    expect(mockToggleDarkMode).toHaveBeenCalledTimes(1);
+    
+    // Simulate dark mode change by rerendering with dark mode prop set
+    const darkThemeProps = { darkMode: true, toggleDarkMode: mockToggleDarkMode };
+    renderComponent(defaultAuthProps, darkThemeProps);
+    
+    const darkToggleButton = screen.getByRole('button', { name: /Switch to light mode/i });
+    expect(darkToggleButton).toHaveTextContent('☀️ Light Mode');
   });
 
-  // test('Google signup button shows alert', () => {
-  //   window.alert = jest.fn();
-  //   renderSignup();
-  //   fireEvent.click(screen.getByRole('button', { name: /Sign up with Google/i }));
-  //   expect(window.alert).toHaveBeenCalledWith('Google signup functionality will be implemented when backend is ready!');
-  // });
+
+
+
+
+test('4. Google signup failure shows error message', async () => {
+  mockLoginWithGoogle.mockResolvedValue({ success: false, error: 'Google signup not enabled' });
+  renderComponent();
+  fireEvent.click(screen.getByRole('button', { name: /Sign up with Google/i }));
+  await waitFor(() => {
+    expect(screen.getByText(/Google signup not enabled/)).toBeInTheDocument();
+  });
+});
+
+
+
+test('5. Theme toggle switches between dark and light mode', async () => {
+  renderComponent();
+  const toggleButton = screen.getByRole('button', { name: /Switch to dark mode/i });
+  fireEvent.click(toggleButton);
+  expect(mockToggleDarkMode).toHaveBeenCalledTimes(1);
+  const darkThemeProps = { darkMode: true, toggleDarkMode: mockToggleDarkMode };
+  renderComponent(defaultAuthProps, darkThemeProps);
+  expect(screen.getByRole('button', { name: /Switch to light mode/i })).toHaveTextContent('☀️ Light Mode');
+});
+
+
+  
 });

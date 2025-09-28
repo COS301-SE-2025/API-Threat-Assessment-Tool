@@ -8,6 +8,7 @@ import Signup from "./Signup";
 import Login from "./Login";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
+import TermsOfService from "./TermsOfService";
 import Reports from "./Reports";
 import StartScan from "./StartScan";
 import Documentation from "./Documentation";
@@ -96,6 +97,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Home />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/terms" 
+                  element={
+                    <ProtectedRoute>
+                      <TermsOfService />
                     </ProtectedRoute>
                   } 
                 />

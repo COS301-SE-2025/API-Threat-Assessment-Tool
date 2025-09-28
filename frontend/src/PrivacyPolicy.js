@@ -356,7 +356,7 @@ const PrivacyPolicy = () => {
           <div className="footer-links">
             <Link to="/privacy">Privacy Policy</Link>
             <Link to="/terms">Terms of Service</Link>
-            <Link to="/security">Security</Link>
+      
             <Link to="/contact">Contact Us</Link>
             <Link to="/documentation">Documentation</Link>
           </div>

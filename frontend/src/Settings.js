@@ -992,83 +992,7 @@ const Settings = () => {
                   </div>
 
                   {/* Security Preferences Section */}
-                  <form onSubmit={handleSubmit} className="settings-form">
-                    <div className="security-section">
-                      <h3 className="section-title">🛡️ Authentication</h3>
-                      <div className="security-item">
-                        <div className="security-info">
-                          <h4>Two-Factor Authentication</h4>
-                          <p>Add an extra layer of security to your account</p>
-                        </div>
-                        <div className="security-action">
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={formData.security.twoFactorAuth}
-                              onChange={(e) =>
-                                handleNestedChange('security', 'twoFactorAuth', e.target.checked)
-                              }
-                              disabled={isSaving}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                          <button type="button" className="btn btn-outline" disabled>
-                            Configure
-                          </button>
-                        </div>
-                      </div>
-                      <div className="security-item">
-                        <div className="security-info">
-                          <h4>Login Notifications</h4>
-                          <p>Get notified when someone logs into your account</p>
-                        </div>
-                        <div className="security-action">
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={formData.security.loginNotifications}
-                              onChange={(e) =>
-                                handleNestedChange('security', 'loginNotifications', e.target.checked)
-                              }
-                              disabled={isSaving}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="security-section">
-                      <h3 className="section-title">⏱️ Session Management</h3>
-                      <div className="form-group">
-                        <label htmlFor="sessionTimeout">Session Timeout (minutes)</label>
-                        <select
-                          id="sessionTimeout"
-                          name="sessionTimeout"
-                          value={formData.security.sessionTimeout}
-                          onChange={(e) =>
-                            handleNestedChange('security', 'sessionTimeout', e.target.value)
-                          }
-                          disabled={isSaving}
-                        >
-                          <option value="15">15 minutes</option>
-                          <option value="30">30 minutes</option>
-                          <option value="60">1 hour</option>
-                          <option value="120">2 hours</option>
-                          <option value="480">8 hours</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-actions">
-                      <button type="button" className="btn btn-secondary" onClick={handleCancel} disabled={isSaving}>
-                        Reset Changes
-                      </button>
-                      <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                        {isSaving ? '⏳ Saving...' : '💾 Save Security Settings'}
-                      </button>
-                    </div>
-                  </form>
+                  
                 </div>
               </div>
             )}
@@ -1159,23 +1083,7 @@ const Settings = () => {
 
                 <form onSubmit={handleSubmit} className="settings-form">
                   <div className="preferences-grid">
-                    <div className="form-group">
-                      <label htmlFor="defaultScanProfile">Default Scan Profile</label>
-                      <select
-                        id="defaultScanProfile"
-                        name="defaultScanProfile"
-                        value={formData.preferences.defaultScanProfile}
-                        onChange={(e) =>
-                          handleNestedChange('preferences', 'defaultScanProfile', e.target.value)
-                        }
-                        disabled={isSaving}
-                      >
-                        <option value="owasp">🛡️ OWASP Top 10 Quick Scan</option>
-                        <option value="comprehensive">🔍 Full Comprehensive Scan</option>
-                        <option value="auth">🔐 Authentication Focus</option>
-                        <option value="performance">⚡ Performance Testing</option>
-                      </select>
-                    </div>
+                    
 
                     <div className="form-group">
                       <label htmlFor="emailFrequency">Report Email Frequency</label>

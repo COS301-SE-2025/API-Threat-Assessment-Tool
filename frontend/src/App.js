@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { AuthProvider } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
 import LandingPage from "./LandingPage";
+import Security from "./Security";
 import Signup from "./Signup";
 import Login from "./Login";
 import Contact from "./Contact";
@@ -74,6 +75,12 @@ function App() {
                   path="/terms" 
                   element={
                       <TermsOfService />
+                  } 
+                />
+                <Route 
+                  path="/security" 
+                  element={
+                      <Security />
                   } 
                 />
                 <Route 

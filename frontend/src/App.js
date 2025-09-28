@@ -6,6 +6,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import LandingPage from "./LandingPage";
 import Signup from "./Signup";
 import Login from "./Login";
+import Contact from "./Contact";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
 import TermsOfService from "./TermsOfService";
@@ -103,9 +104,7 @@ function App() {
                 <Route 
                   path="/terms" 
                   element={
-                    <ProtectedRoute>
                       <TermsOfService />
-                    </ProtectedRoute>
                   } 
                 />
                 <Route 
@@ -146,6 +145,12 @@ function App() {
                     <ProtectedRoute>
                       <StartScan />
                     </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/contact" 
+                  element={
+                      <Contact />
                   } 
                 />
                 <Route path="/privacy" element={<PrivacyPolicy />} />

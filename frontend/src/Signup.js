@@ -205,7 +205,6 @@ const Signup = () => {
               color: darkMode ? "#fff" : "#222",
               userSelect: "none"
             }}>
-              AT-AT
             </span>
           </div>
           <button 

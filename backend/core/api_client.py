@@ -136,29 +136,52 @@ class APIClient:
             print(f"Error loading API from database: {e}")
             return None
 
+# In api_client.py
+# Replace the existing delete_from_db function with this one.
+
     def delete_from_db(self) -> bool:
-        """Delete the API and its endpoints from the database."""
+        """
+        Delete the API and all its associated data (endpoints, scans, scan_results)
+        from the database in the correct order.
+        """
         if not self.db_id:
             print("API has no database ID. Cannot delete.")
             return False
         
         try:
-            # The database schema should be set up with ON DELETE CASCADE for the foreign key
-            # from endpoints to apis. This means deleting the API will automatically delete
-            # its associated endpoints.
-            result = db_manager.delete("apis", {"id": self.db_id})
+            # 1. Find all scans associated with this API
+            scans_to_delete = db_manager.select("scans", columns="id", filters={"api_id": self.db_id})
+            scan_ids = [scan['id'] for scan in scans_to_delete]
+
+            if scan_ids:
+                # 2. Delete all scan_results for those scans
+                print(f"Deleting scan results for {len(scan_ids)} scans...")
+                db_manager.delete("scan_results", filters={"scan_id": scan_ids})
+            
+                # 3. Delete all scans for this API
+                print(f"Deleting {len(scan_ids)} scans...")
+                db_manager.delete("scans", filters={"api_id": self.db_id})
+
+            # 4. Delete all endpoints for this API
+            print(f"Deleting endpoints for API {self.db_id}...")
+            db_manager.delete("endpoints", filters={"api_id": self.db_id})
+
+            # 5. Finally, delete the API itself
+            print(f"Deleting API record {self.db_id}...")
+            result = db_manager.delete("apis", filters={"id": self.db_id})
             
             if result:
-                print(f"Deleted API {self.title} (ID: {self.db_id}) and its associated endpoints.")
+                print(f"Successfully deleted API {self.title} (ID: {self.db_id}) and all associated data.")
                 self.db_id = None
                 return True
-            
-            print(f"Failed to delete API {self.title} from database.")
-            return False
+            else:
+                print(f"Failed to delete the main API record for {self.title} from database. It might have been already deleted.")
+                return False
             
         except Exception as e:
-            print(f"Error deleting API from database: {e}")
+            print(f"Error during comprehensive API deletion from database: {e}")
             return False
+
 
     def set_authorization(self, auth_enum: Authorization):
         """Set the authorization type using the Authorization enum"""

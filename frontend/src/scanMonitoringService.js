@@ -88,35 +88,4 @@ const startMonitoring = (scanId, options, callbacks) => {
 export const scanMonitoringService = {
   startMonitoring,
 };
-```
 
-#### 3. Update Your API Layer (`/api/scan/status`)
-
-Finally, you need a simple route in your API layer (the Node.js/Express part) that forwards the status check to the Python engine.
-
-Add this to your API's routes file:
-```javascript
-// Add this route to your Express app (e.g., in server.js or your routes file)
-app.post('/api/scan/status', async (req, res) => {
-  try {
-    const { scan_id } = req.body;
-
-    // Basic validation
-    if (!scan_id || typeof scan_id !== 'string') {
-      return sendError(res, 'A valid scan_id is required.', null, 400);
-    }
-
-    const engineResponse = await sendToEngine({
-      command: 'scan.status',
-      data: { scan_id: scan_id.trim() }
-    });
-
-    if (engineResponse.code === 200) {
-      sendSuccess(res, 'Scan status retrieved successfully', engineResponse.data);
-    } else {
-      sendError(res, 'Failed to get scan status', engineResponse.data, engineResponse.code || 500);
-    }
-  } catch (err) {
-    sendError(res, 'Get scan status error', err.message, 500);
-  }
-});

@@ -146,7 +146,6 @@ const LandingPage = () => {
         <div className="header-content">
           <div className="logo-section">
             <Logo />
-            <span className="brand-name">AT-AT</span>
             <span className="brand-tagline">API Security Made Simple</span>
           </div>
           <nav className="landing-nav">

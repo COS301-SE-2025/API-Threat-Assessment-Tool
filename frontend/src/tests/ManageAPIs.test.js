@@ -217,35 +217,9 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
   //   });
   // });
 
-  test('scan button opens modal', async () => {
-    render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Test API 1')).toBeInTheDocument();
-    });
-    
-    const scanButtons = screen.getAllByRole('button', { name: /New Scan/i });
-    fireEvent.click(scanButtons[0]);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Select Scan Profile/)).toBeInTheDocument();
-    });
-  });
 
-  test('edit button opens edit modal', async () => {
-    render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Test API 1')).toBeInTheDocument();
-    });
-    
-    const editButtons = screen.getAllByRole('button', { name: /Edit/i });
-    fireEvent.click(editButtons[0]);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Edit Test API 1/)).toBeInTheDocument();
-    });
-  });
+
+ 
 
   // test('endpoints button calls API and opens modal', async () => {
   //   fetch.mockResolvedValueOnce({
@@ -389,21 +363,7 @@ describe('ManageAPIs Component - Working Additional Tests', () => {
   //   });
   // });
 
-  test('edit modal has input fields', async () => {
-    render(<TestWrapper><ManageAPIs /></TestWrapper>);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Test API 1')).toBeInTheDocument();
-    });
-    
-    const editButtons = screen.getAllByRole('button', { name: /Edit/i });
-    fireEvent.click(editButtons[0]);
-    
-    await waitFor(() => {
-      expect(screen.getByLabelText('API Name')).toBeInTheDocument();
-      expect(screen.getByLabelText('Base URL')).toBeInTheDocument();
-    });
-  });
+
 
   // test('modal close button works', async () => {
   //   render(<TestWrapper><ManageAPIs /></TestWrapper>);

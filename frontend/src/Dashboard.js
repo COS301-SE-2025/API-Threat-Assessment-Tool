@@ -83,9 +83,11 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading Dashboard...</p>
+      <div className={`dashboard-container ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading Dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -104,7 +106,7 @@ const Dashboard = () => {
   const maxVulns = Math.max(...weeklyData.map(d => d.vulnerabilities), 1);
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${darkMode ? 'dark-mode' : ''}`}>
       <header className="dashboard-header">
         <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Logo />
@@ -183,7 +185,7 @@ const Dashboard = () => {
         </div>
 
         <section className="recent-activity">
-          <div className="activity-header"><h2>🕐 Recent Scan Activity</h2><Link to="/manage-apis" className="view-all-link">View All →</Link></div>
+          <div className="activity-header"><h2>🕒 Recent Scan Activity</h2><Link to="/manage-apis" className="view-all-link">View All →</Link></div>
           <div className="table-container">
             {dashboardData?.recent_scans?.length > 0 ? (
               <div className="enhanced-table">
@@ -207,7 +209,12 @@ const Dashboard = () => {
 
       <footer className="dashboard-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Help Center</a></div>
+                <div className="footer-links">
+                  <Link to="/privacy">Privacy Policy</Link>
+                  <Link to="/terms">Terms of Service</Link>
+                  <Link to="/documentation">Documentation</Link>
+                  <Link to="/contact">Contact Us</Link>
+                </div>
       </footer>
     </div>
   );

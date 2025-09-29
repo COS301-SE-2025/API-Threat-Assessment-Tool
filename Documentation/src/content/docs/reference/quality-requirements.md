@@ -12,7 +12,6 @@ This document expands on the **Quality Requirements** outlined in the **SRS (Sec
 ## 1. Security
 
 - **JWT-based authentication** ensures secure session management and identity validation.
-- **Role-Based Access Control (RBAC)** prevents unauthorized access to scanning, reporting, and administrative features.
 - **Supabase integration** handles secure user registration and encrypted password storage.
 - **Environment variables** protect credentials and service keys (e.g., Supabase URL, secret keys).
 - **Scan isolation** prevents user-submitted APIs from interfering with internal services.
@@ -21,7 +20,7 @@ This document expands on the **Quality Requirements** outlined in the **SRS (Sec
 
 ## 2. Performance
 
-- **Efficient scan execution** ensures vulnerabilities are flagged quickly using heuristic logic.
+- **Efficient scan execution** ensures vulnerabilities are flagged quickly using endpoint tests derived from uploaded OpenAPI and configured checks.
 - The **Python backend** is optimized for response time with time-limited scan jobs (default: 60 seconds).
 - **Frontend uses async fetch patterns** to avoid blocking the UI during scans and report generation.
 - **Load time** is minimized via lazy-loaded React components and route-based splitting.
@@ -88,8 +87,8 @@ This document expands on the **Quality Requirements** outlined in the **SRS (Sec
 
 | Quality Attribute | Approach |
 |-------------------|----------|
-| Security          | JWT, RBAC, Supabase, .env |
-| Performance       | Async fetch, time-limited scans |
+| Security          | JWT, Supabase, .env |
+| Performance       | Async fetch |
 | Scalability       | Docker + modular services |
 | Maintainability   | Linting, CI/CD, contracts |
 | Reliability       | Error handling + testing |

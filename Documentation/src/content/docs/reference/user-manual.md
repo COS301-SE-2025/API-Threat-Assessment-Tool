@@ -11,7 +11,7 @@ Welcome to the AT-AT User Manual. This guide will walk you through the core feat
 
 ## 1. Landing Page (Marketing View)
 
-![Landing Page](/images/landing.png)
+![Landing Page](/images/usermanual/landing.png)
 
 This is the public-facing page. It includes:
 - A summary of what AT-AT does
@@ -27,7 +27,7 @@ This is the public-facing page. It includes:
 
 ### 2.1 Login
 
-![Login](/images/login.png)
+![Login](/images/usermanual/login.png)
 
 Existing users can log in using:
 - Email or username
@@ -39,7 +39,7 @@ Additional options:
 
 ### 2.2 Sign Up
 
-![Sign Up](/images/signup.png)
+![Sign Up](/images/usermanual/signup.png)
 
 New users can create an account by:
 - Signing in with Google
@@ -49,7 +49,7 @@ New users can create an account by:
 
 ## 3. Home Dashboard
 
-![Home](/images/home.png)
+![Home](/images/usermanual/home.png)
 
 After logging in, users are greeted by:
 - Welcome message
@@ -60,7 +60,7 @@ After logging in, users are greeted by:
 
 ## 4. Dashboard View
 
-![Dashboard](/images/dashboard.png)
+![Dashboard](/images/usermanual/dashboard.png)
 
 The Dashboard provides:
 - Quick stats: Total APIs, Scans This Month, Security Score, Critical Alerts
@@ -71,7 +71,7 @@ The Dashboard provides:
 
 ## 5. Scanning in Progress
 
-![Scan In Progress](/images/scan.png)
+![Scan In Progress](/images/usermanual/scan.png)
 
 During an active scan:
 - Users see current phase (e.g., Authentication Testing)
@@ -83,7 +83,7 @@ During an active scan:
 
 ## 6. Scan Report
 
-![Scan Report](/images/report.png)
+![Scan Report](/images/usermanual/report.png)
 
 After a scan is complete:
 - Users see the **Overall Security Score**
@@ -95,7 +95,7 @@ After a scan is complete:
 
 ## 7. API Management
 
-![API Management](/images/apimanagement.png)
+![API Management](/images/usermanual/apimanagement.png)
 
 From here, users can:
 - Add a new API manually
@@ -106,7 +106,7 @@ From here, users can:
 
 ## 8. API Endpoint Overview
 
-![API Endpoints](/images/apiendpoints.png)
+![API Endpoints](/images/usermanual/endpoints.png)
 
 Displays all APIs with:
 - URL and description

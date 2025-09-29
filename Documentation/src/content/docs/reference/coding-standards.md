@@ -170,5 +170,18 @@ Use clear, human-readable commit messages that briefly describe the change
 
 ---
 
+### Enforcement & Verification (Change4) 
+
+| Area                     | Where it applies | Tool / Config                              | How to run (local)               | Status |
+|--------------------------|------------------|--------------------------------------------|----------------------------------|--------|
+| **Formatting (JS)**      | API              | Prettier (default config)                  | `npm run format`                 | ✅ in repo (`/api`) |
+| **Lint (JS)**            | API              | ESLint                                     | `npm run lint` / `npm run lint:fix` | ✅ in repo (`/api`) |
+| **Lint (JS)**            | Frontend         | CRA built-in ESLint (`react-app` preset)   | via `react-scripts` (start/build) | ✅ implicit (no separate script) |
+| **Tests (JS)**           | API              | Jest                                       | `npm run test` / `npm run test:unit` | ✅ |
+| **Tests (JS)**           | Frontend         | React Testing Library via CRA              | `npm test -- --coverage`         | ✅ |
+| **Tests (Python)**       | Backend/Engine   | pytest                                     | `pytest -q`                      | ✅ (`requirements.txt`) |
+| **Static analysis**      | Repo             | GitHub **CodeQL**                          | —                                | ✅ workflow present |
+
+
 By adhering to these conventions, all contributors to the AT-AT project ensure a cohesive, readable, and professional-grade codebase for API threat assessment.
 

@@ -11,10 +11,10 @@ This document guides you through the complete local installation and execution o
 
 ## Prerequisites
 
-- **Node.js** ≥ 18
+- **Node.js** ≥ 16
 - **Python** ≥ 3.10
-- **npm** ≥ 9
-- **Git**
+- **npm** ≥ 8
+- **Git** 2.44+
 - Recommended: PowerShell (Windows) or bash (Linux/macOS)
 
 ---
@@ -42,6 +42,8 @@ FRONTEND_URL=http://localhost:3000
 PORT=3000
 HOST=0.0.0.0
 DANGEROUSLY_DISABLE_HOST_CHECK=true
+DOCKER=TRUE
+
 ```
 
 ---
@@ -54,6 +56,12 @@ SUPABASE_KEY=your-supabase-service-key
 JWT_SECRET=your-secret
 FRONTEND_URL=http://localhost:3000
 PORT=3001
+GMAIL_USER=at.at.noreply@gmail.com
+GMAIL_CLIENT_ID=client_id
+GMAIL_CLIENT_SECRET=client_secret
+GMAIL_REFRESH_TOKEN=refresh_token
+DOCKER=TRUE
+
 ```
 
 ---
@@ -61,17 +69,41 @@ PORT=3001
 ### `backend/.env`
 
 ```env
-PORT=3002
+PORT=9011
 FRONTEND_URL=http://localhost:3000
 SUPABASE_URL=https://our-link.supabase.co
 SUPABASE_KEY=your-supabase-service-key
 JWT_SECRET=your-secret
 FRONTEND_URL=http://localhost:3000
+DOCKER=TRUE
+
 ```
 
 ---
 
-## 3. Setup and Run Backend (Python)
+## 3. Repository Layout
+```/frontend/           React app
+/api/                Node/Express public API (OpenAPI served here)
+/backend/            Python service(s) for scanning/analysis
+/docs/               SRS, Service Contracts, OpenAPI (openapi.yaml), manuals
+.github/workflows/   CI pipelines
+```
+![Structure](/images/structure.PNG)
+
+---
+## Setup and Running
+To run everything at once use
+```powershell
+cd frontend
+npm start
+
+```
+This will start the necessary requirements, however you can laucnh each individually.
+![Start](/images/start.PNG)
+![Start2](/images/start2.PNG)
+---
+
+## 4. Setup and Run Backend (Python)
 
 ```powershell
 cd backend
@@ -85,7 +117,9 @@ python main.py
 
 ---
 
-## 4. Setup and Run API (Node.js)
+
+
+## 5. Setup and Run API (Node.js)
 
 ```powershell
 cd api
@@ -95,7 +129,7 @@ node index.js
 
 ---
 
-## 5. Setup and Run Frontend (React)
+## 6. Setup and Run Frontend (React)
 
 ```powershell
 cd frontend
@@ -112,7 +146,7 @@ DANGEROUSLY_DISABLE_HOST_CHECK=true
 
 ---
 
-## 6. Test in Browser
+## 7. Test in Browser
 
 Open:
 
@@ -121,12 +155,22 @@ http://localhost:3000
 ```
 
 You should see the AT-AT UI.
+![home](/images/homei.PNG)
 
+- Log in
 - Upload a spec to test backend connectivity
-- Verify `localhost:3001` and `localhost:5001` are active
+- Verify `localhost:3001` and `localhost:9011` are active
 
 ---
 
+## 8. Docker
+```
+docker build -f dockerfile -t atat .
+docker run --rm -p 3000:3000 -p 3001:3001 -p 9011:9011 atat
+
+```
+
+---
 ## Common Troubleshooting
 
 | Issue                        | Fix                                                                 |
@@ -140,4 +184,4 @@ You should see the AT-AT UI.
 ## Final Notes
 
 - GitHub Actions CI/CD is available and runs tests on pull requests.
-- This setup is for local development as used in Demo 3.
+- This setup is for local development.

@@ -182,75 +182,34 @@ React is a powerful and widely adopted JavaScript library for building user inte
 
 ### Scan Engine
 
-**Final Choice:** Node.js (Socket-based Microservice)
+**Final Choice:** Python 
 
-Our scan engine is implemented as a standalone Node.js service that listens to command-based inputs via a TCP socket. This isolates the engine’s logic from the backend while allowing plugin-style extensibility.
+Our scan engine is implemented as a standalone **Python** service. It accepts structured scan requests, executes a modular suite of vulnerability checks, and returns progress/results. This isolates the engine’s logic from the backend while keeping a clean, language-native plugin surface (Python modules).
 
 - **Advantages:**
-  - Event-driven I/O makes it ideal for socket communication.
-  - Native JSON handling simplifies input parsing and response formatting.
-  - Supports modular "command" execution with minimal overhead.
-  - High performance for concurrent scan job handling.
+  - Simple, observable control plane over **HTTP** (no custom TCP protocol).
+  - Clear, modular “plugin” model: each check lives as a Python module/function.
+  - Excellent developer ergonomics and test support .
+  - Straightforward horizontal scaling via multiple service instances.
 
 - **Disadvantages:**
-  - Requires robust error and state management.
-  - Not type-safe without adding tools like TypeScript.
+  - Dynamic typing requires discipline (or optional type hints) to keep contracts clear.
+  - For very high concurrency, process-level scaling is preferred over cooperative async.
 
 - **Justification (Fit):**
-  This architecture embodies a **microkernel pattern**, where the scan engine acts as a pluggable service processing structured instructions. Node.js’s event loop enables responsive communication even under load. This structure supports horizontal scaling of scan jobs in future deployments.
+  This design still embodies a **microkernel pattern**: Python modules make it easy to add/maintain new vulnerability tests. The approach aligns with our quality goals (testability, extensibility) and is consistent with the code currently in the backend.
 
-**Alternative 1:** Python (Sockets with AsyncIO)  
+**Alternative 1:** Node.js Service (Sockets or HTTP)  
 - **Advantages:**
-  - Same language as backend (shared libraries possible).
-  - Readable and maintainable syntax.
+  - Event-driven I/O; shares ecosystem with the web stack.
 - **Disadvantages:**
-  - Less performant under high-concurrency without fine-tuning.
-  - Limited plugin patterns.
+  - Duplicates scanning logic already written in Python; less reuse of current code.
 
-**Alternative 2:** Rust TCP Service  
+**Alternative 2:** Rust TCP/HTTP Service  
 - **Advantages:**
-  - Fast, memory-safe concurrency.
-  - Great performance under high load.
+  - Memory-safe, very high performance under load.
 - **Disadvantages:**
-  - High learning curve.
-  - Slower development cycles for prototyping.
-
-### Authentication
-
-**Final Choice:** Supabase Auth (Email/Password with JWT) + OAuth 2.0 (Google/GitHub)
-
-Authentication is handled through Supabase's built-in authentication service, which provides a simple but powerful abstraction over JWT-based authentication. OAuth support is natively integrated, allowing users to sign in using third-party platforms like Google or GitHub.
-
-- **Advantages:**
-  - Built-in email/password and third-party OAuth flows.
-  - Auto-generates secure, time-limited JWT tokens for session management.
-  - Integrated with the Supabase PostgreSQL user table — no need to duplicate user handling.
-  - Enforces role-based access through Supabase policies.
-
-- **Disadvantages:**
-  - Limited to Supabase’s ecosystem — less flexibility if migrating away.
-  - No built-in support for multi-factor authentication.
-
-- **Justification (Fit):**
-  Supabase Auth is seamlessly tied to our database layer and fits cleanly within the **client-server** and **layered architecture** of the system. It offloads low-level session logic while still allowing token inspection and role validation within Python. This supports our **security** quality requirement (RBAC + JWT) and simplifies login logic on the frontend.
-
-**Alternative 1:** Auth0  
-- **Advantages:**
-  - Supports enterprise auth (MFA, SAML, etc.)
-  - Scalable and secure out-of-the-box
-- **Disadvantages:**
-  - Expensive beyond free tier
-  - High integration overhead
-
-**Alternative 2:** Firebase Auth  
-- **Advantages:**
-  - Supports federated identity providers
-  - Real-time session tracking
-- **Disadvantages:**
-  - Tightly coupled with Google Cloud stack
-  - Less flexibility in backend logic integration
-
-
+  - Steeper learning curve and slower iteration for new checks during the capstone timeline.
 
 ### Database
 

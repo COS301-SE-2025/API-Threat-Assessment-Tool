@@ -4,7 +4,7 @@ description: Documentation of AT-AT's service contract.
 ---
 # AT-AT Service Contracts
 
-The API Threat Assessment Tool (AT-AT) uses a RESTful architecture and communicates using JSON over HTTP(S). The API is authenticated via API keys or Bearer tokens (for RBAC).
+The API Threat Assessment Tool (AT-AT) uses a RESTful architecture and communicates using JSON over HTTP(S). The API is authenticated via Bearer JWT tokens.
 
 ---
 

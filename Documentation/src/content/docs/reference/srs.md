@@ -2,9 +2,8 @@
 title: SRS document
 description: Functional Requirements document.
 ---
-SRS Document for Demo 3 as of 19 August 2025 - Will be updated as the project continues to change to fit with the Agile  methodology.
+SRS Document for Demo 4 as of 30 September 2025 
 
-Headings found here that are also their own seperate document will have the demo 2 variant here, while those in their own document will be updated as asked for in demo 3.
 
 ## Table of Contents
 
@@ -37,17 +36,17 @@ With the growing reliance on APIs in digital systems, there is a critical need t
         - R1.1.3:**First Name**
         - R1.1.4:**Last Name**
     - R1.2 Using existing platforms:
-        - R1.2.1: Google account
+        - R1.2.1: **Google account**
 
 - R2: The user must be able to sign in
     - R2.1: **Using their email and password**
         - R2.1.1: **Credentials must be validated**
     - R2.2: Using existing platforms:
-        - R2.2.1: Google account
+        - R2.2.1: **Google account**
 
 - R3: The user must be able to select "forgot password" 
-    - R3.1: The system must be able to use their email adress to identify if an account exists
-    - R3.2: If an account exists an email should be sent with instructions on how to reset their password
+    - R3.1: **The system must be able to use their email adress to identify if an account exists**
+    - R3.2: **If an account exists an email should be sent with instructions on how to reset their password**
 
 ### Authorization
 - R1: **The system must provide restricted features based on roles**
@@ -57,26 +56,26 @@ With the growing reliance on APIs in digital systems, there is a critical need t
 ### API Specification Input
 - R1: Users must be able to submit API specifications
     - R1.1: **Upload OpenAPI/Swagger files**
-    - R1.2: Upload Postman Collections
-    - R1.3: Provide URL to fetch the API Specification remotely
+    - R1.2: **Upload Postman Collections**
+    - R1.3: **Provide URL to fetch the API Specification remotely**
     - R1.4: **Validate file structure before storing**
 ### Heuristic API Discovery
 - R1: The system must support specification-less scanning
-    - R1.1: Based on a target API domain
-    - R1.2: User Heuristic and Traffic-based pattern detection to infer endpoints
-    - R1.3: Automatically build testable endpoints for undocumented APIs
+    - R1.1: **Based on a target API domain**
+    - R1.2: **User Heuristic and Traffic-based pattern detection to infer endpoints**
+    - R1.3: **Automatically build testable endpoints for undocumented APIs**
 
 ### Scan Configuration
 - R1 Users must be able to select a scan profile from a list of options
-    - R1.1: OWASP Top 10 Quick Scan
-    - R1.2: Full Comprehensive Scan
-    - R1.3: Authentication & Authorization Focus
+    - R1.1: **OWASP Top 10 Quick Scan**
+    - R1.2: **Full Comprehensive Scan**
+    - R1.3: **Authentication & Authorization Focus**
 
 ### API Vulnerability Scanning
 - R1: The system must support automated scanning
-    - R1.1: Perform static analsysis on uploaded specifications
-    - R1.2: Perform dynamic runtime analysis on live APIs
-    - R1.3: Detect OWASP API Top 10 Vulnerabilities
+    - R1.1: **Perform static analsysis on uploaded specifications**
+    - R1.2: **Perform dynamic runtime analysis on live APIs**
+    - R1.3: **Detect OWASP API Top 10 Vulnerabilities**
 
 ### API Behavior & Health Monitoring
 
@@ -86,8 +85,7 @@ With the growing reliance on APIs in digital systems, there is a critical need t
 
 - R2: The system must detect and flag usage of outdated or insecure packages
     - R2.1: Scan dependency metadata in OpenAPI/Swagger specs
-    - R2.2: Use vulnerability databases (e.g., CVE, Snyk API, GitHub Advisory DB) to check for known issues
-    - R2.3: Highlight specific libraries and their affected versions
+    - R2.2: Highlight specific libraries and their affected versions
 
 - R3: The system must correlate scan output with known vulnerability patterns
     - R3.1: Use rule-based or AI-assisted pattern matching to increase detection accuracy
@@ -95,18 +93,18 @@ With the growing reliance on APIs in digital systems, there is a critical need t
 
 ### Report Generation
 - R1: After each scan, a report must be generated
-    - R1.1: Report must include a list of vulnerabilities found, severity levels and endpoints affected
-    - R1.2: Report will include recommendations on how to improve security
-    - R1.3: Allow report to be exported as a pdf
-    - R1.4: Include a security score metric for the API
-    - R1.5: Detailed summary for high-level overview
+    - R1.1: **Report must include a list of vulnerabilities found, severity levels and endpoints affected**
+    - R1.2: **Report will include recommendations on how to improve security**
+    - R1.3: **Allow report to be exported as a pdf**
+    - R1.4: **Include a security score metric for the API**
+    - R1.5: **Detailed summary for high-level overview**
 
 ### Endpoint Management
 - R1: The system must allow users to manage endpoints from imported API specifications
-    - R1.1: List all available endpoints
-    - R1.2: Retrieve details of a specific endpoint
-        - R1.2.1: Return path, method, tags, and security metadata
-    - R1.3: (todo) Return endpoint list scoped by API ID
+    - R1.1: **List all available endpoints**
+    - R1.2: **Retrieve details of a specific endpoint**
+        - R1.2.1: **Return path, method, tags, and security metadata**
+    - R1.3: **Return endpoint list scoped by API ID**
 
 ### Endpoint Tagging
 - R1: **The system must allow tagging of API endpoints**
@@ -114,7 +112,7 @@ With the growing reliance on APIs in digital systems, there is a critical need t
         - R1.1.1: **Tags should be user-defined or selected from a predefined list**
         - R1.1.2: **Tags such as "admin only", "sensitive", "deprecated" should be available**
     - R1.2: **Remove specific tags from an endpoint**
-    - R1.3: Replace all tags for an endpoint
+    - R1.3: **Replace all tags for an endpoint**
     - R1.4: **Retrieve a list of all known tags in the system**
 
 ## User Stories/Characteristics
@@ -442,129 +440,6 @@ These layers are loosely coupled but highly cohesive internally, improving maint
 
 
 
-## Service Contracts
-The service contracts are implemented unless stated otherwise.
-As mentioned in the introduction, the service contracts here are as they were in demo 2, for the demo 3 updated version view their designated file here [Service Contracts](../service-contracts)
-### User Authentication Service
-| Element| Description|
-|-|-|
-| **Purpose**| Handles secure user registration, login, and token-based session handling |
-| **Input**| JSON with `email`, `password`, `username`, `firstName`, `lastName` |
-| **Output**| User object and session or error message |
-| **Endpoint**| `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/profile` |
-
-### API Specification Import Service
-| Element| Description|
-|-|-|
-| **Purpose**| Allows users to upload OpenAPI specifications for analysis |
-| **Input**| File upload via `multipart/form-data` or raw JSON |
-| **Output**| API ID reference or error |
-| **Endpoint**| `POST /api/import` |
-
-### Vulnerability Scanning Service
-| Element| Description|
-|-|-|
-| **Purpose**| Executes a scan on an imported API specification |
-| **Input**| JSON with `api_id` |
-| **Output**| Scan ID and scan initiation confirmation |
-| **Endpoint**| `POST /scan` |
-
-### Scan Status Service
-| Element| Description|
-|-|-|
-| **Purpose**| Retrieve the current status of a scan job |
-| **Input**| Path parameter: `scanId` |
-| **Output**| JSON with scan status and timestamps |
-| **Endpoint**| `GET /status/:scanId` |
-
-### Scan Results Service
-| Element| Description|
-|-|-|
-| **Purpose**| Fetch the results of a completed scan |
-| **Input**| Path parameter: `scanId` |
-| **Output**| Scan report in JSON format |
-| **Endpoint**| `GET /results/:scanId` |
-
-### Endpoint Tagging Service
-| Element| Description|
-|-|-|
-| **Purpose**| Add, remove, or replace tags on detected API endpoints |
-| **Input**| JSON with `endpoint_id` and `tags[]` |
-| **Output**| Success/failure confirmation |
-| **Endpoint**| `POST /api/endpoints/tags/add`, `POST /api/endpoints/tags/remove`, `POST /api/endpoints/tags/replace` |
-
-### Endpoint Listing Service
-| Element| Description|
-|-|-|
-| **Purpose**| Retrieve a list of endpoints for a given API |
-| **Input**| JSON with `api_id` |
-| **Output**| Array of endpoint objects |
-| **Endpoint**| `POST /api/endpoints` |
-
-### Endpoint Detail Service
-| Element| Description|
-|-|-|
-| **Purpose**| Get full metadata for a specific endpoint |
-| **Input**| JSON with `endpoint_id` |
-| **Output**| Endpoint details |
-| **Endpoint**| `POST /api/endpoints/details` |
-
-### Tag Listing Service
-| Element| Description|
-|-|-|
-| **Purpose**| List all unique tags used in the system |
-| **Input**| None |
-| **Output**| Array of strings (tags) |
-| **Endpoint**| `GET /api/tags` |
-
-### Admin User Listing Service
-| Element| Description|
-|-|-|
-| **Purpose**| Return a list of all users (for admins or debugging) |
-| **Input**| None |
-| **Output**| Array of user objects |
-| **Endpoint**| `GET /users` |
-
-### General Health Check Service
-| Element| Description|
-|-|-|
-| **Purpose**| Root route to verify system is running |
-| **Input**| None |
-| **Output**| Service status confirmation |
-| **Endpoint**| `GET /` |
-
-### Report Generation Service *(todo)*
-| Element| Description|
-|-|-|
-| **Purpose**| Generates a downloadable report for a scan |
-| **Input**| Path param: `scan_id`, optional query: `format=pdf/json/html` |
-| **Output**| Formatted report content |
-| **Endpoint**| `GET /api/report/{scan_id}` |
-
-### API Specification Listing Service *(todo)*
-| Element| Description|
-|-|-|
-| **Purpose**| List uploaded specs for a user |
-| **Input**| None |
-| **Output**| List of specs |
-| **Endpoint**| `GET /api/spec/list` |
-
-### API Specification Deletion Service *(todo)*
-| Element| Description|
-|-|-|
-| **Purpose**| Delete an uploaded spec from storage |
-| **Input**| Path parameter: `id` |
-| **Output**| Confirmation or error |
-| **Endpoint**| `DELETE /api/spec/:id` |
-
-### API Specification Validation Service *(todo)*
-| Element| Description|
-|-|-|
-| **Purpose**| Validate format and structure of a given spec |
-| **Input**| Uploaded file |
-| **Output**| Format validity status |
-| **Endpoint**| `POST /api/spec/validate` |
-
 ## Technology Requirements
 ### Frontend Framework
 
@@ -583,7 +458,7 @@ React is a powerful and widely adopted JavaScript library for building user inte
   - Requires third-party libraries for advanced capabilities like routing and form handling.
 
 - **Justification (Fit):**
-  React’s lightweight design aligns perfectly with our **client-server** and **multi-tiered** architecture. It functions as the **presentation layer**, with tight integration into our RESTful backend. The development team already had strong experience with React, which minimized onboarding time. Additionally, React enables rapid iteration in UI prototyping and integrates seamlessly with Playwright for E2E testing.
+  React’s lightweight design aligns perfectly with our **client-server** and **multi-tiered** architecture. It functions as the **presentation layer**, with tight integration into our RESTful backend. The development team already had strong experience with React, which minimized onboarding time. Additionally, React enables rapid iteration in UI prototyping and integrates seamlessly with testing.
 
 **Alternative 1:** Angular  
 - **Advantages:**
@@ -751,13 +626,11 @@ PostgreSQL is a powerful, production-ready, open-source relational database. Sup
 
 ### Testing Stack
 
-**Final Choice:** Pytest + Playwright + Unittest
+**Final Choice:** Pytest  + Unittest
 
-Our test stack includes `pytest` for backend logic, `unittest` for basic module isolation, and `Playwright` for full-stack end-to-end testing.
-
+Our test stack includes `pytest` for backend logic, `unittest` for basic module isolation, 
 - **Advantages:**
   - `pytest`: Clear syntax, great plugin ecosystem (e.g. coverage, fixtures).
-  - `Playwright`: Automated browser testing simulates real user behavior.
   - Unit + integration + E2E layers offer complete coverage.
   - Easy integration into GitHub Actions for automated CI.
 

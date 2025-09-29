@@ -1,29 +1,47 @@
 name: Deploy_ATAT
-
 on:
   workflow_run:
-    workflows: ["Pipeline"]  
+    workflows: ["Pipeline"]
     types:
       - completed
-
 jobs:
   deploy-to-prod:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    name: Imperial Deployment Protocol
-
+    name: Build and Push to Docker Hub
     steps:
-      - name: Activate Central Command
-        run: echo "All systems operational. The Emperor approves this deployment."
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Initialize AT-AT Walkers
-        run: echo "Imperial walkers have entered the atmosphere. Shield generator targeted."
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Deploy to Docker cloud
-        run: echo "The Force is strong with this container. Deploying to Cloud City."
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend 
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/atat-backend:latest 
 
-      - name: Deploy to Dedicated server
-        run: echo "The Death Star is operational. Establishing connection to Scarif base."
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api 
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/atat-api:latest 
 
-      - name: Complete Imperial Occupation
-        run: echo "The Empire's reign continues. Deployment successful. May the Force serve you."
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend 
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/atat-frontend:latest 
+
+      - name: Deployment Initiated
+        run: echo "Images pushed to Docker Hub. Ready for cloud deployment."

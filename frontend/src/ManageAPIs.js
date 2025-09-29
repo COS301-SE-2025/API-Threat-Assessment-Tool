@@ -6,6 +6,13 @@ import Logo from "./components/Logo";
 import './ManageAPIs.css';
 
 const apiService = {
+    async getEnvironment() {
+    const res = await fetch('/api/environment');
+    if (!res.ok) throw new Error('Failed to fetch environment settings.');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Failed to fetch environment.');
+    return data.data;
+  },
   async fetchUserApis(userId) {
     if (!userId) throw new Error("User ID is required.");
     const res = await fetch(`/api/apis?user_id=${userId}`);
@@ -209,14 +216,21 @@ const StatCard = ({ icon, number, label, onClick, active }) => (
     </div>
 );
 
-const ApiCard = ({ api, onScan, onViewEndpoints, onViewPastScans, onManageOwner, onManageShared }) => {
+// In ManageAPIs.js
+
+const ApiCard = ({ api, onScan, onViewEndpoints, onViewPastScans, onManageOwner, onManageShared, isDockerEnv }) => {
     const isOwner = api.permission === 'owner';
+    // Check if the API's base_url contains a local address
+    const isLocal = api.base_url && (api.base_url.includes('localhost') || api.base_url.includes('127.0.0.1'));
+    const isScanDisabled = isLocal && !isDockerEnv;
 
     return (
         <div className="api-card">
             <div className="api-card-header">
                 <div className="api-name-owner">
                     <h4 className="api-name">{api.name}</h4>
+                    {/* Conditionally render the LOCAL tag if isLocal is true */}
+                    {isLocal && <span className="api-local-badge">LOCAL</span>}
                     {!isOwner && <span className="api-owner-badge">Shared by {api.owner_name}</span>}
                 </div>
                 <span className={`api-status ${api.vulnerabilitiesFound > 0 ? 'warning' : 'active'}`}>
@@ -236,7 +250,13 @@ const ApiCard = ({ api, onScan, onViewEndpoints, onViewPastScans, onManageOwner,
             <div className="api-card-actions redesigned">
                 {isOwner ? (
                     <>
-                        <button onClick={() => onScan(api)} className="action-btn scan">⚙️ New Scan</button>
+                        <button 
+                            onClick={() => onScan(api)} 
+                            className="action-btn scan"
+                            // Add the disabled attribute and a helpful title
+                            disabled={isScanDisabled}
+                            title={isScanDisabled ? "Scans for local APIs are disabled in this environment" : "Start a new scan"}
+                        >⚙️ New Scan</button>
                         <button onClick={() => onViewEndpoints(api)} className="action-btn endpoints">📂 Endpoints</button>
                         <button onClick={() => onViewPastScans(api)} className="action-btn history">📜 History</button>
                         <button onClick={() => onManageOwner(api)} className="action-btn manage-btn">Manage ▾</button>
@@ -250,7 +270,6 @@ const ApiCard = ({ api, onScan, onViewEndpoints, onViewPastScans, onManageOwner,
         </div>
     );
 };
-
 const ManageAPIs = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -262,6 +281,7 @@ const ManageAPIs = () => {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [isVisible, setIsVisible] = useState({});
     const [modal, setModal] = useState({ type: null, data: null });
+    const [isDockerEnv, setIsDockerEnv] = useState(true);
     
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('name');
@@ -286,6 +306,20 @@ const ManageAPIs = () => {
     }, [currentUser?.id, showMessage]);
 
     useEffect(() => { fetchApis(); }, [fetchApis]);
+
+        useEffect(() => {
+        const fetchEnvironment = async () => {
+            try {
+                const { isDocker } = await apiService.getEnvironment();
+                setIsDockerEnv(isDocker);
+            } catch (error) {
+                // Default to false (more restrictive) if the endpoint fails
+                setIsDockerEnv(false);
+                showMessage(`Could not determine server environment: ${error.message}`, 'error');
+            }
+        };
+        fetchEnvironment();
+    }, [showMessage]);
     
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
@@ -544,16 +578,17 @@ const ManageAPIs = () => {
                                     <p>Try adjusting your search or filter.</p>
                                 </div>
                             ) : (
-                                filteredAndSortedApis.map(api => 
-                                    <ApiCard 
-                                        key={api.id} 
-                                        api={api}
-                                        onScan={handleStartScanFlow}
-                                        onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
-                                        onViewPastScans={handleViewPastScans}
-                                        onManageOwner={() => setModal({ type: 'manageOwner', data: api })}
-                                        onManageShared={() => setModal({ type: 'manageShared', data: api })}
-                                    />
+                            filteredAndSortedApis.map(api => 
+                                <ApiCard 
+                                    key={api.id} 
+                                    api={api}
+                                    onScan={handleStartScanFlow}
+                                    onViewEndpoints={() => setModal({type: 'endpoints', data: api})}
+                                    onViewPastScans={handleViewPastScans}
+                                    onManageOwner={() => setModal({ type: 'manageOwner', data: api })}
+                                    onManageShared={() => setModal({ type: 'manageShared', data: api })}
+                                    isDockerEnv={isDockerEnv} // Pass the prop here
+                                />
                                 )
                             )}
                          </div>

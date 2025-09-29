@@ -22,14 +22,15 @@ class HTTPInterface:
     def disable_auto_format(self):
         self.auto_format = False
 
-    def add_header(self, key, value):
-        self.headers[key] = value
-
-    def add_header(self, header):
-        header_split = header.split(':')
-        header_key = header_split[0].strip()
-        header_value = header_split[1].strip()
-        self.headers[header_key] = header_value
+    def add_header(self, key_or_full_header, value=None):
+        if value is not None:
+            self.headers[key_or_full_header] = value
+        else:
+            header_split = key_or_full_header.split(':', 1)
+            if len(header_split) == 2:
+                header_key = header_split[0].strip()
+                header_value = header_split[1].strip()
+                self.headers[header_key] = header_value
 
     def remove_header(self, key):
         self.headers.pop(key, None)

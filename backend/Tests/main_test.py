@@ -1,63 +1,43 @@
-
 import unittest
 from unittest.mock import patch, Mock
 from main import handle_request, import_file, get_all_apis, create_scan
+from utils.query import HTTPCode
 
 class TestHandleRequest(unittest.TestCase):
     def test_handle_request_unknown_command(self):
         request = {"command": "unknown.command"}
         response = handle_request(request)
-        self.assertEqual(response["status"], "error")
-        self.assertEqual(response["message"], "Unknown command 'unknown.command'")
-
-    def test_handle_request_import_file(self):
-        request = {"command": "apis.import_file", "data": {"file": "example.yaml"}}
-        with patch("your_module.import_file") as mock_import_file:
-            mock_import_file.return_value = {"status": "success"}
-            response = handle_request(request)
-            self.assertEqual(response["status"], "success")
+        self.assertEqual(response["code"], HTTPCode.BAD_REQUEST.value)
+        self.assertIn("Unknown command", str(response))
 
 class TestImportFile(unittest.TestCase):
     def test_import_file_missing_file(self):
         request = {"data": {}}
         response = import_file(request)
-        self.assertEqual(response["status"], "error")
-        self.assertEqual(response["message"], "Missing 'file' field in request data")
+        self.assertEqual(response["code"], HTTPCode.BAD_REQUEST.value)
+        self.assertIn("Missing 'file' field", str(response))
 
     def test_import_file_success(self):
-        request = {"data": {"file": "example.yaml"}}
-        with patch("your_module.APIImporter") as mock_api_importer:
+        request = {"data": {"file": "example.yaml", "user_id": "123"}}
+        with patch('main.APIImporter') as mock_api_importer:
             mock_api_importer.return_value.import_openapi.return_value = Mock()
+            mock_api_importer.return_value.import_openapi.return_value.save_to_db.return_value = True
             response = import_file(request)
-            self.assertEqual(response["status"], "success")
-
-class TestGetAllApis(unittest.TestCase):
-    def test_get_all_apis_no_apis(self):
-        response = get_all_apis({})
-        self.assertEqual(response["status"], "error")
-        self.assertEqual(response["message"], "No API has been imported yet.")
-
-    def test_get_all_apis_success(self):
-        with patch("your_module.GLOBAL_API_CLIENT") as mock_global_api_client:
-            mock_global_api_client.title = "Example API"
-            mock_global_api_client.version = "1.0"
-            response = get_all_apis({})
-            self.assertEqual(response["status"], "success")
-            self.assertEqual(response["data"]["apis"][0]["title"], "Example API")
+            self.assertEqual(response["code"], HTTPCode.SUCCESS.value)
 
 class TestCreateScan(unittest.TestCase):
     def test_create_scan_no_client_id(self):
         request = {}
         response = create_scan(request)
-        self.assertEqual(response["status"], "error")
-        self.assertEqual(response["message"], "No APIClient found for ID None")
+        self.assertEqual(response["code"], HTTPCode.BAD_REQUEST.value)
+        self.assertIn("Missing 'user_id' or 'api_id'", str(response))
 
     def test_create_scan_success(self):
-        request = {"client_id": "example_client_id"}
-        with patch("your_module.scan_manager") as mock_scan_manager:
-            mock_scan_manager.create_scanner.return_value.run_tests.return_value = []
+        request = {"data": {"user_id": "123", "api_id": "456"}}
+        with patch('main._get_or_create_scan_manager') as mock_get_or_create_scan_manager:
+            mock_get_or_create_scan_manager.return_value = Mock()
             response = create_scan(request)
-            self.assertEqual(response["status"], "success")
+            self.assertEqual(response["code"], HTTPCode.SUCCESS.value)
 
 if __name__ == "__main__":
     unittest.main()

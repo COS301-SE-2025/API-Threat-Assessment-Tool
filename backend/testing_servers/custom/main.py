@@ -32,9 +32,12 @@ def custom_openapi():
     )
 
     # Merge servers
+# In main.py, inside the custom_openapi() function
+
+    # Merge servers
     openapi_schema["servers"] = [
         {
-            "url": "http://localhost:8000",
+            "url": "http://apithreatassessment.co.za/owasp_test",
             "description": "OWASP Testing server"
         }
     ]

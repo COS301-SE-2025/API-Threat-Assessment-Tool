@@ -654,7 +654,6 @@ const Settings = () => {
       <header className="settings-header">
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Logo />
-          <span className="logo-text">AT-AT</span>
         </div>
 
         <nav className="settings-nav">

@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 import logging
 from datetime import datetime
 
-# Set up logging
+# logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

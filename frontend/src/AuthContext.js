@@ -1,7 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
 
 const AuthContext = createContext();
+
+// Initialize Supabase client for Google OAuth only
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: true,     // Fixed: Changed to true for proper session handling
+      persistSession: true,       // Fixed: Changed to true to persist OAuth sessions
+      detectSessionInUrl: true,
+      storage: window.localStorage,
+      flowType: 'pkce'
+    }
+  });
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -15,9 +33,10 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('at_at_token') || '');
+  const [oAuthProcessing, setOAuthProcessing] = useState(false);
 
-  // Base API URL
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  // Base API URL - matches your backend
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -27,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Use the new user profile endpoint
+        // Use your existing profile endpoint
         const res = await axios.get(`${API_BASE_URL}/api/user/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -51,9 +70,212 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
+  // Fixed: Improved OAuth session detection and handling
+  useEffect(() => {
+    const checkOAuthSession = async () => {
+      if (!supabase) return;
+
+      try {
+        console.log('Checking for OAuth session...');
+        console.log('Current URL:', window.location.href);
+        
+        // Check if this is an OAuth callback
+        const isOAuthCallback = window.location.hash.includes('access_token') || 
+                               window.location.search.includes('code') ||
+                               window.location.hash.includes('error');
+
+        if (!isOAuthCallback) {
+          console.log('Not an OAuth callback');
+          return;
+        }
+
+        console.log('OAuth callback detected, processing...');
+        setOAuthProcessing(true);
+
+        // Handle OAuth errors first
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        
+        const error = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        
+        if (error) {
+          console.error('OAuth error:', error, errorDescription);
+          // Clean URL and show error to user
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setOAuthProcessing(false);
+          return;
+        }
+
+        // Get the session from Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw sessionError;
+        }
+        
+        if (session && session.user) {
+          console.log('Valid OAuth session found:', session.user.email);
+          await handleGoogleOAuthSuccess(session.user);
+          // Clean URL after successful processing
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          console.log('No valid session found');
+        }
+      } catch (error) {
+        console.error('OAuth session check error:', error);
+        // Clean URL even on error
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } finally {
+        setOAuthProcessing(false);
+      }
+    };
+
+    // Process OAuth callback immediately
+    checkOAuthSession();
+
+    // Fixed: Better auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event);
+        
+        if (event === 'SIGNED_IN' && session?.user && !oAuthProcessing) {
+          console.log('Auth state: signed in with', session.user.email);
+          setOAuthProcessing(true);
+          try {
+            await handleGoogleOAuthSuccess(session.user);
+          } catch (error) {
+            console.error('Auth state change error:', error);
+          } finally {
+            setOAuthProcessing(false);
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  /**
+   * Handle successful Google OAuth and create/login user
+   */
+  const handleGoogleOAuthSuccess = async (googleUser) => {
+    try {
+      setIsLoading(true);
+      console.log('Processing Google OAuth for:', googleUser.email);
+
+      // Fixed: Better data extraction from Google user
+      const metadata = googleUser.user_metadata || {};
+      const fullName = metadata.full_name || metadata.name || '';
+      const nameParts = fullName.split(' ');
+
+      const userData = {
+        email: googleUser.email,
+        firstName: metadata.given_name || nameParts[0] || '',
+        lastName: metadata.family_name || nameParts.slice(1).join(' ') || '',
+        name: fullName || googleUser.email.split('@')[0],
+        profilePicture: metadata.avatar_url || metadata.picture || '',
+        googleId: googleUser.id,
+        provider: 'google'
+      };
+
+      console.log('Sending to backend:', userData.email);
+
+      // Send to your existing backend Google login endpoint
+      console.log('Making API call to backend...');
+      const res = await axios.post(`${API_BASE_URL}/api/auth/google-login`, userData);
+      console.log('Backend response received:', res.status);
+
+      if (res.data.success) {
+        console.log('Processing successful response...');
+        const { token: newToken, user } = res.data.data;
+        console.log('Extracted token and user, storing...');
+        
+        localStorage.setItem('at_at_token', newToken);
+        setToken(newToken);
+        setCurrentUser(user);
+        console.log('Token and user state updated');
+
+        console.log('Google OAuth successful, user logged in');
+
+        // Clean up Supabase session in background (non-blocking)
+        console.log('Starting non-blocking Supabase cleanup...');
+        supabase.auth.signOut().then(() => {
+          console.log('Supabase cleanup completed');
+        }).catch((cleanupError) => {
+          console.warn('Supabase cleanup failed (non-critical):', cleanupError);
+        });
+
+        return { success: true, user };
+      } else {
+        throw new Error(res.data.message || 'Google login failed');
+      }
+    } catch (error) {
+      console.error('Google OAuth backend error:', error);
+      // Clean up Supabase session on error
+      if (supabase) await supabase.auth.signOut();
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Initiate Google OAuth login
+   */
+  const loginWithGoogle = async () => {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Google login not configured. Please check environment variables.'
+      };
+    }
+
+    try {
+      setIsLoading(true);
+      console.log('Initiating Google OAuth...');
+
+      // Fixed: Better redirect URL construction
+      const redirectUrl = window.location.origin + window.location.pathname;
+      console.log('Using redirect URL:', redirectUrl);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+          skipBrowserRedirect: false,
+        },
+      });
+
+      if (error) {
+        console.error('OAuth initiation error:', error);
+        throw error;
+      }
+
+      console.log('OAuth initiation successful');
+      // OAuth will redirect, so this won't execute immediately
+      return { success: true, data };
+    } catch (error) {
+      console.error('Google OAuth initiation error:', error);
+      setIsLoading(false);
+      return {
+        success: false,
+        error: error.message || 'Failed to initiate Google login'
+      };
+    }
+  };
+
   const login = async (identifier, password) => {
     setIsLoading(true);
     try {
+      // Use your existing login endpoint structure
       const res = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         [identifier.includes('@') ? 'email' : 'username']: identifier,
         password
@@ -62,6 +284,7 @@ export const AuthProvider = ({ children }) => {
       if (res.data.success) {
         const { token: newToken, user } = res.data.data;
         localStorage.setItem('at_at_token', newToken);
+        localStorage.setItem('currentUser_id', user.id); 
         setToken(newToken);
         setCurrentUser(user);
 
@@ -83,6 +306,7 @@ export const AuthProvider = ({ children }) => {
   const signup = async (userData) => {
     setIsLoading(true);
     try {
+      // Use your existing signup endpoint
       const res = await axios.post(`${API_BASE_URL}/api/auth/signup`, userData);
       
       if (res.data.success) {
@@ -110,10 +334,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('at_at_token');
     setCurrentUser(null);
     setToken('');
+
+    // Also sign out from Supabase if there's an active session
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.warn('Supabase logout error:', error);
+      }
+    }
   };
 
   const updateProfile = async (updatedData) => {
@@ -294,8 +527,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasPermission = (permission) => {
-    // Placeholder for role-based permissions
-    // For now, all authenticated users have all permissions
     return isAuthenticated();
   };
 
@@ -306,11 +537,12 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // State
     currentUser,
-    isLoading,
+    isLoading: isLoading || oAuthProcessing, // Fixed: Include OAuth processing in loading state
     token,
 
     // Authentication methods
     login,
+    loginWithGoogle, // Google OAuth method
     signup,
     logout,
     isAuthenticated,

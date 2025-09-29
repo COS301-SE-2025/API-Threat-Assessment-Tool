@@ -378,4 +378,56 @@ describe('Coverage Boost Tests - Error Paths & Edge Cases', () => {
       expect(successful.length).toBeGreaterThan(requests.length * 0.8);
     });
   });
+
+  describe('New Endpoints Edge Cases', () => {
+    test('should handle missing scan_id in /api/scan/status', async () => {
+      const response = await request(app)
+        .get('/api/scan/status')
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Scan ID is required');
+    });
+
+    test('should handle invalid template_id in /api/templates/details', async () => {
+      const response = await request(app)
+        .get('/api/templates/details')
+        .query({ template_id: '' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Template ID is required');
+    });
+
+    test('should handle engine failure in /api/user/profile/get', async () => {
+      mockEngine.setErrorMode(true); // Assume mock has error mode
+      const response = await request(app)
+        .get('/api/user/profile/get')
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      mockEngine.setErrorMode(false);
+    });
+  });
+});
+
+// tests/unit/coverage-boost.test.js
+// ... (keep existing)
+
+describe('Additional Error Paths', () => {
+  // Existing...
+
+  // New: Mock env for branch coverage
+  test('should cover test env branch', async () => {
+    process.env.NODE_ENV = 'test';
+    const response = await request(app).get('/').expect(200);
+    expect(response.body.success).toBe(true);
+  });
+
+  // New: Test global handler with custom error
+  test('should handle custom thrown error', async () => {
+    app.get('/custom-error', (req, res) => { throw new Error('Custom'); });
+    const response = await request(app).get('/custom-error').expect(500);
+    expect(response.body.message).toContain('Server error');
+  });
 });

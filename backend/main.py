@@ -1,63 +1,248 @@
-from utils import config
-from utils.db import DatabaseManager
+from core.db_manager import db_manager
 from input.api_importer import APIImporter
+from core.api_client import APIClient
 from core.vulnerability_scanner import VulnerabilityScanner
 from core.vulnerability_test import OWASP_FLAGS
 from core.report_generator import ReportGenerator
 from core.scan_manager import ScanManager, ScanProfiles
-from core.result_manager import ResultManager
 from utils.query import success, bad_request, not_found, server_error, connection_test, response, HTTPCode
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
+from dateutil.parser import parse as parse_datetime
+from collections import defaultdict 
+from datetime import timedelta
+import base64
+
 
 import socket
 import json
 import os
 import signal
 import sys
-
+import uuid
 
 HOST = '127.0.0.1'
 PORT = 9011
 
-scan_manager = ""
-result_manager = ""
-CLIENT_STORE = {}
-API_METADATA = {}
+USER_STORE: Dict[str, Dict[str, Any]] = {}
+# USER_STORE structure:
+# {
+#     "user_id_1": {
+#         "apis": { "api_id_hash_1": APIClientObject, ... },
+#         "scans": { "api_id_hash_1": ScanManagerObject, ... }
+#     }, ...
+# }
 
-# temporary
-# All connected users will share access to the same api that was loaded
-GLOBAL_API_CLIENT = None  
-GLOBAL_CLIENT_ID = None
-GLOBAL_SCAN_MANAGER = None
+# === Logging Helper ===
+def log_with_timestamp(message: str):
+    """Prints a message with a timezone-aware UTC timestamp."""
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] + "Z"
+    print(f"[{timestamp}] {message}")
 
 
+def _invalidate_api_list_cache(user_id: str):
+    """Removes the cached API list for a specific user."""
+    if USER_STORE.get(user_id) and "api_list_cache" in USER_STORE[user_id]:
+        del USER_STORE[user_id]["api_list_cache"]
+        log_with_timestamp(f"Invalidated API list cache for user {user_id}")
 
-# === Auth ===
-def auth_register(request): 
-    return server_error("Not yet implemented")
+def _get_api_client(user_id: str, api_id: str) -> APIClient:
+    """
+    Robustly retrieves an APIClient instance, checking memory cache first,
+    then loading from the database as a fallback.
+    """
+    # Ensure the basic cache structure exists to prevent KeyErrors
+    USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
+    
+    # 1. Check if the APIClient object is already in memory (fast path)
+    api_client = USER_STORE[user_id]["apis"].get(api_id)
+    
+    if api_client:
+        return api_client
 
-def auth_login(request): 
-    return server_error("Not yet implemented")
+    # 2. If not in memory, try to load it from the database
+    log_with_timestamp(f"APIClient for {api_id} not in cache. Loading from DB...")
+    api_client = APIClient.load_from_db(api_id)
+    
+    if not api_client:
+        # If it's not in the DB either, then it's a true "not found"
+        return None
+    
+    # 3. Add the loaded client back to the cache for future requests
+    USER_STORE[user_id]["apis"][api_id] = api_client
+    log_with_timestamp(f"Cached APIClient {api_id} for user {user_id} from DB.")
+    
+    return api_client
 
-def auth_google(request): 
-    return server_error("Not yet implemented")
+def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
+    # Ensure the basic cache structure exists to prevent errors
+    USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
+    USER_STORE[user_id].setdefault("scans", {})
 
-def auth_logout(request): 
-    return server_error("Not yet implemented")
+    # 1. Use the new robust helper to get the API client
+    api_client = _get_api_client(user_id, api_id)
+    if not api_client:
+        return None # API truly does not exist
+
+    # 2. Now that we have the api_client, get or create its ScanManager
+    USER_STORE[user_id].setdefault("scans", {})
+    if api_id not in USER_STORE[user_id]["scans"]:
+        USER_STORE[user_id]["scans"][api_id] = ScanManager(api_client)
+
+    return USER_STORE[user_id]["scans"][api_id]
+
+# In main.py, near your other helper functions
+
+def _verify_api_access(user_id: str, api_id: str, minimum_level: str) -> bool:
+    """
+    Verifies if a user has the required permission level for an API.
+    Levels: 'view' (read-only), 'manage' (can run scans), 'owner' (full control).
+    """
+    permission_levels = {
+        "view": 1,
+        "read": 1,
+        "manage": 2,
+        "edit": 2,
+        "owner": 3
+    }
+    required_level = permission_levels.get(minimum_level.lower(), 0)
+
+    try:
+        # 1. Check if the user is the owner
+        api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+        if api_owner:
+            return True # Owners have max permission
+
+        # 2. If not the owner, check for shared access
+        access_record = db_manager.select("api_access", columns="permission", filters={"api_id": api_id, "user_id": user_id})
+        if not access_record:
+            return False # No direct ownership or shared access record found
+        
+        user_permission = access_record[0].get("permission", "")
+        user_level = permission_levels.get(user_permission.lower(), 0)
+
+        # 3. Compare user's permission level against the required level
+        return user_level >= required_level
+
+    except Exception as e:
+        log_with_timestamp(f"Error during permission check for user {user_id} on api {api_id}: {e}")
+        return False
 
 # === Dashboard ===
-def dashboard_overview(request): 
-    return server_error("Not yet implemented")
+def dashboard_overview(request):
+    """
+    Gathers and returns a comprehensive, optimized overview of the user's security posture.
+    """
+    user_id = request.get("data", {}).get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    try:
+        # STEP 1: Get all of the user's APIs in a single query.
+        user_apis = db_manager.select("apis", columns="id, name", filters={"user_id": user_id})
+        if not user_apis:
+            return success({
+                "total_apis": 0, "total_scans": 0, "total_vulnerabilities": 0,
+                "critical_vulnerabilities": 0, "vulnerabilities_by_severity": {},
+                "recent_scans": [], "scan_activity_weekly": [], "top_vuln_types": []
+            })
+
+        api_ids = [api['id'] for api in user_apis]
+        api_name_map = {api['id']: api['name'] for api in user_apis}
+
+        # STEP 2: Get all scans for those APIs.
+        all_scans = db_manager.select("scans", columns="id, api_id, status, completed_at", filters={"api_id": api_ids})
+        completed_scans = [s for s in all_scans if s['status'] == 'completed' and s.get('completed_at')]
+        scan_ids = [scan['id'] for scan in completed_scans]
+        
+        # Initialize metrics
+        vulnerabilities_by_severity = defaultdict(int)
+        top_vuln_types = defaultdict(int)
+        vuln_count_by_scan_id = defaultdict(int)
+        total_vulnerabilities = 0
+
+        if scan_ids:
+            # STEP 3: BATCH FETCH all results for ALL completed scans in a single query.
+            all_results = db_manager.select(
+                "scan_results",
+                columns="scan_id, severity, vulnerability_name", # Added scan_id
+                filters={"scan_id": scan_ids}
+            )
+            
+            # STEP 4: Process all results in memory ONCE to build our lookup maps.
+            total_vulnerabilities = len(all_results)
+            for res in all_results:
+                severity = res.get("severity", "UNKNOWN").upper()
+                vuln_name = res.get("vulnerability_name", "Unknown Vulnerability")
+                
+                vulnerabilities_by_severity[severity] += 1
+                if vuln_name:
+                    top_vuln_types[vuln_name] += 1
+                vuln_count_by_scan_id[res['scan_id']] += 1
+        
+        # STEP 5: Prepare recent scans using the in-memory map (NO NEW DB CALLS).
+        completed_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+        recent_scans = []
+        for scan in completed_scans[:5]:
+            recent_scans.append({
+                "id": scan['id'],
+                "apiName": api_name_map.get(scan['api_id'], "Unknown API"),
+                "date": parse_datetime(scan['completed_at']).isoformat(),
+                "status": scan['status'],
+                "vulnerabilities": vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
+            })
+
+        # STEP 6: Prepare weekly activity using the in-memory map (NO NEW DB CALLS).
+        weekly_chart_data_map = {day: {'scans': 0, 'vulnerabilities': 0} for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}
+        today = datetime.now(timezone.utc).date()
+        
+        for scan in completed_scans:
+            completed_date = parse_datetime(scan['completed_at']).date()
+            if completed_date > (today - timedelta(days=7)):
+                day_name = completed_date.strftime('%a')
+                weekly_chart_data_map[day_name]['scans'] += 1
+                weekly_chart_data_map[day_name]['vulnerabilities'] += vuln_count_by_scan_id.get(scan['id'], 0) # Efficient lookup
+        
+        weekly_chart_data = [{'day': day, **data} for day, data in weekly_chart_data_map.items()]
+
+        # Prepare final payload
+        sorted_top_vulns = sorted(top_vuln_types.items(), key=lambda item: item[1], reverse=True)[:4]
+        overview_data = {
+            "total_apis": len(user_apis),
+            "total_scans": len(all_scans),
+            "total_vulnerabilities": total_vulnerabilities,
+            "critical_vulnerabilities": vulnerabilities_by_severity.get("CRITICAL", 0),
+            "vulnerabilities_by_severity": dict(vulnerabilities_by_severity),
+            "recent_scans": recent_scans,
+            "scan_activity_weekly": weekly_chart_data,
+            "top_vuln_types": [{"type": v[0], "count": v[1]} for v in sorted_top_vulns]
+        }
+
+        return success(overview_data)
+
+    except Exception as e:
+        log_with_timestamp(f"Error in dashboard_overview: {e}")
+        return server_error(str(e))
+
 
 def dashboard_metrics(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard, as 'dashboard_overview' provides all necessary data.
+    # It is kept here as a placeholder.
+    log_with_timestamp("dashboard.metrics call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
 
 def dashboard_alerts(request): 
-    return server_error("Not yet implemented")
+    # This endpoint is not used by the new dashboard.
+    log_with_timestamp("dashboard.alerts call received, but is deprecated. Use dashboard.overview instead.")
+    return server_error("This endpoint is deprecated. Please use 'dashboard.overview'.")
+
+
+# In main.py
 
 def import_file(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID, GLOBAL_SCAN_MANAGER
+    user_id = request.get("data", {}).get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
     file_name = request.get("data", {}).get("file")
     if not file_name:
@@ -65,71 +250,146 @@ def import_file(request):
 
     try:
         file_path = f"Files/{file_name}"
-        with open(file_path, 'r') as f:
-            content = f.read()
-
         importer = APIImporter()
-        print("Importing new openAPI file")
+        log_with_timestamp(f"Importing new openAPI file: {file_path}")
         api_client = importer.import_openapi(file_path)
 
-        client_id = str(id(api_client))
-        CLIENT_STORE[client_id] = api_client
-        API_METADATA[client_id] = {
-            "title": api_client.title,
-            "version": api_client.version,
-            "base_url": api_client.base_url
-        }
+        if not api_client.save_to_db(user_id):
+            return server_error("Failed to save the imported API to the database.")
+        
+        api_id = api_client.db_id
 
-        GLOBAL_API_CLIENT = api_client
-        GLOBAL_CLIENT_ID = client_id
-        GLOBAL_SCAN_MANAGER = ScanManager(api_client)
+        # FIX: Robustly ensure the cache structure exists before use
+        # This prevents the KeyError: 'apis'
+        USER_STORE.setdefault(user_id, {}).setdefault("apis", {})
+        
+        # Now it is safe to add the new API to the in-memory cache
+        USER_STORE[user_id]["apis"][api_id] = api_client
 
-        return response(HTTPCode.SUCCESS, {"client_id": client_id})
+        # Invalidate the cached list of APIs so the new one appears on next fetch
+        _invalidate_api_list_cache(user_id)
+
+        return response(HTTPCode.SUCCESS, {"api_id": api_id, "filename": file_name})
+
+    except FileNotFoundError:
+        return not_found(f"File '{file_name}' not found on server.")
     except Exception as e:
+        log_with_timestamp(f"Error in import_file: {e}")
         return server_error(str(e))
 
 
-
 def get_all_apis(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
+    user_id = request.get("data", {}).get("user_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
 
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
+    log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
+    
+    try:
+        # STEP 1: Get APIs OWNED BY the user (added base_url).
+        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"user_id": user_id})
+        for api in owned_apis_data:
+            api['permission'] = 'owner'
 
-    return response(HTTPCode.SUCCESS, {
-        "apis": [{
-            "client_id": GLOBAL_CLIENT_ID,
-            "title": GLOBAL_API_CLIENT.title,
-            "version": GLOBAL_API_CLIENT.version
-        }]
-    })
+        # STEP 2: Get APIs SHARED WITH the user.
+        shared_access_records = db_manager.select("api_access", columns="api_id, permission", filters={"user_id": user_id})
+        shared_api_ids = [rec['api_id'] for rec in shared_access_records]
+        
+        shared_apis_data = []
+        if shared_api_ids:
+            # Get the details for the shared APIs (added base_url).
+            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"id": shared_api_ids})
+            
+            # Create maps for efficient lookups
+            permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
+            owner_ids = {api['user_id'] for api in shared_apis_details}
+            owners = db_manager.select("users", columns="id, first_name, last_name", filters={"id": list(owner_ids)})
+            owner_map = {owner['id']: f"{owner['first_name']} {owner['last_name']}".strip() for owner in owners}
+            
+            for api in shared_apis_details:
+                api['permission'] = permission_map.get(api['id'], 'read')
+                api['owner_name'] = owner_map.get(api['user_id'], 'Unknown Owner')
+                shared_apis_data.append(api)
 
+        # STEP 3: Combine lists and prepare for fetching scan data.
+        all_user_apis = owned_apis_data + shared_apis_data
+        if not all_user_apis:
+            return response(HTTPCode.SUCCESS, {"apis": []})
+
+        all_api_ids = [api['id'] for api in all_user_apis]
+
+        # STEP 4: Batch fetch all scan and result data for ALL accessible APIs.
+        all_completed_scans = db_manager.select(
+            "scans",
+            columns="id, api_id, completed_at",
+            filters={"api_id": all_api_ids, "status": "completed"}
+        )
+        
+        scans_by_api_id = defaultdict(list)
+        for scan in all_completed_scans:
+            scans_by_api_id[scan['api_id']].append(scan)
+        
+        scan_ids_to_check = [scan['id'] for scan in all_completed_scans]
+        results_count_by_scan_id = defaultdict(int)
+
+        if scan_ids_to_check:
+            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": scan_ids_to_check})
+            for result in all_scan_results:
+                results_count_by_scan_id[result['scan_id']] += 1
+
+        # STEP 5: Build the final response list.
+        api_list_for_frontend = []
+        for api in all_user_apis:
+            api_id = api['id']
+            vulnerabilities_found = 0
+            last_scanned = "Never"
+            scan_status = "Ready"
+
+            if api_id in scans_by_api_id:
+                api_scans = scans_by_api_id[api_id]
+                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+                latest_scan = api_scans[0]
+                
+                scan_status = "Completed"
+                last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
+                vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
+
+            dt_obj = parse_datetime(api.get("imported_on"))
+            created_at_iso = dt_obj.isoformat()
+
+            api_list_for_frontend.append({
+                "id": api_id,
+                "api_id": api_id,
+                "name": api.get("name"),
+                "version": api.get("version"),
+                "base_url": api.get("base_url"), # <-- BUG FIX: Add the base_url here
+                "created_at": created_at_iso,
+                "vulnerabilitiesFound": vulnerabilities_found,
+                "lastScanned": last_scanned,
+                "scanStatus": scan_status,
+                "permission": api['permission'],
+                "owner_name": api.get('owner_name')
+            })
+        
+        return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
+
+    except Exception as e:
+        log_with_timestamp(f"Error in get_all_apis: {e}")
+        return server_error(str(e))
+        
 
 def create_api(request): 
     return server_error("Not yet implemented")
 
-def get_all_apis(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
-
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
-
-    return response(HTTPCode.SUCCESS, {
-        "apis": [{
-            "client_id": GLOBAL_CLIENT_ID,
-            "title": GLOBAL_API_CLIENT.title,
-            "version": GLOBAL_API_CLIENT.version
-        }]
-    })
-
 def get_api_details(request):
-    global GLOBAL_API_CLIENT, GLOBAL_CLIENT_ID
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id' field")
 
-    client_id = request.get("data", {}).get("client_id")
-    client = CLIENT_STORE.get(client_id) if client_id else GLOBAL_API_CLIENT
-
+    client = _get_api_client(user_id, api_id)
     if not client:
-        return not_found("API client not found.")
+        return not_found("API client not found in memory or database.")
 
     return response(HTTPCode.SUCCESS, {
         "title": client.title,
@@ -139,52 +399,75 @@ def get_api_details(request):
     })
 
 def update_api(request):
-    client_id = request.get("data", {}).get("client_id")
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
     updates = request.get("data", {}).get("updates", {})
+    if not all([user_id, api_id]):
+        return bad_request("Missing 'user_id' or 'api_id'")
 
-    meta = API_METADATA.get(client_id)
-    client = CLIENT_STORE.get(client_id)
-    if not meta or not client:
+    client = _get_api_client(user_id, api_id)
+    if not client:
         return not_found("API client not found.")
 
+    db_updates = {}
     for key in ["title", "version", "base_url"]:
-        if key in updates:
-            meta[key] = updates[key]
+        # only apply if the key exists and is not None
+        if key in updates and updates[key] is not None:
             setattr(client, key, updates[key])
+            db_key = "name" if key == "title" else key
+            db_updates[db_key] = updates[key]
 
-    return success({ "message": "API metadata updated." }) 
+    if db_updates:
+        if not client.update_in_db(db_updates):
+            return server_error("Failed to persist API updates to the database.")
+
+    return success({"message": "API metadata updated successfully."})
 
 
 def delete_api(request):
-    client_id = request.get("data", {}).get("client_id")
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id' field")
 
-    if client_id not in CLIENT_STORE:
-        return not_found("API not found.")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API not found, cannot delete.")
 
-    CLIENT_STORE.pop(client_id)
-    API_METADATA.pop(client_id, None)
+    if client.delete_from_db():
+        # Clean up from cache if it exists
+        if user_id in USER_STORE and "apis" in USER_STORE[user_id]:
+            USER_STORE[user_id]["apis"].pop(api_id, None)
+        if user_id in USER_STORE and "scans" in USER_STORE[user_id]:
+            USER_STORE[user_id]["scans"].pop(api_id, None)
+        
+        _invalidate_api_list_cache(user_id)
 
-    # Optional cleanup
-    global GLOBAL_CLIENT_ID, GLOBAL_API_CLIENT
-    if client_id == GLOBAL_CLIENT_ID:
-        GLOBAL_CLIENT_ID = None
-        GLOBAL_API_CLIENT = None
+        return success({"message": "API deleted successfully."})
+    else:
+        return server_error("Failed to delete API from the database.")
 
-    return success({ "message": "API deleted." })  #Fix: return data
 
 
 def import_url(request): 
     return server_error("Not yet implemented")
 
 # === API endpoints ===
+# In main.py, update get_api_endpoints
+
 def get_api_endpoints(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id' field")
 
-    client_id = request.get("data", {}).get("client_id")
-    client = CLIENT_STORE.get(client_id) if client_id else GLOBAL_API_CLIENT
+    # PERMISSION CHECK: User must have 'view', 'manage', or 'owner' rights
+    if not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view endpoints for this API."})
 
+    client = _get_api_client(user_id, api_id)
     if not client:
-        return not_found("API not found.")
+        return not_found({"message": "API not found."})
 
     endpoints = [{
         "id": ep.id,
@@ -200,19 +483,17 @@ def get_api_endpoints(request):
 
 
 def get_endpoint_details(request):
-    global GLOBAL_API_CLIENT
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    endpoint_id = request.get("data", {}).get("endpoint_id")
+    if not all([user_id, api_id, endpoint_id]):
+        return bad_request("Missing 'user_id', 'api_id', or endpoint 'id'")
 
-    path = request.get("data", {}).get("path")
-    method = request.get("data", {}).get("method")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
-    if not path or not method:
-        return bad_request("Missing 'path' or 'method'")
-
-    endpoint_id = request.get("data", {}).get("id")
-    if not endpoint_id:
-        return bad_request("Missing 'id'")
-
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
             return response(HTTPCode.SUCCESS, {
                 "id": ep.id,
@@ -229,71 +510,86 @@ def get_endpoint_details(request):
 
 
 def add_tags(request):
-    global GLOBAL_API_CLIENT
-
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
     tags = request.get("data", {}).get("tags")
+    if not all([user_id, api_id, path, method, tags]):
+        return bad_request("Missing required fields")
 
-    if not path or not method or not tags:
-        return bad_request("Missing 'path', 'method', or 'tags'")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = list(set(ep.tags + tags))
+            if not ep.update_in_db({"tags": ep.tags}):
+                return server_error("Failed to update tags in the database.")
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
-
     return not_found("Endpoint not found")
 
 
 
 def remove_tags(request):
-    global GLOBAL_API_CLIENT
-
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
     tags = request.get("data", {}).get("tags")
+    if not all([user_id, api_id, path, method, tags]):
+        return bad_request("Missing required fields")
 
-    if not path or not method or not tags:
-        return bad_request("Missing 'path', 'method', or 'tags'")
-
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+        
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = [t for t in ep.tags if t not in tags]
+            if not ep.update_in_db({"tags": ep.tags}):
+                return server_error("Failed to update tags in the database.")
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
-
     return not_found("Endpoint not found")
 
 
 
 def replace_tags(request):
-    global GLOBAL_API_CLIENT
-
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
     path = request.get("data", {}).get("path")
     method = request.get("data", {}).get("method")
     tags = request.get("data", {}).get("tags")
+    if not all([user_id, api_id, path, method]) or tags is None:
+        return bad_request("Missing required fields")
 
-    if not path or not method or tags is None:
-        return bad_request("Missing 'path', 'method', or 'tags'")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.path == path and ep.method == method:
             ep.tags = tags
+            if not ep.update_in_db({"tags": ep.tags}):
+                return server_error("Failed to update tags in the database.")
             return response(HTTPCode.SUCCESS, {"tags": ep.tags})
-
     return not_found("Endpoint not found")
 
 
 def get_all_tags(request):
-    global GLOBAL_API_CLIENT
-
-    if not GLOBAL_API_CLIENT:
-        return not_found("No API has been imported yet.")
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id'")
+    
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     all_tags = set()
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         all_tags.update(ep.tags)
-
     return response(HTTPCode.SUCCESS, {"tags": list(all_tags)})
 
 
@@ -301,479 +597,739 @@ def get_all_tags(request):
 # flags
 
 def add_flags(request):
-    global GLOBAL_API_CLIENT
+    user_id, api_id, endpoint_id, flag_str = (
+        request.get("data", {}).get(k) for k in ["user_id", "api_id", "endpoint_id", "flags"]
+    )
+    if not all([user_id, api_id, endpoint_id, flag_str]):
+        return bad_request("Missing required fields")
 
-    data = request.get("data", {})
-    endpoint_id = data.get("endpoint_id")
-    flag_str = data.get("flags")
-
-    if not endpoint_id or not flag_str:
-        return bad_request("Missing 'endpoint_id' or 'flags'")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     try:
-        # Convert string to OWASP_FLAGS enum member
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
-        valid_flags = [f.name for f in OWASP_FLAGS]
-        return bad_request(f"Invalid flag: {flag_str}. Valid flags: {', '.join(valid_flags)}")
+        return bad_request(f"Invalid flag. Valid flags: {[f.name for f in OWASP_FLAGS]}")
 
-    for ep in GLOBAL_API_CLIENT.endpoints:
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
-            # Now using the actual enum member
             ep.add_flag(flag_enum)
             
-            # Return flag names to frontend
+            flags_for_db = [f.name for f in ep.flags]
+            if not ep.update_in_db({"flags": flags_for_db}):
+                return server_error("Failed to persist flag changes to the database.")
+
             return response(HTTPCode.SUCCESS, {
                 "flags": [f.name for f in ep.flags]
             })
-
     return not_found("Endpoint not found")
 
 def remove_flags(request):
-    global GLOBAL_API_CLIENT
+    user_id, api_id, endpoint_id, flag_str = (
+        request.get("data", {}).get(k) for k in ["user_id", "api_id", "endpoint_id", "flags"]
+    )
+    if not all([user_id, api_id, endpoint_id, flag_str]):
+        return bad_request("Missing required fields")
 
-    data = request.get("data", {})
-    endpoint_id = data.get("endpoint_id")
-    flag_str = data.get("flags")
-
-    if not endpoint_id or not flag_str:
-        return bad_request("Missing 'endpoint_id' or 'flags'")
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
 
     try:
         flag_enum = OWASP_FLAGS[flag_str]
     except KeyError:
-        valid_flags = [f.name for f in OWASP_FLAGS]
-        return bad_request(
-            f"Invalid flag: '{flag_str}'. Valid flags are: {', '.join(valid_flags)}"
-        )
-
-    for ep in GLOBAL_API_CLIENT.endpoints:
+        return bad_request(f"Invalid flag. Valid flags: {[f.name for f in OWASP_FLAGS]}")
+    
+    for ep in client.endpoints:
         if ep.id == endpoint_id:
             if flag_enum in ep.flags:
                 ep.remove_flag(flag_enum)
+
+                flags_for_db = [f.name for f in ep.flags]
+                if not ep.update_in_db({"flags": flags_for_db}):
+                    return server_error("Failed to persist flag changes to the database.")
+
                 return response(HTTPCode.SUCCESS, {
                     "flags": [f.name for f in ep.flags],
                     "message": f"Flag '{flag_str}' removed successfully"
                 })
             else:
-                return response(HTTPCode.BAD_REQUEST, {
-                    "flags": [f.name for f in ep.flags],
-                    "error": f"Flag '{flag_str}' not set on endpoint"
-                })
-
+                return bad_request(f"Flag '{flag_str}' not set on endpoint")
     return not_found(f"Endpoint with ID '{endpoint_id}' not found")
 
 
+# === Scheduled Scans (NEW FUNCTIONS) ===
+
+def get_schedule(request):
+    """Retrieves the schedule for a given API."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    schedule_data = db_manager.select("scheduled_scans", filters={"api_id": api_id, "user_id": user_id})
+    if not schedule_data:
+        return response(HTTPCode.SUCCESS, {"schedule": None}) # Return success with no schedule
+    
+    return response(HTTPCode.SUCCESS, {"schedule": schedule_data[0]})
+
+def create_or_update_schedule(request):
+    """Creates a new scan schedule or updates an existing one."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    frequency = request.get("data", {}).get("frequency")
+    is_enabled = request.get("data", {}).get("is_enabled", True)
+
+    if not all([user_id, api_id, frequency]):
+        return bad_request("Missing user_id, api_id, or frequency")
+    if frequency not in ['daily', 'weekly', 'monthly']:
+        return bad_request("Invalid frequency. Must be 'daily', 'weekly', or 'monthly'.")
+
+    now = datetime.now(timezone.utc)
+    if frequency == 'daily':
+        next_run_at = now + timedelta(days=1)
+    elif frequency == 'weekly':
+        next_run_at = now + timedelta(weeks=1)
+    else: # monthly
+        next_run_at = now + timedelta(days=30)
+
+    schedule_data = {
+        "user_id": user_id,
+        "api_id": api_id,
+        "frequency": frequency,
+        "is_enabled": is_enabled,
+        "next_run_at": next_run_at.isoformat(),
+        "updated_at": now.isoformat()
+    }
+
+    # Use an "upsert" to either create or update the schedule based on the unique api_id
+    result = db_manager.upsert("scheduled_scans", schedule_data, on_conflict="api_id")
+
+    if not result:
+        return server_error("Failed to save schedule to the database.")
+
+    _invalidate_api_list_cache(user_id)
+    return response(HTTPCode.SUCCESS, {"schedule": result[0]})
+
+def delete_schedule(request):
+    """Deletes a scan schedule."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
+
+    deleted = db_manager.delete("scheduled_scans", filters={"api_id": api_id, "user_id": user_id})
+    if not deleted:
+        return not_found("No schedule found for this API to delete.")
+    
+    _invalidate_api_list_cache(user_id)
+    return success({"message": "Schedule deleted successfully."})
+
+# NOTE: This function is for the cron job runner.
+# It should be called by a separate, scheduled script.
+def check_and_run_scheduled_scans():
+    """
+    This function should be run periodically by a scheduler (e.g., a cron job).
+    It finds and starts scans that are due to run.
+    """
+    log_with_timestamp("Checking for scheduled scans to run...")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    # Find schedules that are enabled and past their due time
+    due_scans = db_manager.select_with_filter("scheduled_scans", filters=[
+        ("is_enabled", "eq", True),
+        ("next_run_at", "lte", now_iso)
+    ])
+
+    if not due_scans:
+        log_with_timestamp("No scans are due.")
+        return
+
+    for schedule in due_scans:
+        log_with_timestamp(f"Running scheduled scan for API {schedule['api_id']}")
+        try:
+            scan_manager = _get_or_create_scan_manager(schedule['user_id'], schedule['api_id'])
+            if not scan_manager:
+                log_with_timestamp(f"Could not find API Client for {schedule['api_id']}. Skipping.")
+                continue
+
+            # Start the scan
+            scan_manager.run_scan(schedule['api_id'], schedule['user_id'])
+            
+            # Calculate the next run time and update the schedule
+            now = datetime.now(timezone.utc)
+            if schedule['frequency'] == 'daily':
+                next_run_at = now + timedelta(days=1)
+            elif schedule['frequency'] == 'weekly':
+                next_run_at = now + timedelta(weeks=1)
+            else: # monthly
+                next_run_at = now + timedelta(days=30)
+            
+            db_manager.update("scheduled_scans", 
+                data={"next_run_at": next_run_at.isoformat(), "updated_at": now.isoformat()},
+                filters={"id": schedule['id']}
+            )
+            log_with_timestamp(f"Successfully started scan for API {schedule['api_id']}. Next run at {next_run_at.isoformat()}")
+
+        except Exception as e:
+            log_with_timestamp(f"Error processing scheduled scan for API {schedule['api_id']}: {e}")
+
 # === Scans ===
+# In main.py
+
 def create_scan(request):
-    client_id = request.get("data", {}).get("client_id")
-    api_name = request.get("data", {}).get("api_name")
-    scan_profile = request.get("scan_profile", "OWASP_API_10")
-    # client = CLIENT_STORE.get(client_id)
-    client = GLOBAL_CLIENT_ID # temp
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    api_key_1 = request.get("data", {}).get("api_key_1")
+    api_key_2 = request.get("data", {}).get("api_key_2") # This can be None or an empty string
 
-    if not client:
-        return not_found(f"{client_id} not found")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id' field")
 
-    try:
-        sm = ScanManager(GLOBAL_API_CLIENT)
-        GLOBAL_SCAN_MANAGER.createScan(scan_profile)
-        return response(HTTPCode.SUCCESS, {"message": "Success"})
-    except Exception as e:
-        return server_error(str(e))
+    # The frontend requires at least one key, but we add a backend check for robustness.
+    if not api_key_1:
+        return bad_request("At least one API key is required to create a scan.")
+
+    # This helper function ensures the APIClient object is loaded into memory.
+    scan_manager = _get_or_create_scan_manager(user_id, api_id)
+    if not scan_manager:
+        return not_found("API client not found, cannot create scan.")
+    
+    # Retrieve the cached APIClient instance to set the tokens.
+    api_client = _get_api_client(user_id, api_id)
+    if not api_client:
+        return not_found("API client could not be loaded, cannot configure scan.")
+    
+    log_with_timestamp(f"Setting API keys for scan on API {api_id}")
+    api_client.set_auth_token(api_key_1)
+
+    # The secondary key is optional. Set it if provided.
+    if api_key_2:
+        api_client.set_secondary_auth_token(api_key_2)
+        log_with_timestamp("Secondary API key has been set for the scan.")
+    else:
+        # Important: Clear any old secondary token to prevent it from being used
+        # in a scan where it wasn't provided.
+        api_client.set_secondary_auth_token("")
+
+
+    return success({"message": "Scan session created and keys configured. Ready to start."})
+
+# In main.py, update start_scan
 
 def start_scan(request): 
-    api_name = request.get("data", {}).get("api_name")
-    scan_profile = request.get("data", {}).get("scan_profile", "OWASP_API_10")
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing 'user_id' or 'api_id' field")
 
-    if not api_name:
-        return not_found(f"{api_name} not found")
+    if not _verify_api_access(user_id, api_id, minimum_level='manage'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to start a scan for this API."})
+
+    scan_manager = _get_or_create_scan_manager(user_id, api_id)
+    if not scan_manager:
+        return not_found("API client not found, cannot start scan.")
 
     try:
-        scan_id = GLOBAL_SCAN_MANAGER.runScan(ScanProfiles.DEFAULT)
-        return success({"scan_id": scan_id})
+        scan_id = scan_manager.run_scan(api_id, user_id)
+        if scan_id:
+            return success({"scan_id": scan_id})
+        else:
+            return server_error("Failed to start scan or retrieve scan ID.")
     except Exception as e:
+        log_with_timestamp(f"Error during start_scan: {e}")
+        return server_error(str(e))
+
+# main.py
+
+def get_scan_status(request):
+    """Checks the status of a scan and returns results if completed."""
+    scan_id = request.get("data", {}).get("scan_id")
+    if not scan_id:
+        return bad_request("Missing 'scan_id' field")
+
+    try:
+        # Query the database directly for the scan's status
+        scan_data = db_manager.select("scans", filters={"id": scan_id})
+        if not scan_data:
+            return not_found(f"Scan with ID {scan_id} not found.")
+
+        scan_info = scan_data[0]
+        status = scan_info.get("status")
+
+        if status == 'completed':
+            # FIX: Load the APIClient associated with this scan before creating the ScanManager
+            api_id = scan_info.get("api_id")
+            if not api_id:
+                return server_error(f"Scan {scan_id} is missing an api_id.")
+
+            # Load the full APIClient object from the database
+            api_client = APIClient.load_from_db(api_id)
+            if not api_client:
+                return not_found(f"Could not load APIClient for api_id {api_id}. It may have been deleted.")
+
+            # Now, initialize ScanManager with the fully loaded api_client
+            scan_manager = ScanManager(api_client) 
+            
+            # This call will now succeed because the manager has a valid client
+            scan_details = scan_manager.get_scan_details(scan_id)
+            
+            return success({
+                "status": "completed",
+                "results": scan_details
+            })
+        else:
+            # If running, pending, or failed, just return the status
+            return success({"status": status})
+
+    except Exception as e:
+        log_with_timestamp(f"Error in get_scan_status: {e}")
+        return server_error(str(e))
+
+
+def get_scan_results(request):
+    """
+    Checks the status of a scan. If 'completed', it returns the full details 
+    including the scan info and all associated vulnerability results.
+    """
+    scan_id = request.get("data", {}).get("scan_id")
+    if not scan_id:
+        return bad_request("Missing 'scan_id' field")
+
+    try:
+        # First, get the main scan record to check its status
+        scan_data = db_manager.select("scans", filters={"id": scan_id})
+        if not scan_data:
+            return not_found(f"Scan with ID {scan_id} not found.")
+
+        scan_info = scan_data[0]
+        status = scan_info.get("status")
+
+        # If the scan is complete, fetch its detailed results
+        if status == 'completed':
+            # We can reuse the ScanManager's logic to fetch and parse results
+            scan_manager = ScanManager(None) # No APIClient needed, just for utility
+            scan_details = scan_manager.get_scan_details(scan_id)
+            return success(scan_details)
+        
+        # If the scan is running, failed, or pending, just return that status
+        else:
+            return success({"status": status, "scan_info": scan_info, "results": []})
+
+    except Exception as e:
+        log_with_timestamp(f"Error in get_scan_results: {e}")
+        return server_error(str(e))
+
+
+def get_all_scans(request):
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id:
+        return bad_request("Missing 'user_id' field")
+
+    # PERMISSION CHECK (only if an api_id is specified)
+    if api_id and not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view scan history for this API."})
+
+    try:
+        filters = {"user_id": user_id}
+        if api_id:
+            filters["api_id"] = api_id
+        
+
+        if api_id:
+            del filters["user_id"] 
+
+        all_scans = db_manager.select("scans", filters=filters)
+        
+        return success({"scans": all_scans})
+    except Exception as e:
+        log_with_timestamp(f"Error in get_all_scans: {e}")
         return server_error(str(e))
 
 def scan_progress(request):
-    scan_id = request.get("scan_id")
-
-    if not scan_id:
-        return not_found(f"{scan_id} not found")
-
-    return success({"scan_id": scan_id, "endpoints_remaining": 0})
+    report_id = request.get("report_id")
+    if not report_id:
+        return bad_request("Missing 'report_id'")
+    return success({"report_id": report_id, "status": "running", "progress": "50%"})
     
 
 def stop_scan(request): 
-    scan_id= request.get("scan_id")
+    report_id= request.get("report_id")
+    if not report_id:
+        return bad_request("Missing 'report_id'")
+    return success({f"Stop request received for report {report_id}"})
 
-    if not scan_id:
-        return not_found(f"{scan_id} not found")
+def share_api(request):
+    """Shares an API with another user by their email address."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    share_with_email = request.get("data", {}).get("email")
+    permission = request.get("data", {}).get("permission", "read")
 
-    return success({f"{scan_id} stopped"})
+    if not all([owner_user_id, api_id, share_with_email]):
+        return bad_request("Missing owner_user_id, api_id, or email.")
 
-def get_scan_results(request):
-    scan_id = request.get("data", {}).get("scan_id")
+    # 1. Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API or it does not exist."})
 
-    if not scan_id:
-        return not_found(f"{scan_id} missing")
+    # 2. Find the user to share with
+    target_user = db_manager.select("users", columns="id", filters={"email": share_with_email})
+    if not target_user:
+        return not_found(f"User with email '{share_with_email}' not found.")
+    
+    target_user_id = target_user[0]['id']
 
-    try:
-        scans = GLOBAL_SCAN_MANAGER.get_scan(scan_id)
+    if target_user_id == owner_user_id:
+        return bad_request("You cannot share an API with yourself.")
 
-        if not scans:
-            return not_found(f"{scan_id} not found")
+    # 3. Check for existing share to either update or insert
+    share_data = {"api_id": api_id, "user_id": target_user_id, "permission": permission}
+    existing_share = db_manager.select("api_access", filters={"api_id": api_id, "user_id": target_user_id})
+    
+    if existing_share:
+        result = db_manager.update("api_access", data={"permission": permission}, filters={"api_id": api_id, "user_id": target_user_id})
+        message = "API share permission updated successfully."
+    else:
+        result = db_manager.insert("api_access", data=share_data)
+        message = "API shared successfully."
 
-        scan_results = []
-        # Handle nested structure (same as your test code)
-        for scan_group in scans:  # First level
-            for scan in scan_group:  # Second level
-                scan_results.append({
-                    "endpoint_id": scan.endpoint.id,
-                    "vulnerability_name": scan.vulnerability_name,
-                    "severity": scan.severity,
-                    "cvss_score": float(scan.cvss_score),
-                    "description": scan.description,
-                    "recommendation": scan.recommendation,
-                    "evidence": scan.evidence,
-                    "test_name": scan.test_name,
-                    "affected_params": scan.affected_params,
-                    "timestamp": (
-                        scan.timestamp.isoformat()
-                        if isinstance(scan.timestamp, datetime)
-                        else str(scan.timestamp)
-                    ),
-                })
+    if not result:
+        return server_error("Failed to save API share information.")
+        
+    return success({"message": message})
 
-        return success({"result": scan_results})
 
-    except Exception as e:
-        return server_error(str(e))
+def get_api_shares(request):
+    """Retrieves a list of users an API is shared with."""
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
 
-def get_all_scans(request):
-    try:
-        all_scans = GLOBAL_SCAN_MANAGER.get_all_scans()
+    if not all([user_id, api_id]):
+        return bad_request("Missing user_id or api_id.")
+        
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view shares for this API."})
+        
+    access_records = db_manager.select("api_access", columns="user_id, permission", filters={"api_id": api_id})
+    if not access_records:
+        return success({"shares": []})
+        
+    user_ids = [rec['user_id'] for rec in access_records]
+    users_info = db_manager.select("users", columns="id, email, first_name, last_name", filters={"id": user_ids})
+    
+    user_map = {user['id']: user for user in users_info}
+    
+    shares = []
+    for rec in access_records:
+        user_info = user_map.get(rec['user_id'])
+        if user_info:
+            shares.append({
+                "user_id": user_info['id'],
+                "email": user_info['email'],
+                "name": f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+                "permission": rec['permission']
+            })
+            
+    return success({"shares": shares})
 
-        if not all_scans:
-            return not_found("No scans found")
+def revoke_api_access(request):
+    """Revokes a user's access to a specific API."""
+    owner_user_id = request.get("data", {}).get("owner_user_id")
+    api_id = request.get("data", {}).get("api_id")
+    revoke_user_id = request.get("data", {}).get("revoke_user_id")
 
-        result_map = {}
+    if not all([owner_user_id, api_id, revoke_user_id]):
+        return bad_request("Missing owner_user_id, api_id, or revoke_user_id.")
 
-        for scan_id, scan_groups in all_scans.items():
-            if not scan_groups:
-                continue
+    # Verify ownership
+    api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": owner_user_id})
+    if not api_owner:
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not own this API."})
+        
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": revoke_user_id})
+    
+    if not deleted:
+        return not_found("Access record not found for this user and API.")
+        
+    return success({"message": "API access revoked successfully."})
 
-            scan_results = []
-            for scan_group in scan_groups:
-                for scan in scan_group:
-                    try:
-                        scan_results.append({
-                            "endpoint_id": scan.endpoint.id,
-                            "vulnerability_name": scan.vulnerability_name,
-                            "severity": scan.severity,
-                            "cvss_score": float(scan.cvss_score),
-                            "description": scan.description,
-                            "recommendation": scan.recommendation,
-                            "evidence": scan.evidence,
-                            "test_name": scan.test_name,
-                            "affected_params": scan.affected_params,
-                            "timestamp": (
-                                scan.timestamp.isoformat()
-                                if hasattr(scan.timestamp, 'isoformat')
-                                else str(scan.timestamp)
-                            ),
-                        })
-                    except AttributeError as e:
-                        print(f"Skipping malformed scan entry: {e}")
-                        continue
+# Add this new function to main.py
+def leave_api_share(request):
+    """Allows a user to remove their own access from a shared API."""
+    user_id = request.get("data", {}).get("user_id") # The user who is leaving
+    api_id = request.get("data", {}).get("api_id")
+    if not user_id or not api_id:
+        return bad_request("Missing user_id or api_id")
 
-            if scan_results:  # Only add if we found valid scans
-                result_map[scan_id] = scan_results
-
-        if not result_map:
-            return not_found("No valid scan results found")
-
-        return success({"result": result_map})
-
-    except Exception as exc:
-        return server_error(str(exc))
+    deleted = db_manager.delete("api_access", filters={"api_id": api_id, "user_id": user_id})
+    if not deleted:
+        return not_found("API access record not found for this user. Nothing to remove.")
+    
+    return success({"message": "You have successfully left the API share."})
 
 def set_api_key(request):
-    apiKey = request.get("api_key")
-    GLOBAL_API_CLIENT.set_auth_token(apiKey)
+    user_id = request.get("data", {}).get("user_id")
+    api_id = request.get("data", {}).get("api_id")
+    api_key = request.get("data", {}).get("api_key")
+    if not all([user_id, api_id, api_key]):
+        return bad_request("Missing 'user_id', 'api_id', or 'api_key'")
+
+    client = _get_api_client(user_id, api_id)
+    if not client:
+        return not_found("API client not found.")
+
+    client.set_auth_token(api_key)
     return response(HTTPCode.SUCCESS, {"message": "api key set"})
 
 
 # === Repots ===
-def get_all_reports(request): 
+
+def download_report(request):
+    scan_id = request.get("data", {}).get("scan_id")
+    report_type = request.get("data", {}).get("report_type") # "technical" or "executive"
+    user_id = request.get("data", {}).get("user_id") # We need user_id for the check
+
+    if not all([scan_id, report_type, user_id]):
+        return bad_request("Missing 'scan_id', 'report_type', or 'user_id'")
+
+    try:
+        # First, find which API this scan belongs to
+        scan_record = db_manager.select("scans", columns="api_id", filters={"id": scan_id})
+        if not scan_record:
+            return not_found("Scan not found.")
+        api_id = scan_record[0]['api_id']
+
+        # PERMISSION CHECK: User must have at least 'view' rights on the parent API
+        if not _verify_api_access(user_id, api_id, minimum_level='view'):
+            return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to download reports for this API."})
+
+        # Step 1: Fetch scan results from the database
+        scan_results_data = db_manager.select("scan_results", filters={"scan_id": scan_id})
+        if not scan_results_data:
+            return not_found("No results found for this scan.")
+        
+        # ... (rest of the function is unchanged)
+
+        # Step 2: Fetch corresponding endpoint details for context
+        endpoint_ids = list(set(res['endpoint_id'] for res in scan_results_data))
+        endpoints_data = db_manager.select("endpoints", filters={"id": endpoint_ids})
+        endpoints_map = {ep['id']: ep for ep in endpoints_data}
+
+        # Step 3: Create mock objects that the ReportGenerator can understand
+        # This avoids complex object reconstruction and fits the generator's expected input structure.
+        class MockEndpoint:
+            def __init__(self, data):
+                self.path = data.get('url', 'N/A')
+                self.method = data.get('method', 'N/A')
+
+        class MockScanResult:
+            def __init__(self, data, endpoint):
+                self.vulnerability_name = data.get('vulnerability_name')
+                self.description = data.get('description')
+                self.severity = data.get('severity')
+                self.owasp_category = data.get('owasp_category')
+                self.endpoint = endpoint
+                self.recommendation = data.get('recommendation')
+                # Add other fields if your executive report needs them
+        
+        scan_results_for_report = []
+        for res in scan_results_data:
+            endpoint_data = endpoints_map.get(res['endpoint_id'])
+            if endpoint_data:
+                mock_endpoint = MockEndpoint(endpoint_data)
+                mock_result = MockScanResult(res, mock_endpoint)
+                scan_results_for_report.append(mock_result)
+
+        # Step 4: Generate the report in-memory
+        report_generator = ReportGenerator()
+        filename = f"{report_type}_report_{scan_id}.pdf"
+        
+        # This will call the updated report generator function which returns PDF bytes
+        pdf_bytes = report_generator.generate_report(
+            report_type=report_type,
+            scan_results=scan_results_for_report,
+            return_bytes=True # New flag to indicate we want bytes back
+        )
+
+        if not pdf_bytes:
+            return server_error("Report generation failed to return data.")
+
+        # Step 5: Encode as base64 and send back
+        encoded_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        return success({
+            "filename": filename,
+            "file_data": encoded_pdf
+        })
+
+    except Exception as e:
+        log_with_timestamp(f"Error in download_report: {e}")
+        return server_error(str(e))
+        
+def get_techincal_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate techinical report
+        # We can either save this to a known location to the api or send the raw pdf data
     return server_error("Not yet implemented")
 
-def get_report_details(request): 
+def get_executive_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate exectuive report
+        # We can either save this to a known location to the api or send the raw pdf data
     return server_error("Not yet implemented")
+
+
 
 # === Templates ===
-def get_all_templates(request): 
-    return server_error("Not yet implemented")
-
-def get_template_details(request): 
-    return server_error("Not yet implemented")
-
-def use_template(request): 
-    return server_error("Not yet implemented")
+def get_all_templates(request): return server_error("Not yet implemented")
+def get_template_details(request): return server_error("Not yet implemented")
+def use_template(request): return server_error("Not yet implemented")
 
 # === User Profile ===
-def get_profile(request): 
-    return server_error("Not yet implemented")
+def get_profile(request): return server_error("Not yet implemented")
+def update_profile(request): return server_error("Not yet implemented")
+def get_settings(request): return server_error("Not yet implemented")
+def update_settings(request): return server_error("Not yet implemented")
 
-def update_profile(request): 
-    return server_error("Not yet implemented")
-
-def get_settings(request): 
-    return server_error("Not yet implemented")
-
-def update_settings(request): 
-    return server_error("Not yet implemented")
-
+# === Auth Stubs ===
+def auth_register(request): return server_error("Not yet implemented")
+def auth_login(request): return server_error("Not yet implemented")
+def auth_google(request): return server_error("Not yet implemented")
+def auth_logout(request): return server_error("Not yet implemented")
 
 # === handle_request ===
-#turning this into a map might be more efficient hmmmmm
 def handle_request(request: dict):
     command = request.get("command")
 
-    if command == "connection.test":
-        response = connection_test()
-        return response
+    routes = {
+        "connection.test": connection_test,
+        "auth.register": auth_register,
+        "auth.login": auth_login,
+        "auth.google": auth_google,
+        "auth.logout": auth_logout,
+        "dashboard.overview": dashboard_overview,
+        "dashboard.metrics": dashboard_metrics,
+        "dashboard.alerts": dashboard_alerts,
+        "apis.get_all": get_all_apis,
+        "apis.create": create_api,
+        "apis.details": get_api_details,
+        "apis.update": update_api,
+        "apis.delete": delete_api,
+        "apis.import_file": import_file,
+        "apis.import_url": import_url,
+        "endpoints.list": get_api_endpoints,
+        "endpoints.details": get_endpoint_details,
+        "endpoints.tags.add": add_tags,
+        "endpoints.tags.remove": remove_tags,
+        "endpoints.tags.replace": replace_tags,
+        "tags.list": get_all_tags,
+        "endpoints.flags.add": add_flags,
+        "endpoints.flags.remove": remove_flags,
+        "scan.create": create_scan,
+        "scan.results": get_scan_results,
+        "scan.start": start_scan,
+        "scan.status": get_scan_status,
+        "scan.stop": stop_scan,
+        "scan.list": get_all_scans,
+        "scans.schedule.get": get_schedule,
+        "scans.schedule.create_or_update": create_or_update_schedule,
+        "scans.schedule.delete": delete_schedule,
+        "apis.share": share_api,
+        "apis.shares.list": get_api_shares,
+        "apis.shares.revoke": revoke_api_access,
+        "apis.shares.leave": leave_api_share, 
+        "templates.list": get_all_templates,
+        "templates.details": get_template_details,
+        "templates.use": use_template,
+        "user.profile.get": get_profile,
+        "user.profile.update": update_profile,
+        "user.settings.get": get_settings,
+        "user.settings.update": update_settings,
+        "reports.tech": get_techincal_report,
+        "reports.exec": get_executive_report,
+        "reports.download": download_report,
+        "apis.key.set": set_api_key,
+    }
 
-    if command == "auth.register":
-        response = auth_register(request)
-        return response
-
-    if command == "auth.login":
-        response = auth_login(request)
-        return response
-
-    elif command == "auth.google":
-        response = auth_google(request)
-        return response
-
-    elif command == "auth.logout":
-        response = auth_logout(request)
-        return response
-
-    elif command == "dashboard.overview":
-        response = dashboard_overview(request)
-        return response
-
-    elif command == "dashboard.metrics":
-        response = dashboard_metrics(request)
-        return response
-
-    elif command == "dashboard.alerts":
-        response = dashboard_alerts(request)
-        return response
-
-    elif command == "apis.get_all":
-        response = get_all_apis(request)
-        return response
-
-    elif command == "apis.create":
-        response = create_api(request)
-        return response
-
-    elif command == "apis.details":
-        response = get_api_details(request)
-        return response
-
-    elif command == "apis.update":
-        response = update_api(request)
-        return response
-
-    elif command == "apis.delete":
-        response = delete_api(request)
-        return response
-
-    elif command == "apis.import_file":
-        response = import_file(request)
-        return response
-
-    elif command == "apis.import_url":
-        response = import_url(request)
-        return response
-
-    elif command == "endpoints.list":
-        response = get_api_endpoints(request)
-        return response
-
-    elif command == "endpoints.details":
-        response = get_endpoint_details(request)
-        return response
-
-    elif command == "endpoints.tags.add":
-        response = add_tags(request)
-        return response
-
-    elif command == "endpoints.tags.remove":
-        response = remove_tags(request)
-        return response
-
-    elif command == "endpoints.tags.replace":
-        response = replace_tags(request)
-        return response
-
-    elif command == "tags.list":
-        response = get_all_tags(request)
-        return response
-
-    elif command == "endpoints.flags.add":
-        response = add_flags(request)
-        return response
-
-    elif command == "endpoints.flags.remove":
-        response = remove_flags(request)
-        return response 
-
-    elif command == "scan.create":
-        response = create_scan(request)
-        return response
-
-    elif command == "scan.results":
-        response = get_scan_results(request)
-        return response
-
-    elif command == "scan.start":
-        response = start_scan(request)
-        return response
-
-    elif command == "scan.stop":
-        response = stop_scan(request)
-        return response
-
-    elif command == "scan.list":
-        response = get_all_scans(request)
-        return response
-
-    elif command == "templates.list":
-        response = get_all_templates(request)
-        return response
-
-    elif command == "templates.details":
-        response = get_template_details(request)
-        return response
-
-    elif command == "templates.use":
-        response = use_template(request)
-        return response
-
-    elif command == "user.profile.get":
-        response = get_profile(request)
-        return response
-
-    elif command == "user.profile.update":
-        response = update_profile(request)
-        return response
-
-    elif command == "user.settings.get":
-        response = get_settings(request)
-        return response
-
-    elif command == "user.settings.update":
-        response = update_settings(request)
-        return response
-
-    elif command == "reports.list":
-        response = get_all_reports(request)
-        return response
-
-    elif command == "reports.details":
-        response = get_report_details(request)
-        return response
-
-    elif command == "reports.download":
-        response = download_report(request)
-        return response
-
-    elif command == "apis.key.set":
-        response = set_api_key(request)
-        return response
-
+    handler = routes.get(command)
+    if handler:
+        return handler(request)
     else:
         return bad_request(f"Unknown command '{command}'")
 
+# === Server Execution Logic ===
 def run_server():
-    print(f"[ATAT] Listening on {HOST}:{PORT}")
+    log_with_timestamp(f"[ATAT] Listening on {HOST}:{PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((HOST, PORT))
         s.listen(5)
         
         running = True
-        
         def signal_handler(sig, frame):
             nonlocal running
-            print("\n[ATAT] Shutting down server gracefully...")
+            log_with_timestamp("\n[ATAT] Shutting down server gracefully...")
             running = False
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as dummy:
-                    dummy.connect((HOST, PORT))
-            except:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as dummy_socket:
+                    dummy_socket.settimeout(1.0)
+                    dummy_socket.connect((HOST, PORT))
+            except (ConnectionRefusedError, socket.timeout):
                 pass
         
         signal.signal(signal.SIGINT, signal_handler)
         
         while running:
             try:
-                s.settimeout(1)
+                s.settimeout(1.0)
                 conn, addr = s.accept()
-                print(f"Connection from: {addr}")
-                s.settimeout(None)
                 with conn:
-                    print("New connection")
+                    log_with_timestamp(f"[CONNECTION] Accepted from: {addr}")
+                    conn.settimeout(2.0)
+                    
                     data = b""
-                    
-                    # Remove timeout for client socket
-                    # conn.settimeout(None)
-                    
-                    while True:
-                        chunk = conn.recv(4096)
-                        print(f'Received {len(chunk)} bytes')
-                        if not chunk:
-                            break
-                        data += chunk
-                        
+                    try:
+                        while True:
+                            chunk = conn.recv(4096)
+                            if not chunk: break
+                            data += chunk
+                    except socket.timeout:
+                        log_with_timestamp(f"[INFO] Socket timeout for {addr}. Assuming end of message.")
+                        pass
+
+                    if data:
                         try:
-                            # Attempt to parse JSON
                             request = json.loads(data.decode())
-                            print(f"[RECV] {request}")
-                            
-                            # Process request
-                            response = handle_request(request)
-                            response_bytes = json.dumps(response).encode()
-                            conn.sendall(response_bytes)
-                            print(f"[SEND] {response}")
-                            break
-                            
+                            log_with_timestamp(f"[RECV] From {addr}: {request}")
+                            response_data = handle_request(request)
                         except json.JSONDecodeError:
-                            # Incomplete JSON - continue reading
-                            print("Incomplete JSON, waiting for more data")
-                            continue
+                            log_with_timestamp(f"[ERROR] Malformed JSON from {addr}")
+                            response_data = bad_request("Malformed JSON received.")
                         except Exception as e:
-                            print(f"Error processing request: {e}")
-                            response = server_error(str(e))
-                            response_bytes = json.dumps(response).encode()
-                            conn.sendall(response_bytes)
-                            break
+                            log_with_timestamp(f"[ERROR] Unhandled exception from {addr}: {e}")
+                            response_data = server_error(str(e))
+                        
+                        # FIX: Ensure the enum value is used for JSON serialization
+                        if 'code' in response_data and isinstance(response_data['code'], HTTPCode):
+                            response_data['code'] = response_data['code'].value
+
+                        response_bytes = json.dumps(response_data).encode()
+                        conn.sendall(response_bytes)
+                        log_with_timestamp(f"[SEND] To {addr}: {response_data}")
             except socket.timeout:
                 continue
-            except OSError as e:
-                if running:
-                    print(f"[ERROR] {e}")
-                break
             except Exception as e:
                 if running:
-                    print(f"[UNEXPECTED ERROR] {e}")
-    
-    print("[ATAT] Server has shut down")
-
+                    log_with_timestamp(f"[ERROR] Server loop error: {e}")
+        
+    log_with_timestamp("[ATAT] Server has shut down.")
 
 if __name__ == "__main__":
     run_server()
+

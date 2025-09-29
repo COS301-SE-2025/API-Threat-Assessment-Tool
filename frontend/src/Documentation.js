@@ -96,15 +96,13 @@ const Documentation = () => {
       <header className="documentation-header">
         <div className="logo">
           <Logo />
-          <span className="logo-text">AT-AT</span>
         </div>
         <nav className="documentation-nav">
-          <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
-          <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
-          <Link to="/public-templates" className={location.pathname === '/public-templates' ? 'active' : ''}>Public Templates</Link>
-          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
-          <Link to="/manage-apis" className={location.pathname === '/manage-apis' ? 'active' : ''}>Manage APIs</Link>
-        </nav>
+                  <Link to="/home" className={location.pathname === '/home' ? 'active' : ''}>Home</Link>
+                  <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>
+                  <Link to="/manage-apis" className={location.pathname === '/manage-apis' ? 'active' : ''}>API Management</Link>
+                  <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
+                </nav>
         <div className="user-info">
           <div className="user-profile">
             <span className="user-avatar">
@@ -134,39 +132,10 @@ const Documentation = () => {
             <p className="hero-description">
               Comprehensive guides and tutorials to help you master API security testing with AT-AT
             </p>
-            <div className="hero-actions">
-              <Link to="/dashboard" className="cta-btn">
-                🚀 Start Scanning
-              </Link>
-              <Link to="#getting-started" className="cta-btn secondary">
-                📚 Quick Start Guide
-              </Link>
-            </div>
           </div>
         </section>
 
         {/* Search Bar */}
-        <section className="search-container">
-          <div className="search-input-wrapper">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search documentation..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="search-clear"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </section>
 
         {/* Quick Actions */}
         <section className="quick-actions-section">
@@ -573,14 +542,14 @@ const Documentation = () => {
       </main>
 
       <footer className="documentation-footer">
-        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links">
-          <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>
-          <a href="#" onClick={(e) => e.preventDefault()}>Terms of Service</a>
-          <a href="#" onClick={(e) => e.preventDefault()}>Help Center</a>
-          <a href="#" onClick={(e) => e.preventDefault()}>Status Page</a>
-        </div>
-      </footer>
+              <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+              <div className="footer-links">
+                <Link to="/privacy">Privacy Policy</Link>
+                <Link to="/terms">Terms of Service</Link>
+                <Link to="/documentation">Documentation</Link>
+                <Link to="/contact">Contact Us</Link>
+              </div>
+            </footer>
     </div>
   );
 };

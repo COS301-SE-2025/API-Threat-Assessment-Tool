@@ -1,4 +1,4 @@
-// tests/mocks/engineMock.js
+// tests/mocks/engineMock.js - Updated with better error handling and response consistency
 const net = require('net');
 
 class MockEngine {
@@ -6,54 +6,21 @@ class MockEngine {
     this.port = port;
     this.server = null;
     this.isRunning = false;
-    
-    // Initialize mock data - this simulates the Python backend state
+    this.errorMode = false;
     this.reset();
   }
 
   reset() {
-    // Reset to initial state - simulates Python backend globals
-    this.mockData = {
-      globalApi: {
-        title: 'Mock API',
-        version: '1.0.0',
-        base_url: 'https://api.mock.com',
-        endpoints: [
-          {
-            id: 'endpoint_1',
-            path: '/users',
-            method: 'GET',
-            summary: 'Get all users',
-            description: 'Retrieve a list of all users',
-            tags: ['users', 'public'] // Start with these base tags
-          },
-          {
-            id: 'endpoint_2',
-            path: '/users',
-            method: 'POST',
-            summary: 'Create user',
-            description: 'Create a new user',
-            tags: ['users', 'create']
-          },
-          {
-            id: 'endpoint_3',
-            path: '/test',
-            method: 'GET',
-            summary: 'Test endpoint',
-            description: 'Test endpoint for API validation',
-            tags: ['test']
-          }
-        ]
-      },
-      apis: {},
-      hasImportedApi: true // Track if an API has been imported
-    };
+    this.errorMode = false;
+    this.requestCount = 0;
+  }
+
+  setErrorMode(enabled) {
+    this.errorMode = enabled;
   }
 
   async start() {
-    if (this.isRunning) {
-      return;
-    }
+    if (this.isRunning) return;
 
     return new Promise((resolve, reject) => {
       this.server = net.createServer((socket) => {
@@ -61,68 +28,39 @@ class MockEngine {
 
         socket.on('data', (chunk) => {
           data += chunk.toString();
+        });
 
+        socket.on('end', () => {
           try {
             const request = JSON.parse(data);
-            console.log(`Mock Engine received: ${request.command}`);
-            
             const response = this.handleRequest(request);
-            console.log(`Mock Engine responding with code: ${response.code}`);
-            
             socket.write(JSON.stringify(response));
-            socket.end();
           } catch (err) {
-            // Not complete JSON yet, continue reading
-            if (err instanceof SyntaxError) {
-              return;
-            }
-            
-            console.error('Mock Engine error:', err);
-            const errorResponse = {
-              code: 500,
-              data: err.message
-            };
-            
-            try {
-              socket.write(JSON.stringify(errorResponse));
-              socket.end();
-            } catch (writeErr) {
-              console.error('Failed to write error response:', writeErr);
-              socket.destroy();
-            }
+            const errorResponse = { code: 500, data: 'Mock Engine Error' };
+            socket.write(JSON.stringify(errorResponse));
           }
+          socket.end();
         });
 
         socket.on('error', (err) => {
-          console.error('Mock Engine socket error:', err);
-        });
-
-        socket.on('close', () => {
-          // Connection closed, cleanup if needed
+          console.warn('Mock Engine socket error:', err.message);
         });
       });
 
       this.server.listen(this.port, '127.0.0.1', () => {
-        console.log(`Mock Engine listening on port ${this.port}`);
         this.isRunning = true;
         resolve();
       });
 
-      this.server.on('error', (err) => {
-        console.error('Mock Engine server error:', err);
-        reject(err);
-      });
+      this.server.on('error', reject);
     });
   }
 
   async stop() {
-    if (!this.isRunning || !this.server) {
-      return;
-    }
+    if (!this.isRunning || !this.server) return;
 
     return new Promise((resolve) => {
       this.server.close(() => {
-        console.log('Mock Engine stopped');
         this.isRunning = false;
         resolve();
       });
@@ -130,289 +68,170 @@ class MockEngine {
   }
 
   handleRequest(request) {
-    try {
-      const { command, data } = request;
+    this.requestCount++;
 
-      console.log(`Mock Engine handling command: ${command} with data:`, data);
-
-      switch (command) {
-        case 'apis.import_file':
-          return this.handleImportFile(data);
-        
-        case 'endpoints.list':
-          return this.handleListEndpoints(data);
-        
-        case 'endpoints.details':
-          return this.handleEndpointDetails(data);
-        
-        case 'endpoints.tags.add':
-          return this.handleAddTags(data);
-        
-        case 'endpoints.tags.remove':
-          return this.handleRemoveTags(data);
-        
-        case 'endpoints.tags.replace':
-          return this.handleReplaceTags(data);
-        
-        case 'tags.list':
-          return this.handleListTags(data);
-        
-        default:
-          console.log(`Mock Engine: Unknown command: ${command}`);
-          return {
-            code: 400,
-            data: `Unknown command: ${command}`
-          };
-      }
-    } catch (error) {
-      console.error('Mock Engine error handling request:', error);
-      return {
-        code: 500,
-        data: `Mock Engine error: ${error.message}`
-      };
-    }
-  }
-
-  handleImportFile(data) {
-    const { file } = data;
-    if (!file) {
-      return {
-        code: 400,
-        data: 'Missing file parameter'
-      };
+    if (this.errorMode) {
+      return { code: 500, data: 'Simulated engine error' };
     }
 
-    // Simulate successful import
-    this.mockData.hasImportedApi = true;
-    const clientId = 'global';
-    
-    return {
-      code: 200,
-      data: {
-        client_id: clientId
-      }
-    };
-  }
+    const { command, data = {} } = request;
 
-  handleListEndpoints(data) {
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
+    switch (command) {
+      case 'connection.test':
+        return { code: 200, data: { status: 'connected', message: 'Mock engine responding' } };
+      
+      case 'apis.import_file':
+        if (!data.user_id || !data.file) {
+          return { code: 400, data: 'Missing required fields: user_id, file' };
+        }
+        return { code: 200, data: { api_id: `mock_api_${Date.now()}`, filename: data.file } };
+      
+      case 'dashboard.overview':
+        if (!data.user_id) {
+          return { code: 400, data: 'Missing user_id field' };
+        }
+        return {
+          code: 200,
+          data: {
+            total_apis: 2,
+            total_scans: 5,
+            total_vulnerabilities: 12,
+            critical_vulnerabilities: 3,
+            vulnerabilities_by_severity: { CRITICAL: 3, HIGH: 4, MEDIUM: 3, LOW: 2 },
+            recent_scans: [],
+            scan_activity_weekly: [],
+            top_vuln_types: []
+          }
+        };
+      
+      case 'apis.get_all':
+        if (!data.user_id) {
+          return { code: 400, data: 'Missing user_id field' };
+        }
+        return {
+          code: 200,
+          data: {
+            apis: [{
+              id: 'mock_api_123',
+              name: 'Mock API',
+              version: '1.0.0',
+              created_at: new Date().toISOString(),
+              vulnerabilitiesFound: 5,
+              lastScanned: new Date().toISOString().split('T')[0],
+              scanStatus: 'Completed',
+              permission: 'owner'
+            }]
+          }
+        };
+      
+      case 'endpoints.list':
+        if (!data.user_id) {
+          return { code: 400, data: 'Missing user_id field' };
+        }
+        return {
+          code: 200,
+          data: {
+            endpoints: [
+              {
+                id: 'endpoint_1',
+                path: '/users',
+                method: 'GET',
+                summary: 'Get users',
+                tags: ['users', 'public'],
+                flags: []
+              },
+              {
+                id: 'endpoint_2',
+                path: '/users',
+                method: 'POST',
+                summary: 'Create user',
+                tags: ['users', 'create'],
+                flags: []
+              },
+              {
+                id: 'endpoint_3',
+                path: '/test',
+                method: 'GET',
+                summary: 'Test endpoint',
+                tags: ['test'],
+                flags: []
+              }
+            ]
+          }
+        };
+      
+      case 'endpoints.details':
+        return {
+          code: 200,
+          data: {
+            id: data.endpoint_id || 'endpoint_1',
+            path: data.path || '/users',
+            method: data.method || 'GET',
+            summary: 'Endpoint details',
+            description: 'Mock endpoint description',
+            tags: ['mock', 'test'],
+            flags: []
+          }
+        };
+      
+      case 'endpoints.tags.add':
+      case 'endpoints.tags.remove':
+      case 'endpoints.tags.replace':
+        if (!data.path || !data.method || !data.tags) {
+          return { code: 400, data: 'Missing path, method, or tags' };
+        }
+        return {
+          code: 200,
+          data: { tags: Array.isArray(data.tags) ? data.tags : [data.tags] }
+        };
+      
+      case 'endpoints.flags.add':
+      case 'endpoints.flags.remove':
+        if (!data.flags) {
+          return { code: 400, data: 'Missing flags' };
+        }
+        return { code: 200, data: { flags: [data.flags] } };
+      
+      case 'tags.list':
+        return { code: 200, data: { tags: ['users', 'public', 'create', 'test', 'mock'] } };
+      
+      case 'scan.create':
+      case 'scan.start':
+        return {
+          code: 200,
+          data: { scan_id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` }
+        };
+      
+      case 'scan.status':
+      case 'scan.results':
+        return {
+          code: 200,
+          data: {
+            status: 'completed',
+            result: [
+              {
+                endpoint_id: 'endpoint_1',
+                vulnerability_name: 'Mock Vulnerability',
+                severity: 'HIGH',
+                cvss_score: 7.5,
+                description: 'Mock vulnerability description',
+                recommendation: 'Mock recommendation',
+                test_name: 'Mock Test'
+              }
+            ]
+          }
+        };
+      
+      case 'scan.stop':
+        return { code: 200, data: { message: 'Scan stopped' } };
+      
+      case 'scan.list':
+        return { code: 200, data: { scans: [] } };
+      
+      // Handle all other commands with generic success
+      default:
+        return { code: 200, data: { message: `Mock response for ${command}` } };
     }
-
-    return {
-      code: 200,
-      data: {
-        endpoints: this.mockData.globalApi.endpoints
-      }
-    };
-  }
-
-  handleEndpointDetails(data) {
-    // Handle undefined/null data gracefully
-    if (!data) {
-      return {
-        code: 400,
-        data: 'Missing request data'
-      };
-    }
-
-    const { id, path, method } = data;
-    
-    // Match Python backend validation order: path/method first, then id
-    if (!path || !method) {
-      console.log(`Mock: Missing path (${path}) or method (${method})`);
-      return {
-        code: 400,
-        data: 'Missing \'path\' or \'method\''
-      };
-    }
-    
-    if (!id) {
-      console.log(`Mock: Missing id (${id})`);
-      return {
-        code: 400,
-        data: 'Missing \'id\''
-      };
-    }
-
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
-    }
-
-    // Try to find by ID first
-    let endpoint = this.mockData.globalApi.endpoints.find(ep => ep.id === id);
-    
-    // If not found by ID, try to find by path and method as fallback
-    if (!endpoint) {
-      endpoint = this.mockData.globalApi.endpoints.find(
-        ep => ep.path === path && ep.method === method
-      );
-    }
-
-    if (!endpoint) {
-      console.log(`Mock: No endpoint found for id=${id}, path=${path}, method=${method}`);
-      console.log(`Mock: Available endpoints:`, this.mockData.globalApi.endpoints.map(ep => 
-        `{id: ${ep.id}, path: ${ep.path}, method: ${ep.method}}`
-      ));
-      return {
-        code: 404,
-        data: 'Endpoint not found'
-      };
-    }
-
-    return {
-      code: 200,
-      data: endpoint
-    };
-  }
-
-  handleAddTags(data) {
-    const { path, method, tags } = data;
-    
-    if (!path || !method || !tags) {
-      return {
-        code: 400,
-        data: 'Missing path, method, or tags'
-      };
-    }
-
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
-    }
-
-    const endpoint = this.mockData.globalApi.endpoints.find(
-      ep => ep.path === path && ep.method === method
-    );
-
-    if (!endpoint) {
-      console.log(`Mock: No endpoint found for path=${path}, method=${method}`);
-      console.log(`Mock: Available endpoints:`, this.mockData.globalApi.endpoints.map(ep => 
-        `{path: ${ep.path}, method: ${ep.method}}`
-      ));
-      return {
-        code: 404,
-        data: 'Endpoint not found'
-      };
-    }
-
-    // Add tags (merge with existing, remove duplicates)
-    endpoint.tags = [...new Set([...endpoint.tags, ...tags])];
-
-    return {
-      code: 200,
-      data: {
-        tags: endpoint.tags
-      }
-    };
-  }
-
-  handleRemoveTags(data) {
-    const { path, method, tags } = data;
-    
-    if (!path || !method || !tags) {
-      return {
-        code: 400,
-        data: 'Missing path, method, or tags'
-      };
-    }
-
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
-    }
-
-    const endpoint = this.mockData.globalApi.endpoints.find(
-      ep => ep.path === path && ep.method === method
-    );
-
-    if (!endpoint) {
-      return {
-        code: 404,
-        data: 'Endpoint not found'
-      };
-    }
-
-    // Remove specified tags
-    endpoint.tags = endpoint.tags.filter(tag => !tags.includes(tag));
-
-    return {
-      code: 200,
-      data: {
-        tags: endpoint.tags
-      }
-    };
-  }
-
-  handleReplaceTags(data) {
-    const { path, method, tags } = data;
-    
-    if (!path || !method || tags === undefined) {
-      return {
-        code: 400,
-        data: 'Missing path, method, or tags'
-      };
-    }
-
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
-    }
-
-    const endpoint = this.mockData.globalApi.endpoints.find(
-      ep => ep.path === path && ep.method === method
-    );
-
-    if (!endpoint) {
-      return {
-        code: 404,
-        data: 'Endpoint not found'
-      };
-    }
-
-    // Replace all tags
-    endpoint.tags = [...tags];
-
-    return {
-      code: 200,
-      data: {
-        tags: endpoint.tags
-      }
-    };
-  }
-
-  handleListTags(data) {
-    if (!this.mockData.hasImportedApi || !this.mockData.globalApi) {
-      return {
-        code: 404,
-        data: 'No API has been imported yet.'
-      };
-    }
-
-    // Collect all unique tags from all endpoints
-    const allTags = new Set();
-    this.mockData.globalApi.endpoints.forEach(endpoint => {
-      endpoint.tags.forEach(tag => allTags.add(tag));
-    });
-
-    return {
-      code: 200,
-      data: {
-        tags: Array.from(allTags)
-      }
-    };
   }
 }
 

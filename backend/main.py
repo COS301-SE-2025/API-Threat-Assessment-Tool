@@ -816,14 +816,31 @@ def create_scan(request):
 
     return success({"message": "Scan session created and keys configured. Ready to start."})
 
-# In main.py, update start_scan
-
 def start_scan(request): 
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
+    # Get the DOCKER environment variable, defaulting to 'FALSE'
+    is_docker_env = os.getenv('DOCKER', 'FALSE').upper() == 'TRUE'
+
+    # --- New Restriction Logic ---
+    # If the environment is NOT docker, check for local URLs
+    if not is_docker_env:
+        log_with_timestamp("DOCKER env is not 'TRUE'. Checking for localhost URL before starting scan.")
+        api_client = _get_api_client(user_id, api_id)
+        if not api_client:
+            return not_found("API client not found, cannot start scan.")
+
+        # Check the API's base URL for 'localhost' or '127.0.0.1'
+        base_url = api_client.base_url.lower() if api_client.base_url else ""
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+            log_with_timestamp(f"Scan blocked for local API '{api_id}' because DOCKER env is not 'TRUE'.")
+            return response(HTTPCode.FORBIDDEN, {"message": "Scans for local APIs are disabled in this environment."})
+    # --- End of New Logic ---
+
+    # Existing permission check
     if not _verify_api_access(user_id, api_id, minimum_level='manage'):
         return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to start a scan for this API."})
 

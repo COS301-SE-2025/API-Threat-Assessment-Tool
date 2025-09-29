@@ -2018,3 +2018,13 @@
     font-weight: 500;
     color: var(--text-secondary);
 }
+
+.api-local-badge {
+  background: #4b6583;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+  vertical-align: middle;
+}

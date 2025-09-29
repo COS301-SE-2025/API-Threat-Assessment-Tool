@@ -650,6 +650,7 @@ app.get('/', (req, res) => {
       leaveShare: 'DELETE /api/apis/leave-share',
       getShare: 'GET /api/apis/shares',
       postShare: 'POST /api/apis/share',
+      getEnv: 'GET /api/environment',
       connectionTest: 'GET /api/connection/test'
     }
   });
@@ -1837,7 +1838,7 @@ app.post('/api/import', async (req, res) => {
       const fileName = req.file.originalname;
       const tempPath = req.file.path;
       
-      const filesDir = path.join(__dirname, 'Files');
+      const filesDir = path.join(__dirname, '../backend', 'Files');
       if (!fs.existsSync(filesDir)) {
         fs.mkdirSync(filesDir, { recursive: true });
       }
@@ -2830,6 +2831,14 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
     console.error('forgot-password error:', err);
     return sendSuccess(res, generic);
   }
+});
+
+// In index.js, after your other app.get routes
+
+app.get('/api/environment', (req, res) => {
+  // Read the DOCKER environment variable, defaulting to 'FALSE'
+  const isDocker = (process.env.DOCKER || 'FALSE').toUpperCase() === 'TRUE';
+  sendSuccess(res, 'Environment configuration retrieved', { isDocker });
 });
 
 // POST /api/auth/reset-password

@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from dateutil.parser import parse as parse_datetime
 from collections import defaultdict 
 from datetime import timedelta
+import base64
+
 
 import socket
 import json
@@ -1006,10 +1008,88 @@ def set_api_key(request):
 
 
 # === Repots ===
+def download_report(request):
+    """
+    Generates a PDF report for a given scan and returns it as base64 encoded data.
+    """
+    scan_id = request.get("data", {}).get("scan_id")
+    report_type = request.get("data", {}).get("report_type") # "technical" or "executive"
+
+    if not scan_id or not report_type:
+        return bad_request("Missing 'scan_id' or 'report_type'")
+
+    try:
+        # Step 1: Fetch scan results from the database
+        scan_results_data = db_manager.select("scan_results", filters={"scan_id": scan_id})
+        if not scan_results_data:
+            return not_found("No results found for this scan.")
+
+        # Step 2: Fetch corresponding endpoint details for context
+        endpoint_ids = list(set(res['endpoint_id'] for res in scan_results_data))
+        endpoints_data = db_manager.select("endpoints", filters={"id": endpoint_ids})
+        endpoints_map = {ep['id']: ep for ep in endpoints_data}
+
+        # Step 3: Create mock objects that the ReportGenerator can understand
+        # This avoids complex object reconstruction and fits the generator's expected input structure.
+        class MockEndpoint:
+            def __init__(self, data):
+                self.path = data.get('url', 'N/A')
+                self.method = data.get('method', 'N/A')
+
+        class MockScanResult:
+            def __init__(self, data, endpoint):
+                self.vulnerability_name = data.get('vulnerability_name')
+                self.description = data.get('description')
+                self.severity = data.get('severity')
+                self.owasp_category = data.get('owasp_category')
+                self.endpoint = endpoint
+                self.recommendation = data.get('recommendation')
+                # Add other fields if your executive report needs them
+        
+        scan_results_for_report = []
+        for res in scan_results_data:
+            endpoint_data = endpoints_map.get(res['endpoint_id'])
+            if endpoint_data:
+                mock_endpoint = MockEndpoint(endpoint_data)
+                mock_result = MockScanResult(res, mock_endpoint)
+                scan_results_for_report.append(mock_result)
+
+        # Step 4: Generate the report in-memory
+        report_generator = ReportGenerator()
+        filename = f"{report_type}_report_{scan_id}.pdf"
+        
+        # This will call the updated report generator function which returns PDF bytes
+        pdf_bytes = report_generator.generate_report(
+            report_type=report_type,
+            scan_results=scan_results_for_report,
+            return_bytes=True # New flag to indicate we want bytes back
+        )
+
+        if not pdf_bytes:
+            return server_error("Report generation failed to return data.")
+
+        # Step 5: Encode as base64 and send back
+        encoded_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        return success({
+            "filename": filename,
+            "file_data": encoded_pdf
+        })
+
+    except Exception as e:
+        log_with_timestamp(f"Error in download_report: {e}")
+        return server_error(str(e))
+        
 def get_techincal_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate techinical report
+        # We can either save this to a known location to the api or send the raw pdf data
     return server_error("Not yet implemented")
 
 def get_executive_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate exectuive report
+        # We can either save this to a known location to the api or send the raw pdf data
     return server_error("Not yet implemented")
 
 

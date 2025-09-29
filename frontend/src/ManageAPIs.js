@@ -166,6 +166,26 @@ const apiService = {
     if (!res.ok || !data.success) throw new Error(data.message || 'Failed to leave share');
     return data;
   },
+    async downloadReport(scanId, reportType, userId) {
+        const res = await fetch(`/api/reports/download?scan_id=${scanId}&report_type=${reportType}&user_id=${userId}`);
+        if (!res.ok) {
+            // Try to parse a JSON error message from the API, otherwise use a generic message
+            const errorData = await res.json().catch(() => ({ message: 'Failed to download report.' }));
+            throw new Error(errorData.message || 'The server returned an error.');
+        }
+        // Get the filename from the Content-Disposition header sent by the API
+        const disposition = res.headers.get('content-disposition');
+        let filename = `report.pdf`;
+        if (disposition && disposition.includes('attachment')) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches?.[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        const blob = await res.blob();
+        return { blob, filename };
+    },
 };
 
 export { apiService };
@@ -405,7 +425,7 @@ const ManageAPIs = () => {
             {modal.type === 'endpointFlags' && <EndpointFlagsModal data={modal.data} onClose={() => setModal({ type: null, data: null })} onScanStart={handleStartScan} showMessage={showMessage} />}
             {modal.type === 'scanProgress' && <ScanProgressModal apiName={modal.data.apiName} />}
             {modal.type === 'scanResults' && <ScanResultsModal data={modal.data} onClose={() => setModal({type:null, data:null})} />}
-            {modal.type === 'pastScans' && <PastScansModal api={modal.data} onClose={() => setModal({type:null, data:null})} onViewReport={handleViewSpecificReport} />}
+            {modal.type === 'pastScans' && <PastScansModal api={modal.data} onClose={() => setModal({type:null, data:null})} onViewReport={handleViewSpecificReport} showMessage={showMessage}/>}
             {modal.type === 'schedule' && <ScheduleScanModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}
             {modal.type === 'editApi' && <EditApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} onSave={handleUpdateApi} />}
             {modal.type === 'share' && <ShareApiModal api={modal.data} onClose={() => setModal({ type: null, data: null })} showMessage={showMessage} />}
@@ -929,10 +949,6 @@ const ScanResultsModal = ({ data, onClose }) => {
                     )}
                 </div>
              </div>
-             <div className="modal-actions">
-                 <button className="action-btn" disabled>Download Report</button>
-                 <button onClick={onClose} className="save-btn">Close</button>
-             </div>
         </Modal>
     );
 };
@@ -1024,11 +1040,12 @@ const ScheduleScanModal = ({ api, onClose, showMessage }) => {
     );
 };
 
-const PastScansModal = ({ api, onClose, onViewReport }) => {
+const PastScansModal = ({ api, onClose, onViewReport, showMessage }) => { // <-- Add showMessage to props
     const { currentUser } = useAuth();
     const [scans, setScans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [downloading, setDownloading] = useState(null); // State to track which report is downloading
 
     useEffect(() => {
         apiService.getScanList(api.id, currentUser.id)
@@ -1041,6 +1058,47 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
     }, [api.id, currentUser.id]);
+    
+    // New handler function for downloads
+    const handleDownload = async (scanId, reportType) => {
+        const downloadKey = `${scanId}-${reportType}`;
+        setDownloading(downloadKey);
+        try {
+            const { blob } = await apiService.downloadReport(scanId, reportType, currentUser.id);
+            
+            // --- FILENAME GENERATION LOGIC ---
+            const now = new Date();
+            const datePart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timePart = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+            const formattedDateTime = `${datePart}_${timePart}`;
+            
+            const formattedApiName = api.name.replace(/\s+/g, '_'); // Replace spaces with underscores
+            const formattedReportType = reportType.charAt(0).toUpperCase() + reportType.slice(1); // Capitalize report type
+            
+            const newFilename = `${formattedDateTime} - ${formattedReportType} Report - ${formattedApiName}.pdf`;
+            // --- END FILENAME LOGIC ---
+
+            // Create a temporary link to trigger the browser download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = newFilename; // Use the newly generated filename
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up the temporary link and object URL
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            
+            showMessage('Report downloaded successfully!', 'success');
+        } catch (error) {
+            showMessage(`Error downloading report: ${error.message}`, 'error');
+        } finally {
+            setDownloading(null);
+        }
+    };
     
     return (
         <Modal onClose={onClose} title={`📜 Scan History for ${api.name}`}>
@@ -1057,8 +1115,21 @@ const PastScansModal = ({ api, onClose, onViewReport }) => {
                             </div>
                             <div className="past-scan-actions">
                                 <button onClick={() => onViewReport(scan.id, api.name)} className="action-btn view-report">View</button>
-                                <button className="action-btn download-report" disabled>Executive Report</button>
-                                <button className="action-btn download-report" disabled>Technical Report</button>
+                                {/* Remove the 'disabled' prop and add the onClick handler */}
+                                <button 
+                                    onClick={() => handleDownload(scan.id, 'executive')} 
+                                    className="action-btn download-report" 
+                                    disabled={downloading === `${scan.id}-executive`}
+                                >
+                                    {downloading === `${scan.id}-executive` ? 'Downloading...' : 'Executive Report'}
+                                </button>
+                                <button 
+                                    onClick={() => handleDownload(scan.id, 'technical')} 
+                                    className="action-btn download-report" 
+                                    disabled={downloading === `${scan.id}-technical`}
+                                >
+                                    {downloading === `${scan.id}-technical` ? 'Downloading...' : 'Technical Report'}
+                                </button>
                             </div>
                           </li>
                       )) : <p>No past scans found.</p>}

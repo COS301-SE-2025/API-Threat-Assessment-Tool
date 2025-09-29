@@ -671,8 +671,8 @@ app.get('/', (req, res) => {
       getUserSettings: 'GET /api/user/settings/get',
       updateUserSettings: 'PUT /api/user/settings/update',
       techReport: 'GET /api/reports/techincal',
-      execReport: 'GET /api/reports/exective',
-      downloadReport: 'POST /api/reports/download',
+      execReport: 'GET /api/reports/executive',
+      downloadReport: 'GET /api/reports/download',
       deleteShare: 'DELETE /api/apis/share',
       leaveShare: 'DELETE /api/apis/leave-share',
       getShare: 'GET /api/apis/shares',
@@ -2727,59 +2727,75 @@ app.put('/api/user/settings/update', async (req, res) => {
   }
 });
 
-// List All Reports (reports.list)
-app.get('/api/reports/list', async (req, res) => {
+// Download techincal report
+app.get('/api/reports/techincal', async (req, res) => {
   try {
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
+    }
     const engineResponse = await sendToEngine({
-      command: 'reports.list',
-      data: {}
+      command: 'reports.tech',
+      data: { scan_id }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Reports retrieved successfully', engineResponse.data);
+      sendSuccess(res, 'Reports retrieved successfully', engineResponse.data); //placeholder, im not sure how to actually get the report to the user just yet
     } else {
       sendError(res, 'Failed to retrieve reports', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'List reports error', err.message, 500);
+    sendError(res, 'Reports error', err.message, 500);
   }
 });
 
-// Get Report Details (reports.details)
-app.get('/api/reports/details', async (req, res) => {
+// Download executive report
+app.get('/api/reports/executive', async (req, res) => {
   try {
-    const { report_id } = req.query;
-    if (!report_id) {
-      return sendError(res, 'Report ID is required', null, 400);
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
     }
     const engineResponse = await sendToEngine({
-      command: 'reports.details',
-      data: { report_id }
+      command: 'reports.exec',
+      data: { scan_id }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Report details retrieved successfully', engineResponse.data);
+      sendSuccess(res, 'Report details retrieved successfully', engineResponse.data); //placeholder, im not sure how to actually get the report to the user just yet
     } else {
       sendError(res, 'Failed to get report details', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'Report details error', err.message, 500);
+    sendError(res, 'Report error', err.message, 500);
   }
 });
 
-// Download Report (reports.download)
-app.post('/api/reports/download', async (req, res) => {
+app.get('/api/reports/download', async (req, res) => {
   try {
-    const { report_id, report_type } = req.body;
-    if (!report_id || !report_type) {
-      return sendError(res, 'Report ID and report type are required', null, 400);
+    const { scan_id, report_type, user_id } = req.query;
+    if (!scan_id || !report_type || !user_id) {
+      return sendError(res, 'scan_id, report_type, and user_id are required.', null, 400);
     }
+    
+    // Forward the request to the Python engine
     const engineResponse = await sendToEngine({
       command: 'reports.download',
-      data: { report_id, report_type }
+      data: { scan_id, report_type, user_id }
     });
+
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Report downloaded successfully', engineResponse.data);
+      const { filename, file_data } = engineResponse.data;
+      
+      // Decode the base64 data into a buffer
+      const pdfBuffer = Buffer.from(file_data, 'base64');
+      
+      // Set headers to trigger a file download in the browser
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      
+      // Send the PDF buffer as the response
+      res.send(pdfBuffer);
     } else {
-      sendError(res, 'Failed to download report', engineResponse.data, engineResponse.code || 500);
+      sendError(res, 'Failed to generate report', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Download report error', err.message, 500);

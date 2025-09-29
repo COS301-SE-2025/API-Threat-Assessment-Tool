@@ -1006,9 +1006,13 @@ def set_api_key(request):
 
 
 # === Repots ===
-def get_all_reports(request): return server_error("Not yet implemented")
-def get_report_details(request): return server_error("Not yet implemented")
-def download_report(request): return server_error("Not yet implemented")
+def get_techincal_report(request): 
+    return server_error("Not yet implemented")
+
+def get_executive_report(request): 
+    return server_error("Not yet implemented")
+
+
 
 # === Templates ===
 def get_all_templates(request): return server_error("Not yet implemented")
@@ -1075,8 +1079,8 @@ def handle_request(request: dict):
         "user.profile.update": update_profile,
         "user.settings.get": get_settings,
         "user.settings.update": update_settings,
-        "reports.list": get_all_reports,
-        "reports.details": get_report_details,
+        "reports.tech": get_techincal_report,
+        "reports.exec": get_executive_report,
         "reports.download": download_report,
         "apis.key.set": set_api_key,
     }

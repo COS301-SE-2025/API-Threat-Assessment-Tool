@@ -2270,10 +2270,9 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
   }
 });
 
-// Create Scan (scan.create) - UPDATED: Now requires user_id (renamed from client_id)
 app.post('/api/scan/create', async (req, res) => {
   try {
-    const { user_id, scan_profile, api_id } = req.body;
+    const { user_id, scan_profile, api_id, api_key_1, api_key_2 } = req.body;
     
     // Use user_id as primary, fall back to client_id for backward compatibility
     const finalUserId = user_id;
@@ -2284,17 +2283,19 @@ app.post('/api/scan/create', async (req, res) => {
       return sendError(res, userIdValidation.error, null, 400);
     }
     
-    // const apiIdValidation = validateApiId(api_id, true);
-    // if (!apiIdValidation.isValid) {
-    //   return sendError(res, apiIdValidation.error, null, 400);
-    // }
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
 
     const engineResponse = await sendToEngine({
       command: 'scan.create',
       data: { 
         user_id: finalUserId.trim(),
         api_id: api_id.trim(),
-        scan_profile: scan_profile || 'OWASP_API_10' 
+        scan_profile: scan_profile || 'OWASP_API_10',
+        api_key_1: api_key_1, // Pass the keys to the engine
+        api_key_2: api_key_2
       }
     });
     

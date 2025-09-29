@@ -67,16 +67,24 @@ const apiService = {
       }
       return await res.json();
   },
-  async createScan(apiId, userId, scanProfile) {
-       const res = await fetch("/api/scan/create", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, api_id: apiId, scan_profile: scanProfile }),
-      });
-      const result = await res.json();
-      if (!res.ok || !result.success) throw new Error(result.message || "Failed to create scan");
-      return result.data;
-  },
+// In ManageAPIs.js, inside the apiService object
+
+async createScan(apiId, userId, scanProfile, apiKeys) {
+     const res = await fetch("/api/scan/create", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+          user_id: userId,
+          api_id: apiId,
+          scan_profile: scanProfile,
+          api_key_1: apiKeys.apiKey1, 
+          api_key_2: apiKeys.apiKey2  
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok || !result.success) throw new Error(result.message || "Failed to create scan");
+    return result.data;
+},
   async startScan(apiId, userId, scanProfile) {
     const res = await fetch("/api/scan/start", {
         method: "POST",
@@ -359,9 +367,10 @@ const ManageAPIs = () => {
     const handleStartScanFlow = (api) => setModal({ type: 'scanProfile', data: api });
     const handleViewPastScans = (api) => setModal({ type: 'pastScans', data: api });
 
-    const handleProfileSelected = async (api, scanProfile) => {
+    const handleProfileSelected = async (api, scanProfile, apiKeys) => {
         try {
-            await apiService.createScan(api.id, currentUser.id, scanProfile);
+            // Pass the new apiKeys object to the service
+            await apiService.createScan(api.id, currentUser.id, scanProfile, apiKeys);
             setModal({ type: 'endpointFlags', data: { api, scanProfile } });
         } catch (error) {
             showMessage(`Could not create scan: ${error.message}`, 'error');
@@ -658,27 +667,60 @@ const EndpointsModal = ({ api, onClose }) => {
     );
 };
 
+// In ManageAPIs.js
+
 const ScanProfileModal = ({ api, onClose, onProfileSelected }) => {
     const [selectedProfile, setSelectedProfile] = useState(SCAN_TYPES[0]);
+    const [apiKey1, setApiKey1] = useState('');
+    const [apiKey2, setApiKey2] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
         setLoading(true);
-        await onProfileSelected(api, selectedProfile);
+        // Pass the keys along with the profile
+        await onProfileSelected(api, selectedProfile, { apiKey1, apiKey2 });
     };
 
+    // Disable the "Next" button if the primary key is missing or a request is in progress
+    const isNextDisabled = loading || !apiKey1.trim();
+
     return (
-        <Modal onClose={onClose} title={`⚙️ Select Scan Profile for ${api.name}`}>
+        <Modal onClose={onClose} title={`⚙️ Configure Scan for ${api.name}`}>
             <div className="modal-form">
                 <div className="form-group">
-                    <label htmlFor="scan-profile">Choose a profile to create a scan session:</label>
+                    <label htmlFor="scan-profile">1. Choose a scan profile:</label>
                     <select id="scan-profile" value={selectedProfile} onChange={e => setSelectedProfile(e.target.value)}>
                         {SCAN_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
                 </div>
+
+                <div className="form-group">
+                    <label htmlFor="api-key-1">2. Provide API Key(s) for testing:</label>
+                    <p className="form-hint">
+                        Enter at least one valid API key for a user role. For more effective authorization testing, provide a second key for a different user.
+                    </p>
+                    <input
+                        id="api-key-1"
+                        type="password"
+                        placeholder="Primary API Key / Token"
+                        value={apiKey1}
+                        onChange={e => setApiKey1(e.target.value)}
+                        required
+                    />
+                    <input
+                        id="api-key-2"
+                        type="password"
+                        placeholder="Secondary API Key / Token (Optional)"
+                        value={apiKey2}
+                        onChange={e => setApiKey2(e.target.value)}
+                    />
+                </div>
+
                 <div className="modal-actions">
                     <button onClick={onClose} className="cancel-btn">Cancel</button>
-                    <button onClick={handleSubmit} className="save-btn" disabled={loading}>{loading ? 'Creating...' : 'Next: Configure Flags'}</button>
+                    <button onClick={handleSubmit} className="save-btn" disabled={isNextDisabled}>
+                        {loading ? 'Creating...' : 'Next: Configure Flags'}
+                    </button>
                 </div>
             </div>
         </Modal>
@@ -897,7 +939,7 @@ const ScanResultsModal = ({ data, onClose }) => {
                     {scanInfo && (
                         <div className="scan-metadata">
                             <span>Scanned on: {new Date(scanInfo.completed_at).toLocaleString()}</span>
-                            <span>Duration: {summaryStats.duration}</span>
+                            <span>{`\u00A0|\u00A0Duration: ${summaryStats.duration}`}</span>
                         </div>
                     )}
                 </div>
@@ -1242,8 +1284,8 @@ const ShareApiModal = ({ api, onClose, showMessage }) => {
                     <div className="form-group">
                         <label htmlFor="share-permission">Permission Level</label>
                         <select id="share-permission" value={permission} onChange={e => setPermission(e.target.value)}>
-                            <option value="read">Read-Only</option>
-                            <option value="edit">Edit</option>
+                            <option value="read">View</option>
+                            <option value="manage">Manage</option>
                         </select>
                     </div>
                     <div className="modal-actions" style={{padding: '20px 0 0 0'}}>
@@ -1284,9 +1326,12 @@ const SharedApiManageModal = ({ api, onClose, onAction, showMessage, fetchApis }
                 <div className="divider"></div>
                 <h4>Available Actions</h4>
                 <div className="shared-api-actions">
-                    <button onClick={() => { onAction('scan'); onClose(); }} className="action-btn scan large-btn">⚙️ Run New Scan</button>
-                    <button onClick={() => { onAction('endpoints'); onClose(); }} className="action-btn endpoints large-btn">📂 View Endpoints</button>
-                    <button onClick={() => { onAction('history'); onClose(); }} className="action-btn history large-btn">📜 View History</button>
+                    {/* Only show "Run New Scan" button if permission is 'manage' */}
+                    {api.permission === 'manage' && (
+                        <button onClick={() => onAction('scan')} className="action-btn scan large-btn">⚙️ Run New Scan</button>
+                    )}
+                    <button onClick={() => onAction('endpoints')} className="action-btn endpoints large-btn">📂 View Endpoints</button>
+                    <button onClick={() => onAction('history')} className="action-btn history large-btn">📜 View History</button>
                 </div>
                 <div className="divider"></div>
                 <h4>Leave Share</h4>

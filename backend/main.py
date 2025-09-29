@@ -91,6 +91,43 @@ def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
 
     return USER_STORE[user_id]["scans"][api_id]
 
+# In main.py, near your other helper functions
+
+def _verify_api_access(user_id: str, api_id: str, minimum_level: str) -> bool:
+    """
+    Verifies if a user has the required permission level for an API.
+    Levels: 'view' (read-only), 'manage' (can run scans), 'owner' (full control).
+    """
+    permission_levels = {
+        "view": 1,
+        "read": 1,
+        "manage": 2,
+        "edit": 2,
+        "owner": 3
+    }
+    required_level = permission_levels.get(minimum_level.lower(), 0)
+
+    try:
+        # 1. Check if the user is the owner
+        api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+        if api_owner:
+            return True # Owners have max permission
+
+        # 2. If not the owner, check for shared access
+        access_record = db_manager.select("api_access", columns="permission", filters={"api_id": api_id, "user_id": user_id})
+        if not access_record:
+            return False # No direct ownership or shared access record found
+        
+        user_permission = access_record[0].get("permission", "")
+        user_level = permission_levels.get(user_permission.lower(), 0)
+
+        # 3. Compare user's permission level against the required level
+        return user_level >= required_level
+
+    except Exception as e:
+        log_with_timestamp(f"Error during permission check for user {user_id} on api {api_id}: {e}")
+        return False
+
 # === Dashboard ===
 def dashboard_overview(request):
     """
@@ -240,22 +277,19 @@ def import_file(request):
         log_with_timestamp(f"Error in import_file: {e}")
         return server_error(str(e))
 
-# In main.py, replace the entire get_all_apis function with this new version.
 
 def get_all_apis(request):
     user_id = request.get("data", {}).get("user_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
-    # The API list is now dynamic, so we should not cache it this way.
-    # The cache will be invalidated on share/revoke actions if needed, but for now, let's remove it for simplicity.
     log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
     
     try:
-        # STEP 1: Get APIs OWNED BY the user.
-        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"user_id": user_id})
+        # STEP 1: Get APIs OWNED BY the user (added base_url).
+        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"user_id": user_id})
         for api in owned_apis_data:
-            api['permission'] = 'owner' # Mark as owner
+            api['permission'] = 'owner'
 
         # STEP 2: Get APIs SHARED WITH the user.
         shared_access_records = db_manager.select("api_access", columns="api_id, permission", filters={"user_id": user_id})
@@ -263,8 +297,8 @@ def get_all_apis(request):
         
         shared_apis_data = []
         if shared_api_ids:
-            # Get the details for the shared APIs
-            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"id": shared_api_ids})
+            # Get the details for the shared APIs (added base_url).
+            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"id": shared_api_ids})
             
             # Create maps for efficient lookups
             permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
@@ -328,12 +362,13 @@ def get_all_apis(request):
                 "api_id": api_id,
                 "name": api.get("name"),
                 "version": api.get("version"),
+                "base_url": api.get("base_url"), # <-- BUG FIX: Add the base_url here
                 "created_at": created_at_iso,
                 "vulnerabilitiesFound": vulnerabilities_found,
                 "lastScanned": last_scanned,
                 "scanStatus": scan_status,
-                "permission": api['permission'], # Pass permission to frontend
-                "owner_name": api.get('owner_name') # Pass owner name if it exists
+                "permission": api['permission'],
+                "owner_name": api.get('owner_name')
             })
         
         return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
@@ -418,13 +453,18 @@ def import_url(request):
     return server_error("Not yet implemented")
 
 # === API endpoints ===
+# In main.py, update get_api_endpoints
+
 def get_api_endpoints(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    # CORRECT IMPLEMENTATION: Rely solely on the helper function
+    # PERMISSION CHECK: User must have 'view', 'manage', or 'owner' rights
+    if not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view endpoints for this API."})
+
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found({"message": "API not found."})
@@ -736,24 +776,56 @@ def check_and_run_scheduled_scans():
             log_with_timestamp(f"Error processing scheduled scan for API {schedule['api_id']}: {e}")
 
 # === Scans ===
+# In main.py
+
 def create_scan(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
+    api_key_1 = request.get("data", {}).get("api_key_1")
+    api_key_2 = request.get("data", {}).get("api_key_2") # This can be None or an empty string
+
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
+    # The frontend requires at least one key, but we add a backend check for robustness.
+    if not api_key_1:
+        return bad_request("At least one API key is required to create a scan.")
+
+    # This helper function ensures the APIClient object is loaded into memory.
     scan_manager = _get_or_create_scan_manager(user_id, api_id)
-    
     if not scan_manager:
         return not_found("API client not found, cannot create scan.")
+    
+    # Retrieve the cached APIClient instance to set the tokens.
+    api_client = _get_api_client(user_id, api_id)
+    if not api_client:
+        return not_found("API client could not be loaded, cannot configure scan.")
+    
+    log_with_timestamp(f"Setting API keys for scan on API {api_id}")
+    api_client.set_auth_token(api_key_1)
 
-    return success({"message": "Scan session created. Ready to start."})
+    # The secondary key is optional. Set it if provided.
+    if api_key_2:
+        api_client.set_secondary_auth_token(api_key_2)
+        log_with_timestamp("Secondary API key has been set for the scan.")
+    else:
+        # Important: Clear any old secondary token to prevent it from being used
+        # in a scan where it wasn't provided.
+        api_client.set_secondary_auth_token("")
+
+
+    return success({"message": "Scan session created and keys configured. Ready to start."})
+
+# In main.py, update start_scan
 
 def start_scan(request): 
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
+
+    if not _verify_api_access(user_id, api_id, minimum_level='manage'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to start a scan for this API."})
 
     scan_manager = _get_or_create_scan_manager(user_id, api_id)
     if not scan_manager:
@@ -849,17 +921,26 @@ def get_scan_results(request):
         log_with_timestamp(f"Error in get_scan_results: {e}")
         return server_error(str(e))
 
+
 def get_all_scans(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
+    # PERMISSION CHECK (only if an api_id is specified)
+    if api_id and not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view scan history for this API."})
+
     try:
         filters = {"user_id": user_id}
         if api_id:
             filters["api_id"] = api_id
         
+
+        if api_id:
+            del filters["user_id"] 
+
         all_scans = db_manager.select("scans", filters=filters)
         
         return success({"scans": all_scans})
@@ -1008,21 +1089,32 @@ def set_api_key(request):
 
 
 # === Repots ===
+
 def download_report(request):
-    """
-    Generates a PDF report for a given scan and returns it as base64 encoded data.
-    """
     scan_id = request.get("data", {}).get("scan_id")
     report_type = request.get("data", {}).get("report_type") # "technical" or "executive"
+    user_id = request.get("data", {}).get("user_id") # We need user_id for the check
 
-    if not scan_id or not report_type:
-        return bad_request("Missing 'scan_id' or 'report_type'")
+    if not all([scan_id, report_type, user_id]):
+        return bad_request("Missing 'scan_id', 'report_type', or 'user_id'")
 
     try:
+        # First, find which API this scan belongs to
+        scan_record = db_manager.select("scans", columns="api_id", filters={"id": scan_id})
+        if not scan_record:
+            return not_found("Scan not found.")
+        api_id = scan_record[0]['api_id']
+
+        # PERMISSION CHECK: User must have at least 'view' rights on the parent API
+        if not _verify_api_access(user_id, api_id, minimum_level='view'):
+            return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to download reports for this API."})
+
         # Step 1: Fetch scan results from the database
         scan_results_data = db_manager.select("scan_results", filters={"scan_id": scan_id})
         if not scan_results_data:
             return not_found("No results found for this scan.")
+        
+        # ... (rest of the function is unchanged)
 
         # Step 2: Fetch corresponding endpoint details for context
         endpoint_ids = list(set(res['endpoint_id'] for res in scan_results_data))

@@ -28,8 +28,8 @@ class APIClient:
         self.endpoints: List[Endpoint] = []
         self.authorization: Optional[Authorization] = None 
         self.auth_token = ""
-        self.secondary_auth_token = "" # ADD THIS LINE
-        self.db_id: Optional[str] = None  # To store the database ID (hash) after saving
+        self.secondary_auth_token = "" 
+        self.db_id: Optional[str] = None  
 
     def save_to_db(self, user_id: str) -> bool:
         """Save the API and its endpoints to the database using a hash ID and bulk inserts."""

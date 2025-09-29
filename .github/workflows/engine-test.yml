@@ -51,7 +51,13 @@ jobs:
         run: |
           nohup python backend/main.py > engine.log 2>&1 &
           sleep 5
-          netstat -an | grep 9011 || (echo "❌ Scanning Engine not listening on port 9011"; exit 1)
+          if ! netstat -an | grep 9011; then
+            echo "❌ Scanning Engine not listening on port 9011"
+            echo "--- engine.log ---"
+            cat engine.log
+            exit 1
+          fi
+
 
       # Run the automated test suite with pytest
       - name: Run Engine Tests

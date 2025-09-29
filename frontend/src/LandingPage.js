@@ -56,10 +56,10 @@ const LandingPage = () => {
 
   // Statistics data - focused on value proposition
   const statistics = [
-    { number: 'Free', label: 'During Beta', icon: '🎉' },
+    { number: 'Fast', label: 'Setup', icon: '⚡' },
     { number: 'OWASP', label: 'Compliant', icon: '🛡️' },
     { number: 'Complete', label: 'Coverage', icon: '🔍' },
-    { number: '5min', label: 'Setup', icon: '⏰' }
+    { number: '5min', label: 'Quick Start', icon: '⏰' }
   ];
 
   // Feature highlights
@@ -84,49 +84,48 @@ const LandingPage = () => {
     }
   ];
 
-  // Current offering tiers (free beta)
-  const offeringTiers = [
+  // Pricing tiers
+  const pricingTiers = [
     {
-      name: 'Beta Access',
-      price: 'Free',
-      period: 'during beta',
-      description: 'Full access to all features',
+      name: 'Starter',
+      price: '$29',
+      period: 'per month',
+      description: 'Perfect for small teams and individual developers',
       features: [
-        'Unlimited API endpoints',
-        'Complete OWASP Top 10 testing',
-        'Custom scan profiles',
-        'Detailed security reports',
-        'Community support',
-        'Beta feature previews',
-        'Feedback directly to dev team'
+        'Up to 10 API endpoints',
+        'OWASP Top 10 testing',
+        'Basic scan profiles',
+        'Standard security reports',
+        'Email support',
+        'API documentation'
       ],
-      cta: 'Join Beta Now',
-      popular: true
+      cta: 'Start Free Trial',
+      popular: false
     },
     {
-      name: 'Future Pro',
-      price: 'TBD',
-      period: 'post-launch',
-      description: 'Enhanced features for teams',
+      name: 'Professional',
+      price: '$99',
+      period: 'per month',
+      description: 'Enhanced features for growing teams',
       features: [
-        'Everything in Beta',
+        'Unlimited API endpoints',
+        'Complete OWASP testing suite',
+        'Custom scan profiles',
+        'Detailed security reports',
         'Priority support',
         'Advanced integrations',
-        'Team collaboration tools',
-        'Custom compliance frameworks',
-        'API for automation',
-        'Enterprise security features'
+        'Team collaboration tools'
       ],
-      cta: 'Get Notified',
-      popular: false
+      cta: 'Get Started',
+      popular: true
     },
     {
       name: 'Enterprise',
       price: 'Contact',
       period: 'for organizations',
-      description: 'Tailored for large teams',
+      description: 'Tailored for large organizations',
       features: [
-        'Everything in Pro',
+        'Everything in Professional',
         'Dedicated support',
         'On-premise deployment',
         'SSO integration',
@@ -134,7 +133,7 @@ const LandingPage = () => {
         'Advanced compliance reporting',
         'Professional services'
       ],
-      cta: 'Contact Us',
+      cta: 'Contact Sales',
       popular: false
     }
   ];
@@ -150,16 +149,14 @@ const LandingPage = () => {
           </div>
           <nav className="landing-nav">
             <a href="#features">Features</a>
-            <a href="#pricing">Beta Access</a>
-            <a href="#community">Community</a>
-            <a href="#contact">Contact</a>
+            <a href="#how-it-works">How It Works</a>
+            <Link to="/signup">Get Started</Link>
           </nav>
           <div className="header-actions">
             <button onClick={toggleDarkMode} className="theme-toggle" title="Toggle Theme">
               <span className="theme-icon">{darkMode ? '☀️' : '🌙'}</span>
             </button>
             <Link to="/login" className="login-link">Login</Link>
-            <Link to="/signup" className="signup-btn">Get Started Free</Link>
           </div>
         </div>
       </header>
@@ -168,42 +165,20 @@ const LandingPage = () => {
       <section className="hero-section">
         <div className="hero-content">
           <div className="hero-text">
-            <p></p> {/* Empty paragraph added here */}
             <h1 className="hero-title">
-              Secure Your APIs with 
-              <span className="gradient-text"> Confidence </span>
+              Secure Your APIs with Confidence!
             </h1>
             <p className="hero-description">
-              AT-AT is a comprehensive API security testing platform that helps developers and security teams 
-              identify vulnerabilities, ensure OWASP compliance, and protect their digital assets. 
-              Currently in beta with full access to all features - completely free during development.
+              Comprehensive API security testing platform that identifies vulnerabilities, 
+              ensures OWASP compliance, and protects your digital assets.
             </p>
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="stat-number">Free</span>
-                <span className="stat-label">Beta Access</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">OWASP</span>
-                <span className="stat-label">Standards</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">5min</span>
-                <span className="stat-label">Quick Setup</span>
-              </div>
-            </div>
             <div className="hero-actions">
-              <Link to="/signup" className="cta-primary">
-                🚀 Join Beta Program
+              <Link to="/signup" className="cta-primary large">
+                Get Started
               </Link>
-              <a href="#community" className="cta-secondary">
-                📖 Learn More
+              <a href="#how-it-works" className="cta-secondary large">
+                Learn More
               </a>
-            </div>
-            <div className="trust-indicators">
-              <span>✓ Completely free during beta</span>
-              <span>✓ 5-minute setup</span>
-              <span>✓ OWASP compliant</span>
             </div>
           </div>
           <div className="hero-visual">
@@ -319,116 +294,18 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Community Section */}
-      <section 
-        id="community" 
-        className={`testimonials-section animate-on-scroll ${isVisible['community'] ? 'visible' : ''}`}
-      >
-        <div className="section-header">
-          <h2>Join Our Community</h2>
-          <p>Be part of the future of API security testing</p>
-        </div>
-        <div className="community-container">
-          <div className="community-card">
-            <div className="community-content">
-              <div className="community-icon">🚀</div>
-              <h3>Beta Testers</h3>
-              <p>Get early access to cutting-edge API security features and directly influence our product roadmap. Your feedback shapes the future of API security testing.</p>
-              <Link to="/signup" className="community-cta">Join Beta Program</Link>
-            </div>
-          </div>
-          <div className="community-card">
-            <div className="community-content">
-              <div className="community-icon">💬</div>
-              <h3>Developer Community</h3>
-              <p>Connect with security-minded developers, share experiences, and learn best practices for API security in modern applications.</p>
-              <a href="#contact" className="community-cta">Get in Touch</a>
-            </div>
-          </div>
-          <div className="community-card">
-            <div className="community-content">
-              <div className="community-icon">🛡️</div>
-              <h3>Security Focus</h3>
-              <p>Stay ahead of emerging API security threats with comprehensive testing that covers OWASP Top 10 and custom vulnerability patterns.</p>
-              <a href="#features" className="community-cta">Learn More</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Offering Section */}
-      <section 
-        id="pricing" 
-        className={`pricing-section animate-on-scroll ${isVisible['pricing'] ? 'visible' : ''}`}
-      >
-        <div className="section-header">
-          <h2>Join Our Beta Program</h2>
-          <p>Get full access to AT-AT during our beta phase - completely free</p>
-        </div>
-        <div className="pricing-grid">
-          {offeringTiers.map((tier, index) => (
-            <div 
-              key={index} 
-              className={`pricing-card ${tier.popular ? 'popular' : ''}`}
-              style={{animationDelay: `${index * 0.1}s`}}
-            >
-              {tier.popular && <div className="popular-badge">Most Popular</div>}
-              <div className="pricing-header">
-                <h3>{tier.name}</h3>
-                <div className="price">
-                  <span className="price-amount">{tier.price}</span>
-                  <span className="price-period">/{tier.period}</span>
-                </div>
-                <p className="pricing-description">{tier.description}</p>
-              </div>
-              <ul className="pricing-features">
-                {tier.features.map((feature, idx) => (
-                  <li key={idx}>✓ {feature}</li>
-                ))}
-              </ul>
-              {tier.name === 'Enterprise' ? (
-                <a 
-                  href="#contact"
-                  className={`pricing-cta ${tier.popular ? 'primary' : 'secondary'}`}
-                >
-                  {tier.cta}
-                </a>
-              ) : tier.name === 'Future Pro' ? (
-                <a 
-                  href="#contact"
-                  className={`pricing-cta ${tier.popular ? 'primary' : 'secondary'}`}
-                >
-                  {tier.cta}
-                </a>
-              ) : (
-                <Link 
-                  to="/signup" 
-                  className={`pricing-cta ${tier.popular ? 'primary' : 'secondary'}`}
-                >
-                  {tier.cta}
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="cta-section">
         <div className="cta-content">
           <h2>Ready to Secure Your APIs?</h2>
-          <p>Join our beta program and get full access to AT-AT - completely free during development</p>
+          <p>Start protecting your digital assets with enterprise-grade API security testing</p>
           <div className="cta-actions">
             <Link to="/signup" className="cta-primary large">
-              Join Beta Program
+              Get Started Now
             </Link>
             <a href="#community" className="cta-secondary large">
               Learn More
             </a>
-          </div>
-          <div className="cta-guarantee">
-            <span>🆓 Completely free during beta</span>
-            <span>🚀 Early access to new features</span>
           </div>
         </div>
       </section>
@@ -446,45 +323,22 @@ const LandingPage = () => {
           <div className="footer-section">
             <h4>Product</h4>
             <ul>
+              <li><Link to="/signup">Get Started</Link></li>
               <li><a href="#features">Features</a></li>
-              <li><a href="#pricing">Beta Access</a></li>
               <li><a href="/documentation">Documentation</a></li>
-              <li><a href="#security">Security</a></li>
-            </ul>
-          </div>
-          <div className="footer-section">
-            <h4>Community</h4>
-            <ul>
-              <li><a href="#community">Beta Program</a></li>
-              <li><a href="#contact">Feedback</a></li>
-              <li><a href="#help">Help Center</a></li>
-              <li><a href="#about">About Us</a></li>
-            </ul>
-          </div>
-          <div className="footer-section">
-            <h4>Support</h4>
-            <ul>
-              <li><a href="#help">Help Center</a></li>
-              <li><a href="#contact">Contact Us</a></li>
-              <li><a href="#feedback">Report Issues</a></li>
-              <li><a href="#feedback">Feature Requests</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>Legal</h4>
             <ul>
-              <li><a href="#privacy">Privacy Policy</a></li>
-              <li><a href="#terms">Terms of Service</a></li>
-              <li><a href="#beta-terms">Beta Terms</a></li>
+              <li><Link to="/privacy">Privacy Policy</Link></li>
+              <li><Link to="/terms">Terms of Service</Link></li>
+              <li><Link to="/contact">Contact Us</Link></li>
             </ul>
           </div>
         </div>
         <div className="footer-bottom">
           <p>© 2025 AT-AT (API Threat Assessment Tool). All rights reserved.</p>
-          <div className="footer-social">
-            <a href="#linkedin" aria-label="LinkedIn">💼</a>
-            <a href="#email" aria-label="Email">📧</a>
-          </div>
         </div>
       </footer>
     </div>

@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
-import Cookies from 'js-cookie';
 import Logo from './components/Logo';
 import './Settings.css';
 
@@ -747,12 +746,7 @@ const Settings = () => {
                         )}
                       </div>
                       <div className="avatar-actions">
-                        <button type="button" className="btn btn-outline">
-                          Change Photo
-                        </button>
-                        <button type="button" className="btn btn-text">
-                          Remove
-                        </button>
+
                       </div>
                     </div>
                   </div>
@@ -998,83 +992,7 @@ const Settings = () => {
                   </div>
 
                   {/* Security Preferences Section */}
-                  <form onSubmit={handleSubmit} className="settings-form">
-                    <div className="security-section">
-                      <h3 className="section-title">🛡️ Authentication</h3>
-                      <div className="security-item">
-                        <div className="security-info">
-                          <h4>Two-Factor Authentication</h4>
-                          <p>Add an extra layer of security to your account</p>
-                        </div>
-                        <div className="security-action">
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={formData.security.twoFactorAuth}
-                              onChange={(e) =>
-                                handleNestedChange('security', 'twoFactorAuth', e.target.checked)
-                              }
-                              disabled={isSaving}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                          <button type="button" className="btn btn-outline" disabled>
-                            Configure
-                          </button>
-                        </div>
-                      </div>
-                      <div className="security-item">
-                        <div className="security-info">
-                          <h4>Login Notifications</h4>
-                          <p>Get notified when someone logs into your account</p>
-                        </div>
-                        <div className="security-action">
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={formData.security.loginNotifications}
-                              onChange={(e) =>
-                                handleNestedChange('security', 'loginNotifications', e.target.checked)
-                              }
-                              disabled={isSaving}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="security-section">
-                      <h3 className="section-title">⏱️ Session Management</h3>
-                      <div className="form-group">
-                        <label htmlFor="sessionTimeout">Session Timeout (minutes)</label>
-                        <select
-                          id="sessionTimeout"
-                          name="sessionTimeout"
-                          value={formData.security.sessionTimeout}
-                          onChange={(e) =>
-                            handleNestedChange('security', 'sessionTimeout', e.target.value)
-                          }
-                          disabled={isSaving}
-                        >
-                          <option value="15">15 minutes</option>
-                          <option value="30">30 minutes</option>
-                          <option value="60">1 hour</option>
-                          <option value="120">2 hours</option>
-                          <option value="480">8 hours</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-actions">
-                      <button type="button" className="btn btn-secondary" onClick={handleCancel} disabled={isSaving}>
-                        Reset Changes
-                      </button>
-                      <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                        {isSaving ? '⏳ Saving...' : '💾 Save Security Settings'}
-                      </button>
-                    </div>
-                  </form>
+                  
                 </div>
               </div>
             )}
@@ -1142,44 +1060,6 @@ const Settings = () => {
                         </label>
                       </div>
                     </div>
-
-                    <div className="notification-group">
-                      <h3 className="group-title">📱 Mobile Notifications</h3>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>SMS Alerts</h4>
-                          <p>Text messages for urgent security issues</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.smsAlerts}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'smsAlerts', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                      <div className="notification-item">
-                        <div className="notification-info">
-                          <h4>Product Updates</h4>
-                          <p>New features, updates, and product announcements</p>
-                        </div>
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={formData.notifications.productUpdates}
-                            onChange={(e) =>
-                              handleNestedChange('notifications', 'productUpdates', e.target.checked)
-                            }
-                            disabled={isSaving}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="form-actions">
@@ -1203,23 +1083,7 @@ const Settings = () => {
 
                 <form onSubmit={handleSubmit} className="settings-form">
                   <div className="preferences-grid">
-                    <div className="form-group">
-                      <label htmlFor="defaultScanProfile">Default Scan Profile</label>
-                      <select
-                        id="defaultScanProfile"
-                        name="defaultScanProfile"
-                        value={formData.preferences.defaultScanProfile}
-                        onChange={(e) =>
-                          handleNestedChange('preferences', 'defaultScanProfile', e.target.value)
-                        }
-                        disabled={isSaving}
-                      >
-                        <option value="owasp">🛡️ OWASP Top 10 Quick Scan</option>
-                        <option value="comprehensive">🔍 Full Comprehensive Scan</option>
-                        <option value="auth">🔐 Authentication Focus</option>
-                        <option value="performance">⚡ Performance Testing</option>
-                      </select>
-                    </div>
+                    
 
                     <div className="form-group">
                       <label htmlFor="emailFrequency">Report Email Frequency</label>
@@ -1276,14 +1140,15 @@ const Settings = () => {
         </section>
       </main>
 
-      <footer className="settings-footer">
-        <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Help Center</a>
-        </div>
-      </footer>
+<footer className="manage-apis-footer">
+                <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
+                        <div className="footer-links">
+                          <Link to="/privacy">Privacy Policy</Link>
+                          <Link to="/terms">Terms of Service</Link>
+                          <Link to="/documentation">Documentation</Link>
+                          <Link to="/contact">Contact Us</Link>
+                        </div>
+            </footer>
     </div>
   );
 };

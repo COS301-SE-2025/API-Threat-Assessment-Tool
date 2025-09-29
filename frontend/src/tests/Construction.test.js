@@ -1,157 +1,99 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import Construction from '../Construction';
+import { useAuth } from '../AuthContext';
 import { ThemeContext } from '../App';
-import { AuthProvider } from '../AuthContext';
-import Login from '../Login';
-import axios from 'axios';
 
-// Mock axios to simulate requests
-jest.mock('axios', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
+jest.mock('../AuthContext', () => ({
+  useAuth: jest.fn(),
 }));
 
-// Mocking localStorage to simulate it being cleared and set
-const mockLocalStorage = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value; },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
-  };
-})();
+const mockToggleDarkMode = jest.fn();
+const mockThemeContext = {
+  darkMode: false,
+  toggleDarkMode: mockToggleDarkMode,
+};
 
-Object.defineProperty(global, 'localStorage', {
-  value: mockLocalStorage
-});
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: '/construction/feature' }),
+}));
 
-// Simplified custom render function with flexibility
-const customRender = (ui) => render(
-  <AuthProvider>
-    <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: jest.fn() }}>
-      <MemoryRouter initialEntries={['/login']}>{ui}</MemoryRouter>
+const mockConfirm = jest.spyOn(window, 'confirm');
+
+const mockUser = {
+  id: 'u1',
+  username: 'testuser',
+  firstName: 'Test',
+  lastName: 'User',
+};
+
+const renderComponent = (authProps, themeProps = mockThemeContext) => {
+  useAuth.mockReturnValue(authProps);
+  
+  return render(
+    <ThemeContext.Provider value={themeProps}>
+      <MemoryRouter initialEntries={['/construction/feature']}>
+        <Construction />
+      </MemoryRouter>
     </ThemeContext.Provider>
-  </AuthProvider>
-);
+  );
+};
 
-describe('Login Component', () => {
+describe('Construction Component', () => {
+  const mockLogout = jest.fn();
+  const mockGetUserFullName = jest.fn().mockReturnValue('Test User');
+  
+  const authenticatedAuthProps = {
+    currentUser: mockUser,
+    isLoading: false,
+    logout: mockLogout,
+    getUserFullName: mockGetUserFullName,
+  };
+
   beforeEach(() => {
-    localStorage.clear();
-    localStorage.setItem('at_at_users', JSON.stringify([{
-      id: 1,
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john.doe@example.com',
-      username: 'johndoe',
-      password: 'password123'
-    }]));
-    localStorage.removeItem('at_at_current_user');
-    localStorage.removeItem('at_at_session_expiry');
+    jest.clearAllMocks();
+    mockConfirm.mockReturnValue(true);
   });
 
-  // test('renders login form', () => {
-  //   customRender(<Login />);
-  //   expect(screen.getByLabelText(/Username or Email/i)).toBeInTheDocument();
-  //   expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
-  // });
-
-  test('shows error on empty submission', async () => {
-    customRender(<Login />);
-    fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
-    expect(await screen.findByText(/Please enter both/i)).toBeInTheDocument();
+  test('1. Renders the main "Page Under Construction" heading', () => {
+    renderComponent(authenticatedAuthProps);
+    expect(screen.getByRole('heading', { name: /Page Under Construction/i })).toBeInTheDocument();
   });
-  // test('shows error on invalid credentials', async () => {
-  //   // Mock failed login response
-  //   axios.post.mockRejectedValue({
-  //     response: {
-  //       data: {
-  //         message: 'Invalid credentials'
-  //       }
-  //     }
-  //   });
 
-  test
-  // test('logs in successfully with valid credentials', async () => {
-  //   // Mock successful login response
-  //   axios.post.mockResolvedValue({
-  //     data: {
-  //       data: {
-  //         token: 'fake-token',
-  //         user: { username: 'johndoe', firstName: 'John', lastName: 'Doe' }
-  //       }
-  //     }
-  //   });
+  test('2. Renders the "Back to Dashboard" link', () => {
+    renderComponent(authenticatedAuthProps);
+    const link = screen.getByRole('link', { name: /Back to Dashboard/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/dashboard');
+  });
 
-  //   customRender(<Login />);
-  //   fireEvent.change(screen.getByLabelText(/Username or Email/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
-  //   fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
+  test('3. Calls logout and navigates to /login upon confirmation', () => {
+    renderComponent(authenticatedAuthProps);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Logout/i }));
 
-  //   await act(async () => {
-  //     jest.runAllTimers(); // Simulate async processing
-  //   });
+    expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to logout?');
+    expect(mockLogout).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
 
-  //   await waitFor(() => {
-  //     const user = localStorage.getItem('at_at_current_user');
-  //     expect(user).not.toBeNull();
-  //     const parsed = JSON.parse(user);
-  //     expect(parsed.username).toBe('johndoe');
-  //   });
-  // });
+  test('4. Does NOT call logout or navigate when confirmation is cancelled', () => {
+    mockConfirm.mockReturnValue(false);
+    renderComponent(authenticatedAuthProps);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Logout/i }));
 
-  // test('fails login with incorrect credentials', async () => {
-  //   // Mock failed login response
-  //   axios.post.mockRejectedValue({
-  //     response: {
-  //       data: {
-  //         message: 'Invalid credentials'
-  //       }
-  //     }
-  //   });
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 
-  //   customRender(<Login />);
-  //   fireEvent.change(screen.getByLabelText(/Username or Email/i), { target: { value: 'johndoe' } });
-  //   fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'wrongpass' } });
-  //   fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
-
-  //   await act(async () => {
-  //     jest.runAllTimers();
-  //   });
-
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
-  //   });
-  // });
-
-  // test('demo login works', async () => {
-  //   customRender(<Login />);
-  //   fireEvent.click(screen.getByRole('button', { name: /Login as John Doe/i }));
-
-  //   await act(async () => {
-  //     jest.runAllTimers();
-  //   });
-
-  //   await waitFor(() => {
-  //     const user = localStorage.getItem('at_at_current_user');
-  //     expect(user).not.toBeNull();
-  //     const parsed = JSON.parse(user);
-  //     expect(parsed.username).toBe('johndoe');
-  //   });
-  // });
-
-  // test('displays error on demo login failure', async () => {
-  //   customRender(<Login />);
-  //   fireEvent.click(screen.getByRole('button', { name: /Login as Jane Smith/i }));
-
-  //   await act(async () => {
-  //     jest.runAllTimers();
-  //   });
-
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
-  //   });
-  // });
+  test('5. Renders the footer copyright information', () => {
+    renderComponent(authenticatedAuthProps);
+    expect(screen.getByText(/© 2025 AT-AT \(API Threat Assessment Tool\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/COS301 Capstone Project/i)).toBeInTheDocument();
+  });
 });

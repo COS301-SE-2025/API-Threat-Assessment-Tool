@@ -2,7 +2,7 @@ import React, { useContext, useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeContext } from "./App";
 import Logo from "./components/Logo";
-import "./Login.css"; // reuse the same styling system as Login
+import "./Login.css"; 
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -16,7 +16,6 @@ export default function ForgotPassword() {
 
 
 
-  // optional entrance animation like Login
   const [animationPhase, setAnimationPhase] = useState("entering");
   useEffect(() => {
     const t = setTimeout(() => setAnimationPhase("entered"), 10);
@@ -38,7 +37,7 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
-      setMsg({ type: "ok", text: "If that account exists, we sent a reset link." });
+      setMsg({ type: "ok", text: "If that account exists, we sent a reset link. If you cannot find the email, make sure to check your spam folder." });
     } catch {
       setMsg({ type: "err", text: "Something went wrong. Try again." });
     } finally {

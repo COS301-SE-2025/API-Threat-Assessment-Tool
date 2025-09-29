@@ -85,7 +85,7 @@ function displayCoverageSummary() {
 function getStatusIcon(percentage) {
   if (percentage >= 90) return '🟢';
   if (percentage >= 80) return '🟡';
-  if (percentage >= 70) return '🟠';
+  if (percentage >= 40) return '🟠';
   return '🔴';
 }
 

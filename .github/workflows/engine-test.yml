@@ -13,6 +13,10 @@ jobs:
   engine-test:
     runs-on: ubuntu-latest
 
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -27,6 +31,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install pytest
+          export DOCKER=TRUE
 
       # Start the custom API test server in the background
       - name: Start Custom Test API Server
@@ -50,7 +55,13 @@ jobs:
         run: |
           nohup python backend/main.py > engine.log 2>&1 &
           sleep 5
-          netstat -an | grep 9011 || (echo "❌ Scanning Engine not listening on port 9011"; exit 1)
+          if ! netstat -an | grep 9011; then
+            echo "❌ Scanning Engine not listening on port 9011"
+            echo "--- engine.log ---"
+            cat engine.log
+            exit 1
+          fi
+
 
       # Run the automated test suite with pytest
       - name: Run Engine Tests

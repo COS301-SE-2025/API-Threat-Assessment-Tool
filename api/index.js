@@ -608,6 +608,7 @@ app.get('/', (req, res) => {
       dashboardOverview: 'GET /api/dashboard/overview',
       dashboardMetrics: 'GET /api/dashboard/metrics',
       dashboardAlerts: 'GET /api/dashboard/alerts',
+      landingStats: 'GET /api/stats/platform',
       getAllApis: 'GET /api/apis',
       createApi: 'POST /api/apis/create',
       getApiDetails: 'GET /api/apis/details',
@@ -1580,6 +1581,22 @@ app.get('/api/dashboard/alerts', async (req, res) => {
     }
   } catch (err) {
     sendError(res, 'Dashboard alerts error', err.message, 500);
+  }
+});
+
+app.get('/api/stats/platform', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'platform.stats',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Platform stats retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get platform stats', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Platform stats error', err.message, 500);
   }
 });
 
@@ -2817,7 +2834,7 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
       const token = newToken();
       saveResetToken(user.id, token);
 
-      const origin = (req.get('FRONTEND_URL') || 'http://localhost:3000').replace(/\/+$/, '');
+      const origin = ('https://apithreatassessment.co.za/')    
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
       // Dev "send": log the link 
       await sendResetEmail(user.email, resetUrl);

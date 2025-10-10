@@ -75,7 +75,43 @@ class DB_Manager:
         except Exception as e:
             logger.error(f"Error selecting from {table_name}: {e}")
             return []
+
+    def select_with_filter(self, table_name: str, columns: str = "*", filters: Optional[List[tuple]] = None) -> List[Dict[str, Any]]:
+        """
+        Selects records with a more flexible list of filters (e.g., for lte, gte).
+        Filters should be a list of tuples, e.g., [('column', 'operator', 'value')].
+        """
+        try:
+            query = self._supabase.table(table_name).select(columns)
+
+            if filters:
+                for column, operator, value in filters:
+                    if operator == 'eq':
+                        query = query.eq(column, value)
+                    elif operator == 'neq':
+                        query = query.neq(column, value)
+                    elif operator == 'gt':
+                        query = query.gt(column, value)
+                    elif operator == 'gte':
+                        query = query.gte(column, value)
+                    elif operator == 'lt':
+                        query = query.lt(column, value)
+                    elif operator == 'lte':
+                        query = query.lte(column, value)
+                    elif operator == 'in':
+                        query = query.in_(column, value)
+                    else:
+                        logger.warning(f"Unsupported filter operator '{operator}' in select_with_filter. Skipping.")
+
+            result = query.execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error selecting from {table_name} with custom filters: {e}")
+            return []
     
+    
+
+
     def update(self, table_name: str, data: Dict[str, Any], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         try:
             query = self._supabase.table(table_name).update(data)

@@ -12,7 +12,9 @@ from dateutil.parser import parse as parse_datetime
 from collections import defaultdict 
 from datetime import timedelta
 import base64
-
+import threading
+from dotenv import load_dotenv
+load_dotenv()
 
 import socket
 import json
@@ -286,7 +288,7 @@ def get_all_apis(request):
     log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
     
     try:
-        # STEP 1: Get APIs OWNED BY the user (added base_url).
+        # STEP 1: Get APIs OWNED BY the user.
         owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"user_id": user_id})
         for api in owned_apis_data:
             api['permission'] = 'owner'
@@ -297,10 +299,8 @@ def get_all_apis(request):
         
         shared_apis_data = []
         if shared_api_ids:
-            # Get the details for the shared APIs (added base_url).
             shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"id": shared_api_ids})
             
-            # Create maps for efficient lookups
             permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
             owner_ids = {api['user_id'] for api in shared_apis_details}
             owners = db_manager.select("users", columns="id, first_name, last_name", filters={"id": list(owner_ids)})
@@ -318,22 +318,23 @@ def get_all_apis(request):
 
         all_api_ids = [api['id'] for api in all_user_apis]
 
-        # STEP 4: Batch fetch all scan and result data for ALL accessible APIs.
-        all_completed_scans = db_manager.select(
+        # STEP 4: Batch fetch ALL scan and result data.
+        # Fetch ALL scans, not just completed ones.
+        all_scans = db_manager.select(
             "scans",
-            columns="id, api_id, completed_at",
-            filters={"api_id": all_api_ids, "status": "completed"}
+            columns="id, api_id, status, started_at, completed_at",
+            filters={"api_id": all_api_ids}
         )
         
         scans_by_api_id = defaultdict(list)
-        for scan in all_completed_scans:
+        for scan in all_scans:
             scans_by_api_id[scan['api_id']].append(scan)
         
-        scan_ids_to_check = [scan['id'] for scan in all_completed_scans]
+        completed_scan_ids = [s['id'] for s in all_scans if s.get('status') == 'completed']
         results_count_by_scan_id = defaultdict(int)
 
-        if scan_ids_to_check:
-            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": scan_ids_to_check})
+        if completed_scan_ids:
+            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": completed_scan_ids})
             for result in all_scan_results:
                 results_count_by_scan_id[result['scan_id']] += 1
 
@@ -347,12 +348,17 @@ def get_all_apis(request):
 
             if api_id in scans_by_api_id:
                 api_scans = scans_by_api_id[api_id]
-                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+                # Sort by started_at to find the most recent scan
+                api_scans.sort(key=lambda s: parse_datetime(s["started_at"]), reverse=True)
                 latest_scan = api_scans[0]
                 
-                scan_status = "Completed"
-                last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
-                vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
+                # Get the status from the LATEST scan, whatever it is
+                scan_status = latest_scan.get("status", "Unknown").capitalize()
+                
+                # If the latest scan is completed, populate its details
+                if latest_scan.get('status') == 'completed':
+                    last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
+                    vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
 
             dt_obj = parse_datetime(api.get("imported_on"))
             created_at_iso = dt_obj.isoformat()
@@ -362,7 +368,7 @@ def get_all_apis(request):
                 "api_id": api_id,
                 "name": api.get("name"),
                 "version": api.get("version"),
-                "base_url": api.get("base_url"), # <-- BUG FIX: Add the base_url here
+                "base_url": api.get("base_url"),
                 "created_at": created_at_iso,
                 "vulnerabilitiesFound": vulnerabilities_found,
                 "lastScanned": last_scanned,
@@ -726,17 +732,10 @@ def delete_schedule(request):
     _invalidate_api_list_cache(user_id)
     return success({"message": "Schedule deleted successfully."})
 
-# NOTE: This function is for the cron job runner.
-# It should be called by a separate, scheduled script.
 def check_and_run_scheduled_scans():
-    """
-    This function should be run periodically by a scheduler (e.g., a cron job).
-    It finds and starts scans that are due to run.
-    """
     log_with_timestamp("Checking for scheduled scans to run...")
     now_iso = datetime.now(timezone.utc).isoformat()
     
-    # Find schedules that are enabled and past their due time
     due_scans = db_manager.select_with_filter("scheduled_scans", filters=[
         ("is_enabled", "eq", True),
         ("next_run_at", "lte", now_iso)
@@ -747,17 +746,29 @@ def check_and_run_scheduled_scans():
         return
 
     for schedule in due_scans:
-        log_with_timestamp(f"Running scheduled scan for API {schedule['api_id']}")
+        log_with_timestamp(f"Processing scheduled scan for API {schedule['api_id']}")
         try:
             scan_manager = _get_or_create_scan_manager(schedule['user_id'], schedule['api_id'])
             if not scan_manager:
                 log_with_timestamp(f"Could not find API Client for {schedule['api_id']}. Skipping.")
                 continue
 
-            # Start the scan
-            scan_manager.run_scan(schedule['api_id'], schedule['user_id'])
+            # Start the scan entry synchronously to get an ID
+            scan_id = scan_manager._start_scan_entry(schedule['api_id'], schedule['user_id'])
+            if not scan_id:
+                log_with_timestamp(f"Could not create scan entry for scheduled scan on API {schedule['api_id']}. Skipping.")
+                continue
+
+            # Start the actual scan in a background thread
+            scan_thread = threading.Thread(
+                target=scan_manager._execute_scan_in_background,
+                args=(scan_id,)
+            )
+            scan_thread.daemon = True
+            scan_thread.start()
+            log_with_timestamp(f"Started background thread for scheduled scan {scan_id}")
             
-            # Calculate the next run time and update the schedule
+            # Immediately calculate the next run time and update the schedule
             now = datetime.now(timezone.utc)
             if schedule['frequency'] == 'daily':
                 next_run_at = now + timedelta(days=1)
@@ -816,6 +827,7 @@ def create_scan(request):
 
     return success({"message": "Scan session created and keys configured. Ready to start."})
 
+# Replace the existing start_scan function with this one
 def start_scan(request): 
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
@@ -825,22 +837,17 @@ def start_scan(request):
     # Get the DOCKER environment variable, defaulting to 'FALSE'
     is_docker_env = os.getenv('DOCKER', 'FALSE').upper() == 'TRUE'
 
-    # --- New Restriction Logic ---
-    # If the environment is NOT docker, check for local URLs
     if not is_docker_env:
         log_with_timestamp("DOCKER env is not 'TRUE'. Checking for localhost URL before starting scan.")
         api_client = _get_api_client(user_id, api_id)
         if not api_client:
             return not_found("API client not found, cannot start scan.")
 
-        # Check the API's base URL for 'localhost' or '127.0.0.1'
         base_url = api_client.base_url.lower() if api_client.base_url else ""
         if "localhost" in base_url or "127.0.0.1" in base_url:
             log_with_timestamp(f"Scan blocked for local API '{api_id}' because DOCKER env is not 'TRUE'.")
             return response(HTTPCode.FORBIDDEN, {"message": "Scans for local APIs are disabled in this environment."})
-    # --- End of New Logic ---
 
-    # Existing permission check
     if not _verify_api_access(user_id, api_id, minimum_level='manage'):
         return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to start a scan for this API."})
 
@@ -849,16 +856,27 @@ def start_scan(request):
         return not_found("API client not found, cannot start scan.")
 
     try:
-        scan_id = scan_manager.run_scan(api_id, user_id)
-        if scan_id:
-            return success({"scan_id": scan_id})
-        else:
-            return server_error("Failed to start scan or retrieve scan ID.")
+        # Step 1: Create the scan entry in the DB synchronously to get an ID.
+        scan_id = scan_manager._start_scan_entry(api_id, user_id)
+        if not scan_id:
+            return server_error("Failed to create a scan entry in the database.")
+
+        # Step 2: Create and start a new thread to run the scan in the background.
+        scan_thread = threading.Thread(
+            target=scan_manager._execute_scan_in_background,
+            args=(scan_id,)
+        )
+        scan_thread.daemon = True # Allows main program to exit even if threads are running
+        scan_thread.start()
+        log_with_timestamp(f"Started background scan thread for scan_id: {scan_id}")
+
+        # Step 3: Immediately return the scan_id to the user.
+        return success({"scan_id": scan_id})
+        
     except Exception as e:
         log_with_timestamp(f"Error during start_scan: {e}")
         return server_error(str(e))
 
-# main.py
 
 def get_scan_status(request):
     """Checks the status of a scan and returns results if completed."""
@@ -1201,6 +1219,32 @@ def get_executive_report(request):
         # We can either save this to a known location to the api or send the raw pdf data
     return server_error("Not yet implemented")
 
+def get_platform_stats(request):
+    try:
+        vuln_count_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM scan_results")
+        # FIX: Access the nested 'result' key first, then 'total'
+        total_vulnerabilities = vuln_count_res[0]['result']['total'] if vuln_count_res else 0
+
+        api_count_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM apis")
+        # FIX: Access the nested 'result' key first, then 'total'
+        total_apis = api_count_res[0]['result']['total'] if api_count_res else 0
+
+        scans_today_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM scans WHERE started_at >= NOW() - INTERVAL '1 day'")
+        # FIX: Access the nested 'result' key first, then 'total'
+        scans_today = scans_today_res[0]['result']['total'] if scans_today_res else 0
+
+        # Format numbers with commas for better readability
+        stats = {
+            "vulnerabilitiesFound": f"{total_vulnerabilities:,}",
+            "apisSecured": f"{total_apis:,}",
+            "scansToday": f"{scans_today:,}"
+        }
+
+        return success(stats)
+
+    except Exception as e:
+        log_with_timestamp(f"Error in get_platform_stats: {e}")
+        return server_error(str(e))
 
 
 # === Templates ===
@@ -1270,6 +1314,7 @@ def handle_request(request: dict):
         "user.settings.update": update_settings,
         "reports.tech": get_techincal_report,
         "reports.exec": get_executive_report,
+        "platform.stats": get_platform_stats,
         "reports.download": download_report,
         "apis.key.set": set_api_key,
     }
@@ -1349,4 +1394,5 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
+
 

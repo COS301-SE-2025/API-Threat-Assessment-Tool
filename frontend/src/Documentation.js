@@ -82,7 +82,7 @@ const Documentation = () => {
     {
       id: 'false-positives',
       question: 'How do I handle false positives in scan results?',
-      answer: 'Use the "Mark as False Positive" feature in the results view. You can also create custom rules to exclude specific findings and set up approval workflows for vulnerability validation.'
+      answer: 'Skill Issue.'
     },
     {
       id: 'integration-support',
@@ -511,33 +511,16 @@ const Documentation = () => {
             <h2 className="section-title">Need More Help?</h2>
             <p className="section-description">Get support from our team and community</p>
           </div>
-          
-          <div className="support-grid">
-            <div className="support-card">
-              <div className="support-icon">💬</div>
-              <h3 className="support-title">Live Chat</h3>
-              <p className="support-description">Get instant help from our support team</p>
-              <button className="support-btn">Start Chat</button>
-            </div>
             <div className="support-card">
               <div className="support-icon">📧</div>
               <h3 className="support-title">Email Support</h3>
               <p className="support-description">Send us detailed questions or bug reports</p>
-              <button className="support-btn">Send Email</button>
-            </div>
-            <div className="support-card">
-              <div className="support-icon">👥</div>
-              <h3 className="support-title">Community Forum</h3>
-              <p className="support-description">Connect with other AT-AT users</p>
-              <button className="support-btn">Join Forum</button>
             </div>
             <div className="support-card">
               <div className="support-icon">📖</div>
-              <h3 className="support-title">API Reference</h3>
+              <h3 className="support-title">User Manual</h3>
               <p className="support-description">Technical documentation for developers</p>
-              <button className="support-btn">View Docs</button>
             </div>
-          </div>
         </section>
       </main>
 

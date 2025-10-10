@@ -1,113 +1,170 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ThemeContext, ScanContext } from '../App';
-import { AuthProvider } from '../AuthContext';
-import { Dashboard } from '../Dashboard';  // Assuming you default export Dashboard
-import { ScanSimulation } from '../scanSimulation';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Dashboard from '../Dashboard'; 
+import { useAuth } from '../AuthContext';
+import { ThemeContext } from '../App';
 
-// Mocking axios to avoid issues with import syntax in Jest
-jest.mock('axios', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
+global.fetch = jest.fn();
+
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: '/dashboard' }),
 }));
 
-// Mock IntersectionObserver for Jest environment
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
+const mockLogout = jest.fn();
+const mockGetUserFullName = jest.fn();
+jest.mock('../AuthContext', () => ({
+  useAuth: jest.fn(),
 }));
 
-const mockScanSimulation = new ScanSimulation();
+const mockToggleDarkMode = jest.fn();
+const mockThemeContext = {
+  darkMode: false,
+  toggleDarkMode: mockToggleDarkMode,
+};
 
-// Render function
-const renderApp = () =>
-  render(
-    <AuthProvider>
-      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: jest.fn() }}>
-        <ScanContext.Provider value={{ scanSimulation: mockScanSimulation }}>
-          <Dashboard />
-        </ScanContext.Provider>
-      </ThemeContext.Provider>
-    </AuthProvider>
-  );
+const mockConfirm = jest.spyOn(window, 'confirm');
+const mockAlert = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
-describe('Dashboard Component Unit Tests', () => {
-  
-  // Reset or clear localStorage and class list before each test to avoid interference
-  beforeEach(() => {
-    localStorage.clear();
-    document.body.classList.remove('dark-mode');
-    document.documentElement.classList.remove('dark-mode');
-  });
+const mockUser = {
+  id: 'user-123',
+  username: 'dashuser',
+  firstName: 'Dash',
+  lastName: 'User',
+};
 
-  test('renders without crashing', () => {
-    renderApp();
-    expect(screen.getByText('Security Dashboard')).toBeInTheDocument();
-  });
+const mockApis = [
+    { id: 'api-1', name: 'Billing Service API' },
+    { id: 'api-2', name: 'User Auth API' },
+];
 
-  test('provides scan simulation context', () => {
-    renderApp();
-    expect(typeof mockScanSimulation.startScan).toBe('function');
-  });
+const mockDashboardData = {
+    total_apis: 2,
+    total_scans: 15,
+    total_vulnerabilities: 8,
+    critical_vulnerabilities: 3,
+    scan_activity_weekly: [
+        { day: 'Mon', scans: 2, vulnerabilities: 1 },
+        { day: 'Tue', scans: 5, vulnerabilities: 4 },
+        { day: 'Wed', scans: 8, vulnerabilities: 3 },
+        { day: 'Thu', scans: 0, vulnerabilities: 0 },
+        { day: 'Fri', scans: 0, vulnerabilities: 0 },
+        { day: 'Sat', scans: 0, vulnerabilities: 0 },
+        { day: 'Sun', scans: 0, vulnerabilities: 0 },
+    ],
+    top_vuln_types: [
+        { type: 'Broken Access Control', count: 3 },
+        { type: 'Injection', count: 2 },
+    ],
+    recent_scans: [
+        { id: 'scan-1', apiName: 'Billing Service API', date: new Date().toISOString(), status: 'Complete', vulnerabilities: 3 },
+        { id: 'scan-2', apiName: 'User Auth API', date: new Date(Date.now() - 3600000).toISOString(), status: 'Failed', vulnerabilities: 0 },
+    ],
+};
 
-  test('toggles theme to dark mode', () => {
-    const toggleDarkModeMock = jest.fn();
-    render(
-      <ThemeContext.Provider value={{ darkMode: false, toggleDarkMode: toggleDarkModeMock }}>
-        <Dashboard />
-      </ThemeContext.Provider>
+const renderComponent = (authProps, themeProps = mockThemeContext) => {
+    useAuth.mockReturnValue(authProps);
+    return render(
+        <ThemeContext.Provider value={themeProps}>
+            <MemoryRouter initialEntries={['/dashboard']}>
+                <Dashboard />
+            </MemoryRouter>
+        </ThemeContext.Provider>
     );
-    fireEvent.click(screen.getByTitle(/Toggle Theme/i));
-    expect(toggleDarkModeMock).toHaveBeenCalled();
-  });
-  test('starts a scan when button is clicked', () => {
-    renderApp();
-    const startScanButton = screen.getByRole('button', { name: /Start Scan/i });
-    fireEvent.click(startScanButton);
-    expect(mockScanSimulation.startScan).toHaveBeenCalled();
-  });
-  test('displays scan results after scan completion', async () => {
-    renderApp();
-    const startScanButton = screen.getByRole('button', { name: /Start Scan/i });
-    fireEvent.click(startScanButton);
-    
-    // Simulate scan completion
-    mockScanSimulation.scanResults = [{ id: 1, status: 'completed' }];
-    mockScanSimulation.onScanComplete();
+};
 
-    expect(screen.getByText(/Scan Results/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 completed/i)).toBeInTheDocument();
-  });
-  test('handles scan errors gracefully', async () => {
-    renderApp();
-    const startScanButton = screen.getByRole('button', { name: /Start Scan/i });
-    fireEvent.click(startScanButton);
-    
-    // Simulate scan error
-    mockScanSimulation.scanError = 'Network error';
-    mockScanSimulation.onScanError();
+const mockSuccessfulFetch = (data = mockDashboardData, apis = mockApis) => {
+    global.fetch.mockImplementationOnce(() =>
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true, data: data }),
+        })
+    );
+    global.fetch.mockImplementationOnce(() =>
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true, data: { apis: apis } }),
+        })
+    );
+};
 
-    expect(screen.getByText(/Error/i)).toBeInTheDocument();
-    expect(screen.getByText(/Network error/i)).toBeInTheDocument();
-  });
-  test('updates scan progress during scan', async () => {
-    renderApp();
-    const startScanButton = screen.getByRole('button', { name: /Start Scan/i });
-    fireEvent.click(startScanButton);
-    
-    // Simulate scan progress
-    mockScanSimulation.scanProgress = 50;
-    mockScanSimulation.onScanProgress();
+const mockOverviewFailure = () => {
+    global.fetch.mockImplementationOnce(() =>
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: false, message: 'Overview API Error' }),
+        })
+    );
+    global.fetch.mockImplementationOnce(() =>
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true, data: { apis: mockApis } }),
+        })
+    );
+};
 
-    expect(screen.getByText(/Progress: 50%/i)).toBeInTheDocument();
+describe('Dashboard Component', () => {
+  const authenticatedAuthProps = {
+    currentUser: mockUser,
+    logout: mockLogout,
+    getUserFullName: mockGetUserFullName.mockReturnValue('Dash User'),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockConfirm.mockReturnValue(true);
+    useAuth.mockReturnValue(authenticatedAuthProps);
   });
-  test('applies dark mode styles when dark mode is enabled', () => {
-    localStorage.setItem('darkMode', 'true');
-    renderApp();
-    expect(document.body.classList.contains('dark-mode')).toBe(true);
-    expect(document.documentElement.classList.contains('dark-mode')).toBe(true);
+
+  test('1. Renders correct summary statistics from API data', async () => {
+    mockSuccessfulFetch(mockDashboardData);
+    renderComponent(authenticatedAuthProps);
+
+    await waitFor(() => {
+        expect(screen.getByText('Total APIs Managed').nextElementSibling.textContent).toBe('2');
+        expect(screen.getByText('Total Scans').nextElementSibling.textContent).toBe('15');
+        expect(screen.getByText('Critical Alerts').nextElementSibling.textContent).toBe('3');
+    });
+  });
+
+  test('2. Displays error banner on dashboard overview fetch failure', async () => {
+    mockOverviewFailure();
+    renderComponent(authenticatedAuthProps);
+
+    await waitFor(() => {
+        expect(screen.getByText(/Could not load dashboard data: Overview API Error/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText('Total APIs Managed').nextElementSibling.textContent).toBe('0');
+  });
+
+  test('3. Calls logout and navigates to /login on confirmed logout', async () => {
+    mockSuccessfulFetch();
+    renderComponent(authenticatedAuthProps);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Security Dashboard/i })).toBeInTheDocument());
+    
+    fireEvent.click(screen.getByRole('button', { name: /Logout/i }));
+
+    expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to logout?');
+    expect(mockLogout).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  test('4. Checks navigation links in the header are present and correct', async () => {
+    mockSuccessfulFetch();
+    renderComponent(authenticatedAuthProps);
+    
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Security Dashboard/i })).toBeInTheDocument());
+
+    const homeLink = screen.getByRole('link', { name: /Home/i });
+    const manageApisLink = screen.getByRole('link', { name: /API Management/i });
+    
+    expect(homeLink).toHaveAttribute('href', '/home');
+    expect(manageApisLink).toHaveAttribute('href', '/manage-apis');
+    
+    expect(screen.getByRole('link', { name: /Dashboard/i })).toHaveClass('active');
   });
 });

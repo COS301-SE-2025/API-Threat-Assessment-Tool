@@ -1,9 +1,8 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
 import axios from 'axios';
-import React from 'react';
 
-// Mocking axios to simulate requests
 jest.mock('axios', () => ({
   get: jest.fn(),
   post: jest.fn(),
@@ -11,53 +10,69 @@ jest.mock('axios', () => ({
   delete: jest.fn(),
 }));
 
-// Mocking localStorage to simulate it being cleared and set
 const mockLocalStorage = (() => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
+    getItem: (key) => (key in store ? store[key] : null),
     setItem: (key, value) => { store[key] = value; },
     removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    clear: () => { store = {}; },
   };
 })();
 
-Object.defineProperty(global, 'localStorage', {
-  value: mockLocalStorage
-});
+Object.defineProperty(global, 'localStorage', { value: mockLocalStorage });
 
-// Test Component that uses the AuthContext
 const TestComponent = () => {
   const { currentUser, login, logout, signup } = useAuth();
   return (
     <div>
-      <div>{currentUser ? currentUser.username : "No user logged in"}</div>
+      <div data-testid="who">
+        {currentUser ? currentUser.username : 'No user logged in'}
+      </div>
       <button onClick={() => login('johndoe', 'password123')}>Login</button>
       <button onClick={() => logout()}>Logout</button>
-      <button onClick={() => signup({ firstName: 'New', lastName: 'User', email: 'new.user@example.com', username: 'newuser', password: 'newpass' })}>Signup</button>
+      <button
+        onClick={() =>
+          signup({
+            firstName: 'New',
+            lastName: 'User',
+            email: 'new.user@example.com',
+            username: 'newuser',
+            password: 'newpass',
+          })
+        }
+      >
+        Signup
+      </button>
     </div>
   );
 };
 
 describe('AuthContext', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
     localStorage.clear();
+    jest.clearAllMocks();
   });
-  test('initializes with no user', () => {
+
+  test('initializes with no user', async () => {
     render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>
     );
+    expect(screen.getByTestId('who').textContent).toBe('No user logged in');
   });
 
-  test('initializes with default users', () => {
-    // Simulate having users in localStorage
-    localStorage.setItem('at_at_users', JSON.stringify([
-      { username: 'johndoe', password: 'password123' },
-      { username: 'janedoe', password: 'password456' }
-    ]));
+  test('login success sets token and currentUser', async () => {
+    axios.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          token: 'fake-token',
+          user: { id: '1', username: 'johndoe', firstName: 'John', lastName: 'Doe' },
+        },
+      },
+    });
 
     render(
       <AuthProvider>
@@ -65,122 +80,288 @@ describe('AuthContext', () => {
       </AuthProvider>
     );
 
-    const users = JSON.parse(localStorage.getItem('at_at_users'));
-    expect(users).toHaveLength(2);
+    fireEvent.click(screen.getByText('Login'));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('at_at_token')).toBe('fake-token');
+      expect(screen.getByTestId('who').textContent).toBe('johndoe');
+    });
   });
-  
-// test(signup, async () => {
-//     // Mock the axios.post method for successful signup 
-//     axios.post.mockResolvedValue({
-//       data: {
-//         success: true,
-//         data: { token: 'fake-token', user: { username: 'newuser', firstName: 'New', lastName: 'User' } }
-//       }
-//     });
 
-  //   render(
-  //     <AuthProvider>
-  //       <TestComponent />
-  //     </AuthProvider>
-  //   );
+  test('login failure keeps user unauthenticated and token unset', async () => {
+    axios.post.mockResolvedValueOnce({
+      data: {
+        success: false,
+        message: 'Invalid credentials',
+      },
+    });
 
-  //   fireEvent.click(screen.getByText('Login'));
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
 
-  //   await act(async () => {
-  //     jest.runAllTimers(); // Simulating the timers running (used for delayed effects)
-  //   });
+    fireEvent.click(screen.getByText('Login'));
 
-  //   await waitFor(() => {
-  //     // Ensuring the token is set in localStorage after login
-  //     expect(localStorage.getItem('at_at_token')).toBe('fake-token');
-  //     expect(screen.getByText('johndoe')).toBeInTheDocument();
-  //   });
-  // });
+    await waitFor(() => {
+      expect(localStorage.getItem('at_at_token')).toBeNull();
+      expect(screen.getByTestId('who').textContent).toBe('No user logged in');
+    });
+  });
 
-  // test('login fails with invalid credentials', async () => {
-  //   // Mock the axios.post method for failed login
-  //   axios.post.mockRejectedValue({
-  //     response: {
-  //       data: {
-  //         message: 'Invalid credentials'
-  //       }
-  //     }
-  //   });
+  test('signup success triggers auto-login and sets user + token', async () => {
+    axios.post
+      .mockResolvedValueOnce({
+        data: { success: true },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            token: 'signup-token',
+            user: { id: '2', username: 'newuser', firstName: 'New', lastName: 'User' },
+          },
+        },
+      });
 
-  //   render(
-  //     <AuthProvider>
-  //       <TestComponent />
-  //     </AuthProvider>
-  //   );
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
 
-  //   fireEvent.click(screen.getByText('Login'));
+    fireEvent.click(screen.getByText('Signup'));
 
-  //   await act(async () => {
-  //     jest.runAllTimers(); // Simulating the timers running (used for delayed effects)
-  //   });
+    await waitFor(() => {
+      expect(localStorage.getItem('at_at_token')).toBe('signup-token');
+      expect(screen.getByTestId('who').textContent).toBe('newuser');
+    });
+  });
 
-  //   await waitFor(() => {
-  //     expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
-  //   });
-  // });
+  test('logout clears session and user', async () => {
+    axios.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          token: 'fake-token',
+          user: { id: '1', username: 'johndoe', firstName: 'John', lastName: 'Doe' },
+        },
+      },
+    });
 
-  // test('signup creates new user', async () => {
-  //   // Mock the axios.post method for successful signup
-  //   axios.post.mockResolvedValue({
-  //     data: {
-  //       success: true,
-  //       data: { token: 'fake-token', user: { username: 'newuser', firstName: 'New', lastName: 'User' } }
-  //     }
-  //   });
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
 
-  //   render(
-  //     <AuthProvider>
-  //       <TestComponent />
-  //     </AuthProvider>
-  //   );
+    fireEvent.click(screen.getByText('Login'));
 
-  //   fireEvent.click(screen.getByText('Signup'));
+    await waitFor(() => {
+      expect(localStorage.getItem('at_at_token')).toBe('fake-token');
+      expect(screen.getByTestId('who').textContent).toBe('johndoe');
+    });
 
-  //   await act(async () => {
-  //     jest.runAllTimers(); // Simulating the timers running (used for delayed effects)
-  //   });
+    fireEvent.click(screen.getByText('Logout'));
 
-  //   await waitFor(() => {
-  //     // Ensuring that the new user is added to localStorage
-  //     const users = JSON.parse(localStorage.getItem('at_at_users'));
-  //     expect(users).toBeTruthy();
-  //     expect(users.find(u => u.username === 'newuser')).toBeTruthy();
-  //   });
-  // });
+    await waitFor(() => {
+      expect(localStorage.getItem('at_at_token')).toBeNull();
+      expect(screen.getByTestId('who').textContent).toBe('No user logged in');
+    });
+  });
+});
+const ExtendedComponent = () => {
+  const {
+    currentUser,
+    updateProfile,
+    updatePassword,
+    getUserPreferences,
+    updatePreferences,
+    refreshProfile,
+    getUserFullName,
+    getUserInitials,
+    isAuthenticated,
+    hasPermission,
+    getAuthHeaders,
+  } = useAuth();
 
-  // test('logout clears session', async () => {
-  //   // Simulate user login first
-  //   axios.post.mockResolvedValue({
-  //     data: {
-  //       data: {
-  //         token: 'fake-token',
-  //         user: { username: 'johndoe', firstName: 'John', lastName: 'Doe' }
-  //       }
-  //     }
-  //   });
+  return (
+    <div>
+      <div data-testid="who-ext">
+        {currentUser ? currentUser.username : 'No user'}
+      </div>
+      <div data-testid="full-ext">{getUserFullName()}</div>
+      <div data-testid="init-ext">{getUserInitials()}</div>
+      <div data-testid="isauth-ext">{String(isAuthenticated())}</div>
+      <div data-testid="hasperm-ext">{String(hasPermission('anything'))}</div>
+      <div data-testid="authhdr-ext">
+        {getAuthHeaders().Authorization ? 'has' : 'none'}
+      </div>
 
-  //   render(
-  //     <AuthProvider>
-  //       <TestComponent />
-  //     </AuthProvider>
-  //   );
+      <button
+        data-testid="btn-updateProfile"
+        onClick={() => updateProfile({ firstName: 'Alice', lastName: 'Adams' })}
+      >
+        updProfile
+      </button>
+      <button
+        data-testid="btn-updatePassword"
+        onClick={() => updatePassword('oldpw', 'newpw')}
+      >
+        updPass
+      </button>
+      <button
+        data-testid="btn-getPrefs"
+        onClick={() => getUserPreferences()}
+      >
+        getPrefs
+      </button>
+      <button
+        data-testid="btn-setPrefs"
+        onClick={() => updatePreferences({ theme: 'dark' })}
+      >
+        setPrefs
+      </button>
+      <button
+        data-testid="btn-refresh"
+        onClick={() => refreshProfile()}
+      >
+        refresh
+      </button>
+    </div>
+  );
+};
 
-  //   fireEvent.click(screen.getByText('Login'));
+describe('AuthContext – additional coverage', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    jest.clearAllMocks();
+    localStorage.setItem('at_at_token', 'BOOT_TOKEN');
+    axios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { user: { id: '1', username: 'john', firstName: 'John', lastName: 'Doe', email: 'j@e.com' } },
+      },
+    });
+  });
 
-  //   await act(async () => {
-  //     jest.runAllTimers(); // Simulating the timers running (used for delayed effects)
-  //   });
+  test('updateProfile success updates user and full name helpers', async () => {
+    const { AuthProvider } = require('../AuthContext');
+    axios.put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { user: { id: '1', username: 'john', firstName: 'Alice', lastName: 'Adams', email: 'j@e.com' } },
+      },
+    });
 
-  //   fireEvent.click(screen.getByText('Logout'));
+    render(
+      <AuthProvider>
+        <ExtendedComponent />
+      </AuthProvider>
+    );
 
-  //   await waitFor(() => {
-  //     expect(screen.getByText('No user logged in')).toBeInTheDocument();
-  //     expect(localStorage.getItem('at_at_token')).toBe('');
-  //   });
-  // });
+    await waitFor(() => expect(screen.getByTestId('who-ext').textContent).toBe('john'));
+
+    fireEvent.click(screen.getByTestId('btn-updateProfile'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('full-ext').textContent).toBe('Alice Adams');
+      expect(screen.getByTestId('init-ext').textContent).toBe('AA');
+    });
+  });
+
+  test('updateProfile failure leaves user unchanged', async () => {
+    const { AuthProvider } = require('../AuthContext');
+
+    axios.put.mockResolvedValueOnce({ data: { success: false, message: 'nope' } });
+
+    render(
+      <AuthProvider>
+        <ExtendedComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('who-ext').textContent).toBe('john'));
+    const beforeFull = screen.getByTestId('full-ext').textContent;
+
+    fireEvent.click(screen.getByTestId('btn-updateProfile'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('who-ext').textContent).toBe('john');
+      expect(screen.getByTestId('full-ext').textContent).toBe(beforeFull);
+    });
+  });
+
+  test('updatePassword success hits expected endpoint', async () => {
+    const { AuthProvider } = require('../AuthContext');
+
+    axios.put.mockResolvedValueOnce({ data: { success: true } });
+
+    render(
+      <AuthProvider>
+        <ExtendedComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('who-ext').textContent).toBe('john'));
+
+    fireEvent.click(screen.getByTestId('btn-updatePassword'));
+
+    await waitFor(() => {
+      expect(axios.put).toHaveBeenCalled();
+      const [url] = axios.put.mock.calls[0];
+      expect(url).toMatch(/\/api\/user\/password$/);
+    });
+  });
+
+  test('getUserPreferences success and updatePreferences success call correct endpoints', async () => {
+    const { AuthProvider } = require('../AuthContext');
+
+    axios.get.mockResolvedValueOnce({
+      data: { success: true, data: { preferences: { theme: 'dark' } } },
+    });
+    axios.put.mockResolvedValueOnce({ data: { success: true } });
+
+    render(
+      <AuthProvider>
+        <ExtendedComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('who-ext').textContent).toBe('john'));
+
+    fireEvent.click(screen.getByTestId('btn-getPrefs'));
+    fireEvent.click(screen.getByTestId('btn-setPrefs'));
+
+    await waitFor(() => {
+      const getCall = axios.get.mock.calls.find(([u]) => /\/api\/user\/preferences$/.test(u));
+      const putCall = axios.put.mock.calls.find(([u]) => /\/api\/user\/preferences$/.test(u));
+      expect(getCall).toBeTruthy();
+      expect(putCall).toBeTruthy();
+    });
+  });
+
+  test('refreshProfile failure keeps current user intact', async () => {
+    const { AuthProvider } = require('../AuthContext');
+
+    axios.get.mockResolvedValueOnce({ data: { success: false, message: 'fail-refresh' } });
+
+    render(
+      <AuthProvider>
+        <ExtendedComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('who-ext').textContent).toBe('john'));
+
+    fireEvent.click(screen.getByTestId('btn-refresh'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('who-ext').textContent).toBe('john');
+      expect(screen.getByTestId('isauth-ext').textContent).toBe('true');
+      expect(screen.getByTestId('hasperm-ext').textContent).toBe('true');
+      expect(screen.getByTestId('authhdr-ext').textContent).toBe('has');
+    });
+  });
 });

@@ -230,6 +230,8 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  padding: 0 0.1em; /* Add padding to prevent clipping */
+  display: inline-block; /* Ensure padding works correctly */
 }
 
 .hero-description {

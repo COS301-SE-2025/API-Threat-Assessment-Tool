@@ -1,0 +1,87 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OWASP API Top 10 2023 Vulnerable API",
+    "description": "A vulnerable API for automated testing of OWASP API Top 10 2023 issues.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "OWASP Testing server"
+    }
+  ],
+  "paths": {
+    "/api/BOLA/profile/{user_id}": {
+      "get": {
+        "summary": "Get User Profile",
+        "description": "Vulnerable: Can access any user's profile",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/BKEN_AUTH/login": {
+      "post": {
+        "summary": "Login",
+        "description": "Vulnerable: Weak authentication, no rate limiting",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/SSRF/fetch": {
+      "get": {
+        "summary": "Fetch URL",
+        "description": "Vulnerable: No URL validation",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    }
+  }
+}

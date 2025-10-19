@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 from dateutil.parser import parse as parse_datetime
 from collections import defaultdict 
 from datetime import timedelta
+import base64
+import threading
+from dotenv import load_dotenv
+load_dotenv()
 
 import socket
 import json
@@ -88,6 +92,43 @@ def _get_or_create_scan_manager(user_id: str, api_id: str) -> ScanManager:
         USER_STORE[user_id]["scans"][api_id] = ScanManager(api_client)
 
     return USER_STORE[user_id]["scans"][api_id]
+
+# In main.py, near your other helper functions
+
+def _verify_api_access(user_id: str, api_id: str, minimum_level: str) -> bool:
+    """
+    Verifies if a user has the required permission level for an API.
+    Levels: 'view' (read-only), 'manage' (can run scans), 'owner' (full control).
+    """
+    permission_levels = {
+        "view": 1,
+        "read": 1,
+        "manage": 2,
+        "edit": 2,
+        "owner": 3
+    }
+    required_level = permission_levels.get(minimum_level.lower(), 0)
+
+    try:
+        # 1. Check if the user is the owner
+        api_owner = db_manager.select("apis", columns="user_id", filters={"id": api_id, "user_id": user_id})
+        if api_owner:
+            return True # Owners have max permission
+
+        # 2. If not the owner, check for shared access
+        access_record = db_manager.select("api_access", columns="permission", filters={"api_id": api_id, "user_id": user_id})
+        if not access_record:
+            return False # No direct ownership or shared access record found
+        
+        user_permission = access_record[0].get("permission", "")
+        user_level = permission_levels.get(user_permission.lower(), 0)
+
+        # 3. Compare user's permission level against the required level
+        return user_level >= required_level
+
+    except Exception as e:
+        log_with_timestamp(f"Error during permission check for user {user_id} on api {api_id}: {e}")
+        return False
 
 # === Dashboard ===
 def dashboard_overview(request):
@@ -238,22 +279,19 @@ def import_file(request):
         log_with_timestamp(f"Error in import_file: {e}")
         return server_error(str(e))
 
-# In main.py, replace the entire get_all_apis function with this new version.
 
 def get_all_apis(request):
     user_id = request.get("data", {}).get("user_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
-    # The API list is now dynamic, so we should not cache it this way.
-    # The cache will be invalidated on share/revoke actions if needed, but for now, let's remove it for simplicity.
     log_with_timestamp(f"Fetching all accessible APIs for user {user_id}.")
     
     try:
         # STEP 1: Get APIs OWNED BY the user.
-        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"user_id": user_id})
+        owned_apis_data = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"user_id": user_id})
         for api in owned_apis_data:
-            api['permission'] = 'owner' # Mark as owner
+            api['permission'] = 'owner'
 
         # STEP 2: Get APIs SHARED WITH the user.
         shared_access_records = db_manager.select("api_access", columns="api_id, permission", filters={"user_id": user_id})
@@ -261,10 +299,8 @@ def get_all_apis(request):
         
         shared_apis_data = []
         if shared_api_ids:
-            # Get the details for the shared APIs
-            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id", filters={"id": shared_api_ids})
+            shared_apis_details = db_manager.select("apis", columns="id, name, version, imported_on, user_id, base_url", filters={"id": shared_api_ids})
             
-            # Create maps for efficient lookups
             permission_map = {rec['api_id']: rec['permission'] for rec in shared_access_records}
             owner_ids = {api['user_id'] for api in shared_apis_details}
             owners = db_manager.select("users", columns="id, first_name, last_name", filters={"id": list(owner_ids)})
@@ -282,22 +318,23 @@ def get_all_apis(request):
 
         all_api_ids = [api['id'] for api in all_user_apis]
 
-        # STEP 4: Batch fetch all scan and result data for ALL accessible APIs.
-        all_completed_scans = db_manager.select(
+        # STEP 4: Batch fetch ALL scan and result data.
+        # Fetch ALL scans, not just completed ones.
+        all_scans = db_manager.select(
             "scans",
-            columns="id, api_id, completed_at",
-            filters={"api_id": all_api_ids, "status": "completed"}
+            columns="id, api_id, status, started_at, completed_at",
+            filters={"api_id": all_api_ids}
         )
         
         scans_by_api_id = defaultdict(list)
-        for scan in all_completed_scans:
+        for scan in all_scans:
             scans_by_api_id[scan['api_id']].append(scan)
         
-        scan_ids_to_check = [scan['id'] for scan in all_completed_scans]
+        completed_scan_ids = [s['id'] for s in all_scans if s.get('status') == 'completed']
         results_count_by_scan_id = defaultdict(int)
 
-        if scan_ids_to_check:
-            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": scan_ids_to_check})
+        if completed_scan_ids:
+            all_scan_results = db_manager.select("scan_results", columns="scan_id", filters={"scan_id": completed_scan_ids})
             for result in all_scan_results:
                 results_count_by_scan_id[result['scan_id']] += 1
 
@@ -311,12 +348,17 @@ def get_all_apis(request):
 
             if api_id in scans_by_api_id:
                 api_scans = scans_by_api_id[api_id]
-                api_scans.sort(key=lambda s: parse_datetime(s["completed_at"]), reverse=True)
+                # Sort by started_at to find the most recent scan
+                api_scans.sort(key=lambda s: parse_datetime(s["started_at"]), reverse=True)
                 latest_scan = api_scans[0]
                 
-                scan_status = "Completed"
-                last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
-                vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
+                # Get the status from the LATEST scan, whatever it is
+                scan_status = latest_scan.get("status", "Unknown").capitalize()
+                
+                # If the latest scan is completed, populate its details
+                if latest_scan.get('status') == 'completed':
+                    last_scanned = parse_datetime(latest_scan.get("completed_at")).isoformat().split('T')[0]
+                    vulnerabilities_found = results_count_by_scan_id.get(latest_scan['id'], 0)
 
             dt_obj = parse_datetime(api.get("imported_on"))
             created_at_iso = dt_obj.isoformat()
@@ -326,12 +368,13 @@ def get_all_apis(request):
                 "api_id": api_id,
                 "name": api.get("name"),
                 "version": api.get("version"),
+                "base_url": api.get("base_url"),
                 "created_at": created_at_iso,
                 "vulnerabilitiesFound": vulnerabilities_found,
                 "lastScanned": last_scanned,
                 "scanStatus": scan_status,
-                "permission": api['permission'], # Pass permission to frontend
-                "owner_name": api.get('owner_name') # Pass owner name if it exists
+                "permission": api['permission'],
+                "owner_name": api.get('owner_name')
             })
         
         return response(HTTPCode.SUCCESS, {"apis": api_list_for_frontend})
@@ -416,13 +459,18 @@ def import_url(request):
     return server_error("Not yet implemented")
 
 # === API endpoints ===
+# In main.py, update get_api_endpoints
+
 def get_api_endpoints(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
-    # CORRECT IMPLEMENTATION: Rely solely on the helper function
+    # PERMISSION CHECK: User must have 'view', 'manage', or 'owner' rights
+    if not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view endpoints for this API."})
+
     client = _get_api_client(user_id, api_id)
     if not client:
         return not_found({"message": "API not found."})
@@ -684,17 +732,10 @@ def delete_schedule(request):
     _invalidate_api_list_cache(user_id)
     return success({"message": "Schedule deleted successfully."})
 
-# NOTE: This function is for the cron job runner.
-# It should be called by a separate, scheduled script.
 def check_and_run_scheduled_scans():
-    """
-    This function should be run periodically by a scheduler (e.g., a cron job).
-    It finds and starts scans that are due to run.
-    """
     log_with_timestamp("Checking for scheduled scans to run...")
     now_iso = datetime.now(timezone.utc).isoformat()
     
-    # Find schedules that are enabled and past their due time
     due_scans = db_manager.select_with_filter("scheduled_scans", filters=[
         ("is_enabled", "eq", True),
         ("next_run_at", "lte", now_iso)
@@ -705,17 +746,29 @@ def check_and_run_scheduled_scans():
         return
 
     for schedule in due_scans:
-        log_with_timestamp(f"Running scheduled scan for API {schedule['api_id']}")
+        log_with_timestamp(f"Processing scheduled scan for API {schedule['api_id']}")
         try:
             scan_manager = _get_or_create_scan_manager(schedule['user_id'], schedule['api_id'])
             if not scan_manager:
                 log_with_timestamp(f"Could not find API Client for {schedule['api_id']}. Skipping.")
                 continue
 
-            # Start the scan
-            scan_manager.run_scan(schedule['api_id'], schedule['user_id'])
+            # Start the scan entry synchronously to get an ID
+            scan_id = scan_manager._start_scan_entry(schedule['api_id'], schedule['user_id'])
+            if not scan_id:
+                log_with_timestamp(f"Could not create scan entry for scheduled scan on API {schedule['api_id']}. Skipping.")
+                continue
+
+            # Start the actual scan in a background thread
+            scan_thread = threading.Thread(
+                target=scan_manager._execute_scan_in_background,
+                args=(scan_id,)
+            )
+            scan_thread.daemon = True
+            scan_thread.start()
+            log_with_timestamp(f"Started background thread for scheduled scan {scan_id}")
             
-            # Calculate the next run time and update the schedule
+            # Immediately calculate the next run time and update the schedule
             now = datetime.now(timezone.utc)
             if schedule['frequency'] == 'daily':
                 next_run_at = now + timedelta(days=1)
@@ -734,40 +787,96 @@ def check_and_run_scheduled_scans():
             log_with_timestamp(f"Error processing scheduled scan for API {schedule['api_id']}: {e}")
 
 # === Scans ===
+# In main.py
+
 def create_scan(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
+    api_key_1 = request.get("data", {}).get("api_key_1")
+    api_key_2 = request.get("data", {}).get("api_key_2") # This can be None or an empty string
+
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
+    # The frontend requires at least one key, but we add a backend check for robustness.
+    if not api_key_1:
+        return bad_request("At least one API key is required to create a scan.")
+
+    # This helper function ensures the APIClient object is loaded into memory.
     scan_manager = _get_or_create_scan_manager(user_id, api_id)
-    
     if not scan_manager:
         return not_found("API client not found, cannot create scan.")
+    
+    # Retrieve the cached APIClient instance to set the tokens.
+    api_client = _get_api_client(user_id, api_id)
+    if not api_client:
+        return not_found("API client could not be loaded, cannot configure scan.")
+    
+    log_with_timestamp(f"Setting API keys for scan on API {api_id}")
+    api_client.set_auth_token(api_key_1)
 
-    return success({"message": "Scan session created. Ready to start."})
+    # The secondary key is optional. Set it if provided.
+    if api_key_2:
+        api_client.set_secondary_auth_token(api_key_2)
+        log_with_timestamp("Secondary API key has been set for the scan.")
+    else:
+        # Important: Clear any old secondary token to prevent it from being used
+        # in a scan where it wasn't provided.
+        api_client.set_secondary_auth_token("")
 
+
+    return success({"message": "Scan session created and keys configured. Ready to start."})
+
+# Replace the existing start_scan function with this one
 def start_scan(request): 
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id or not api_id:
         return bad_request("Missing 'user_id' or 'api_id' field")
 
+    # Get the DOCKER environment variable, defaulting to 'FALSE'
+    is_docker_env = os.getenv('DOCKER', 'FALSE').upper() == 'TRUE'
+
+    if not is_docker_env:
+        log_with_timestamp("DOCKER env is not 'TRUE'. Checking for localhost URL before starting scan.")
+        api_client = _get_api_client(user_id, api_id)
+        if not api_client:
+            return not_found("API client not found, cannot start scan.")
+
+        base_url = api_client.base_url.lower() if api_client.base_url else ""
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+            log_with_timestamp(f"Scan blocked for local API '{api_id}' because DOCKER env is not 'TRUE'.")
+            return response(HTTPCode.FORBIDDEN, {"message": "Scans for local APIs are disabled in this environment."})
+
+    if not _verify_api_access(user_id, api_id, minimum_level='manage'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to start a scan for this API."})
+
     scan_manager = _get_or_create_scan_manager(user_id, api_id)
     if not scan_manager:
         return not_found("API client not found, cannot start scan.")
 
     try:
-        scan_id = scan_manager.run_scan(api_id, user_id)
-        if scan_id:
-            return success({"scan_id": scan_id})
-        else:
-            return server_error("Failed to start scan or retrieve scan ID.")
+        # Step 1: Create the scan entry in the DB synchronously to get an ID.
+        scan_id = scan_manager._start_scan_entry(api_id, user_id)
+        if not scan_id:
+            return server_error("Failed to create a scan entry in the database.")
+
+        # Step 2: Create and start a new thread to run the scan in the background.
+        scan_thread = threading.Thread(
+            target=scan_manager._execute_scan_in_background,
+            args=(scan_id,)
+        )
+        scan_thread.daemon = True # Allows main program to exit even if threads are running
+        scan_thread.start()
+        log_with_timestamp(f"Started background scan thread for scan_id: {scan_id}")
+
+        # Step 3: Immediately return the scan_id to the user.
+        return success({"scan_id": scan_id})
+        
     except Exception as e:
         log_with_timestamp(f"Error during start_scan: {e}")
         return server_error(str(e))
 
-# main.py
 
 def get_scan_status(request):
     """Checks the status of a scan and returns results if completed."""
@@ -847,17 +956,26 @@ def get_scan_results(request):
         log_with_timestamp(f"Error in get_scan_results: {e}")
         return server_error(str(e))
 
+
 def get_all_scans(request):
     user_id = request.get("data", {}).get("user_id")
     api_id = request.get("data", {}).get("api_id")
     if not user_id:
         return bad_request("Missing 'user_id' field")
 
+    # PERMISSION CHECK (only if an api_id is specified)
+    if api_id and not _verify_api_access(user_id, api_id, minimum_level='view'):
+        return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to view scan history for this API."})
+
     try:
         filters = {"user_id": user_id}
         if api_id:
             filters["api_id"] = api_id
         
+
+        if api_id:
+            del filters["user_id"] 
+
         all_scans = db_manager.select("scans", filters=filters)
         
         return success({"scans": all_scans})
@@ -1006,9 +1124,128 @@ def set_api_key(request):
 
 
 # === Repots ===
-def get_all_reports(request): return server_error("Not yet implemented")
-def get_report_details(request): return server_error("Not yet implemented")
-def download_report(request): return server_error("Not yet implemented")
+
+def download_report(request):
+    scan_id = request.get("data", {}).get("scan_id")
+    report_type = request.get("data", {}).get("report_type") # "technical" or "executive"
+    user_id = request.get("data", {}).get("user_id") # We need user_id for the check
+
+    if not all([scan_id, report_type, user_id]):
+        return bad_request("Missing 'scan_id', 'report_type', or 'user_id'")
+
+    try:
+        # First, find which API this scan belongs to
+        scan_record = db_manager.select("scans", columns="api_id", filters={"id": scan_id})
+        if not scan_record:
+            return not_found("Scan not found.")
+        api_id = scan_record[0]['api_id']
+
+        # PERMISSION CHECK: User must have at least 'view' rights on the parent API
+        if not _verify_api_access(user_id, api_id, minimum_level='view'):
+            return response(HTTPCode.FORBIDDEN, {"message": "You do not have permission to download reports for this API."})
+
+        # Step 1: Fetch scan results from the database
+        scan_results_data = db_manager.select("scan_results", filters={"scan_id": scan_id})
+        if not scan_results_data:
+            return not_found("No results found for this scan.")
+        
+        # ... (rest of the function is unchanged)
+
+        # Step 2: Fetch corresponding endpoint details for context
+        endpoint_ids = list(set(res['endpoint_id'] for res in scan_results_data))
+        endpoints_data = db_manager.select("endpoints", filters={"id": endpoint_ids})
+        endpoints_map = {ep['id']: ep for ep in endpoints_data}
+
+        # Step 3: Create mock objects that the ReportGenerator can understand
+        # This avoids complex object reconstruction and fits the generator's expected input structure.
+        class MockEndpoint:
+            def __init__(self, data):
+                self.path = data.get('url', 'N/A')
+                self.method = data.get('method', 'N/A')
+
+        class MockScanResult:
+            def __init__(self, data, endpoint):
+                self.vulnerability_name = data.get('vulnerability_name')
+                self.description = data.get('description')
+                self.severity = data.get('severity')
+                self.owasp_category = data.get('owasp_category')
+                self.endpoint = endpoint
+                self.recommendation = data.get('recommendation')
+                # Add other fields if your executive report needs them
+        
+        scan_results_for_report = []
+        for res in scan_results_data:
+            endpoint_data = endpoints_map.get(res['endpoint_id'])
+            if endpoint_data:
+                mock_endpoint = MockEndpoint(endpoint_data)
+                mock_result = MockScanResult(res, mock_endpoint)
+                scan_results_for_report.append(mock_result)
+
+        # Step 4: Generate the report in-memory
+        report_generator = ReportGenerator()
+        filename = f"{report_type}_report_{scan_id}.pdf"
+        
+        # This will call the updated report generator function which returns PDF bytes
+        pdf_bytes = report_generator.generate_report(
+            report_type=report_type,
+            scan_results=scan_results_for_report,
+            return_bytes=True # New flag to indicate we want bytes back
+        )
+
+        if not pdf_bytes:
+            return server_error("Report generation failed to return data.")
+
+        # Step 5: Encode as base64 and send back
+        encoded_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        return success({
+            "filename": filename,
+            "file_data": encoded_pdf
+        })
+
+    except Exception as e:
+        log_with_timestamp(f"Error in download_report: {e}")
+        return server_error(str(e))
+        
+def get_techincal_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate techinical report
+        # We can either save this to a known location to the api or send the raw pdf data
+    return server_error("Not yet implemented")
+
+def get_executive_report(request): 
+    scan_id = request.get("data", {}).get("scan_id")
+    # generate exectuive report
+        # We can either save this to a known location to the api or send the raw pdf data
+    return server_error("Not yet implemented")
+
+def get_platform_stats(request):
+    try:
+        vuln_count_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM scan_results")
+        # FIX: Access the nested 'result' key first, then 'total'
+        total_vulnerabilities = vuln_count_res[0]['result']['total'] if vuln_count_res else 0
+
+        api_count_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM apis")
+        # FIX: Access the nested 'result' key first, then 'total'
+        total_apis = api_count_res[0]['result']['total'] if api_count_res else 0
+
+        scans_today_res = db_manager.execute_raw("SELECT COUNT(*) as total FROM scans WHERE started_at >= NOW() - INTERVAL '1 day'")
+        # FIX: Access the nested 'result' key first, then 'total'
+        scans_today = scans_today_res[0]['result']['total'] if scans_today_res else 0
+
+        # Format numbers with commas for better readability
+        stats = {
+            "vulnerabilitiesFound": f"{total_vulnerabilities:,}",
+            "apisSecured": f"{total_apis:,}",
+            "scansToday": f"{scans_today:,}"
+        }
+
+        return success(stats)
+
+    except Exception as e:
+        log_with_timestamp(f"Error in get_platform_stats: {e}")
+        return server_error(str(e))
+
 
 # === Templates ===
 def get_all_templates(request): return server_error("Not yet implemented")
@@ -1075,8 +1312,9 @@ def handle_request(request: dict):
         "user.profile.update": update_profile,
         "user.settings.get": get_settings,
         "user.settings.update": update_settings,
-        "reports.list": get_all_reports,
-        "reports.details": get_report_details,
+        "reports.tech": get_techincal_report,
+        "reports.exec": get_executive_report,
+        "platform.stats": get_platform_stats,
         "reports.download": download_report,
         "apis.key.set": set_api_key,
     }
@@ -1156,4 +1394,5 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
+
 

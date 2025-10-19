@@ -11,3 +11,4 @@ fastapi
 httpx
 uvicorn
 supabase
+matplotlib

@@ -28,7 +28,8 @@ class APIClient:
         self.endpoints: List[Endpoint] = []
         self.authorization: Optional[Authorization] = None 
         self.auth_token = ""
-        self.db_id: Optional[str] = None  # To store the database ID (hash) after saving
+        self.secondary_auth_token = "" 
+        self.db_id: Optional[str] = None  
 
     def save_to_db(self, user_id: str) -> bool:
         """Save the API and its endpoints to the database using a hash ID and bulk inserts."""
@@ -184,7 +185,6 @@ class APIClient:
 
 
     def set_authorization(self, auth_enum: Authorization):
-        """Set the authorization type using the Authorization enum"""
         self.authorization = auth_enum    
 
     def set_auth_token(self, token: str):
@@ -218,4 +218,10 @@ class APIClient:
     def update_endpoint(self):
         print("do something")
 
+    def set_secondary_auth_token(self, token: str):
+        self.secondary_auth_token = token
 
+    def get_secondary_auth_header(self) -> str:
+        if self.authorization and self.secondary_auth_token:
+            return self.authorization.value.format(self.secondary_auth_token)
+        return ""

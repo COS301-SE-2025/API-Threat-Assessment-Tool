@@ -14,6 +14,7 @@ require('dotenv').config();
 const supabaseCfg = require('./config/supabase'); 
 const { google } = require('googleapis');
 const app = express();
+const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 // Supabase config
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -284,6 +285,8 @@ async function sendResetEmail(to, resetUrl, ttlMins = 60) {
 module.exports = { sendResetEmail };
 
 
+  // 3) Dev fallback (unchanged)
+  
 const RESET_TTL_MS = 60 * 60 * 1000;   // 60 min
 const pwdResetStore = new Map();       // tokenHash -> { userId, exp }
 
@@ -308,10 +311,12 @@ function consumeResetToken(token) {
   return rec;
 }
 // Optional background cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
-}, 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of pwdResetStore.entries()) if (v.exp <= now) pwdResetStore.delete(k);
+  }, 60 * 1000);
+}
 // -----------------------------------------------------
 // Engine management functions
 const isEngineRunning = () => {
@@ -494,6 +499,7 @@ app.get('/', (req, res) => {
       dashboardOverview: 'GET /api/dashboard/overview',
       dashboardMetrics: 'GET /api/dashboard/metrics',
       dashboardAlerts: 'GET /api/dashboard/alerts',
+      landingStats: 'GET /api/stats/platform',
       getAllApis: 'GET /api/apis',
       createApi: 'POST /api/apis/create',
       getApiDetails: 'GET /api/apis/details',
@@ -527,13 +533,14 @@ app.get('/', (req, res) => {
       updateUserProfile: 'PUT /api/user/profile/update',
       getUserSettings: 'GET /api/user/settings/get',
       updateUserSettings: 'PUT /api/user/settings/update',
-      listReports: 'GET /api/reports/list',
-      getReportDetails: 'GET /api/reports/details',
-      downloadReport: 'POST /api/reports/download',
+      techReport: 'GET /api/reports/techincal',
+      execReport: 'GET /api/reports/executive',
+      downloadReport: 'GET /api/reports/download',
       deleteShare: 'DELETE /api/apis/share',
       leaveShare: 'DELETE /api/apis/leave-share',
       getShare: 'GET /api/apis/shares',
       postShare: 'POST /api/apis/share',
+      getEnv: 'GET /api/environment',
       connectionTest: 'GET /api/connection/test'
     }
   });
@@ -783,7 +790,7 @@ app.get('/api/user/preferences', authenticateToken, async (req, res) => {
           },
         };
       } else {
-        prefsData = newPrefs;
+        const prefsData = newPrefs;
       }
     }
 
@@ -1466,10 +1473,33 @@ app.get('/api/dashboard/alerts', async (req, res) => {
   }
 });
 
-// Get All APIs (apis.get_all)
+app.get('/api/stats/platform', async (req, res) => {
+  try {
+    const engineResponse = await sendToEngine({
+      command: 'platform.stats',
+      data: {}
+    });
+    if (engineResponse.code === 200) {
+      sendSuccess(res, 'Platform stats retrieved successfully', engineResponse.data);
+    } else {
+      sendError(res, 'Failed to get platform stats', engineResponse.data, engineResponse.code || 500);
+    }
+  } catch (err) {
+    sendError(res, 'Platform stats error', err.message, 500);
+  }
+});
+
+// Get All APIs (apis.get_all) - UPDATED: Now requires user_id
 app.get('/api/apis', async (req, res) => {
   try {
     const { user_id } = req.query;
+    
+    // Validate required user_id parameter
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'apis.get_all',
       data: { user_id: user_id || 'default' }
@@ -1973,18 +2003,32 @@ app.post('/api/endpoints/flags/remove', async (req, res) => {
   }
 });
 
-// Create Scan (scan.create)
 app.post('/api/scan/create', async (req, res) => {
   try {
-    const { client_id, scan_profile } = req.body;
-    if (!client_id) {
-      return sendError(res, 'Client ID is required', null, 400);
+    const { user_id, scan_profile, api_id, api_key_1, api_key_2 } = req.body;
+    
+    // Use user_id as primary, fall back to client_id for backward compatibility
+    const finalUserId = user_id;
+    
+    // Validate required parameters
+    const userIdValidation = validateUserId(finalUserId);
+    if (!userIdValidation.isValid) {
+      return sendError(res, userIdValidation.error, null, 400);
     }
+    
+    const apiIdValidation = validateApiId(api_id, true);
+    if (!apiIdValidation.isValid) {
+      return sendError(res, apiIdValidation.error, null, 400);
+    }
+
     const engineResponse = await sendToEngine({
       command: 'scan.create',
       data: { 
-        client_id, 
-        scan_profile: scan_profile || 'OWASP_API_10' 
+        user_id: finalUserId.trim(),
+        api_id: api_id.trim(),
+        scan_profile: scan_profile || 'OWASP_API_10',
+        api_key_1: api_key_1, // Pass the keys to the engine
+        api_key_2: api_key_2
       }
     });
     if (engineResponse.code === 200) {
@@ -2303,59 +2347,75 @@ app.put('/api/user/settings/update', async (req, res) => {
   }
 });
 
-// List All Reports (reports.list)
-app.get('/api/reports/list', async (req, res) => {
+// Download techincal report
+app.get('/api/reports/techincal', async (req, res) => {
   try {
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
+    }
     const engineResponse = await sendToEngine({
-      command: 'reports.list',
-      data: {}
+      command: 'reports.tech',
+      data: { scan_id }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Reports retrieved successfully', engineResponse.data);
+      sendSuccess(res, 'Reports retrieved successfully', engineResponse.data); //placeholder, im not sure how to actually get the report to the user just yet
     } else {
       sendError(res, 'Failed to retrieve reports', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'List reports error', err.message, 500);
+    sendError(res, 'Reports error', err.message, 500);
   }
 });
 
-// Get Report Details (reports.details)
-app.get('/api/reports/details', async (req, res) => {
+// Download executive report
+app.get('/api/reports/executive', async (req, res) => {
   try {
-    const { report_id } = req.query;
-    if (!report_id) {
-      return sendError(res, 'Report ID is required', null, 400);
+    const { scan_id } = req.query;
+    if (!scan_id) {
+      return sendError(res, 'Scan ID is required', null, 400);
     }
     const engineResponse = await sendToEngine({
-      command: 'reports.details',
-      data: { report_id }
+      command: 'reports.exec',
+      data: { scan_id }
     });
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Report details retrieved successfully', engineResponse.data);
+      sendSuccess(res, 'Report details retrieved successfully', engineResponse.data); //placeholder, im not sure how to actually get the report to the user just yet
     } else {
       sendError(res, 'Failed to get report details', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
-    sendError(res, 'Report details error', err.message, 500);
+    sendError(res, 'Report error', err.message, 500);
   }
 });
 
-// Download Report (reports.download)
-app.post('/api/reports/download', async (req, res) => {
+app.get('/api/reports/download', async (req, res) => {
   try {
-    const { report_id, report_type } = req.body;
-    if (!report_id || !report_type) {
-      return sendError(res, 'Report ID and report type are required', null, 400);
+    const { scan_id, report_type, user_id } = req.query;
+    if (!scan_id || !report_type || !user_id) {
+      return sendError(res, 'scan_id, report_type, and user_id are required.', null, 400);
     }
+    
+    // Forward the request to the Python engine
     const engineResponse = await sendToEngine({
       command: 'reports.download',
-      data: { report_id, report_type }
+      data: { scan_id, report_type, user_id }
     });
+
     if (engineResponse.code === 200) {
-      sendSuccess(res, 'Report downloaded successfully', engineResponse.data);
+      const { filename, file_data } = engineResponse.data;
+      
+      // Decode the base64 data into a buffer
+      const pdfBuffer = Buffer.from(file_data, 'base64');
+      
+      // Set headers to trigger a file download in the browser
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      
+      // Send the PDF buffer as the response
+      res.send(pdfBuffer);
     } else {
-      sendError(res, 'Failed to download report', engineResponse.data, engineResponse.code || 500);
+      sendError(res, 'Failed to generate report', engineResponse.data, engineResponse.code || 500);
     }
   } catch (err) {
     sendError(res, 'Download report error', err.message, 500);
@@ -2378,13 +2438,9 @@ app.get('/api/connection/test', async (req, res) => {
     sendError(res, 'Connection test error', err.message, 500);
   }
 });
-//////////////
-//Forget Password
-//////////////
-// POST /api/auth/forgot-password
 
 app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async (req, res) => {
-  const generic = 'If that account exists, we sent a reset link.';
+  const generic = 'If that account exists, we sent a reset link. Make sure to check your spam folder if you can not find it.';
   try {
     const { email } = req.body || {};
     if (!email) return sendSuccess(res, generic);
@@ -2402,7 +2458,7 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
       const token = newToken();
       saveResetToken(user.id, token);
 
-      const origin = (req.get('FRONTEND_URL') || 'http://localhost:3002').replace(/\/+$/, '');
+      const origin = ('https://apithreatassessment.co.za/')    
       const resetUrl = `${origin}/recover?token=${encodeURIComponent(token)}`;
       // Dev "send": log the link 
    await sendResetEmail(user.email, resetUrl);
@@ -2418,7 +2474,13 @@ app.post('/api/auth/forgot-password', createRateLimit(5, 15 * 60 * 1000), async 
   }
 });
 
+// In index.js, after your other app.get routes
 
+app.get('/api/environment', (req, res) => {
+  // Read the DOCKER environment variable, defaulting to 'FALSE'
+  const isDocker = (process.env.DOCKER || 'FALSE').toUpperCase() === 'TRUE';
+  sendSuccess(res, 'Environment configuration retrieved', { isDocker });
+});
 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {

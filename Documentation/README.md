@@ -1,3 +1,4 @@
+## Note: This readme is the auto generated one after creating this project using pnpm create astro --template starlight
 # Starlight Starter Kit: Basics
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)

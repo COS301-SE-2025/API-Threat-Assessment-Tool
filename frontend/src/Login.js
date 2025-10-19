@@ -293,8 +293,9 @@ const Login = () => {
         <footer className="login-footer">
           <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
           <div className="footer-links">
-            <button type="button" onClick={() => console.log('Privacy Policy')} className="footer-link-btn">Privacy Policy</button>
-            <button type="button" onClick={() => console.log('Terms of Service')} className="footer-link-btn">Terms of Service</button>
+            <Link to="/privacy" className="footer-link-btn">Privacy Policy</Link>
+            <Link to="/terms" className="footer-link-btn">Terms of Service</Link>
+            <Link to="/contact" className="footer-link-btn">Contact Us</Link>
           </div>
         </footer>
       </div>

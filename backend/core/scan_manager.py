@@ -1,6 +1,3 @@
-# Manages the creation, execution, and retrieval of scans.
-# This version re-introduces the `scans` and `scan_results` tables.
-
 import uuid
 import json
 from enum import Enum
@@ -8,8 +5,6 @@ from core.vulnerability_scanner import VulnerabilityScanner
 from core.db_manager import db_manager
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-# FIX: Import server_error to handle exceptions correctly
-from utils.query import server_error
 
 class ScanProfiles(Enum):
     DEFAULT = "OWASP API Top 10 Full Scan"
@@ -20,7 +15,7 @@ class ScanManager:
         self.vulnScanners = [VulnerabilityScanner(api_client, ScanProfiles.DEFAULT)]
     
     def _start_scan_entry(self, api_id: str, user_id: str) -> Optional[str]:
-        """Creates a record in the 'scans' table."""
+        """Creates a record in the 'scans' table and returns the scan ID."""
         try:
             scan_id = uuid.uuid4().hex
             scan_data = {
@@ -46,14 +41,14 @@ class ScanManager:
     def _save_scan_results(self, scan_id: str, results: List[Dict[str, Any]]):
         """Bulk-inserts all scan findings into the 'scan_results' table."""
         if not results:
-            print("No vulnerabilities found to save.")
+            print(f"No vulnerabilities found to save for scan {scan_id}.")
             return
 
         try:
             db_manager.insert("scan_results", results)
             print(f"Successfully saved {len(results)} findings for scan {scan_id}.")
         except Exception as e:
-            print(f"Error bulk-saving scan results: {e}")
+            print(f"Error bulk-saving scan results for scan {scan_id}: {e}")
 
     def _complete_scan_entry(self, scan_id: str):
         """Updates the scan record to 'completed' status."""
@@ -67,15 +62,13 @@ class ScanManager:
         except Exception as e:
             print(f"Error completing scan entry {scan_id}: {e}")
 
-    def run_scan(self, api_id: str, user_id: str) -> Optional[str]:
-        """Runs a complete scan and records it in the database."""
-        print(f"Starting new scan for API ID: {api_id}")
-        scan_id = self._start_scan_entry(api_id, user_id)
-        if not scan_id:
-             # FIX: Correctly call server_error without 'self'
-            return None
-        
+    def _execute_scan_in_background(self, scan_id: str):
+        """
+        This method contains the long-running scan logic and is intended to be run
+        in a separate thread. It does not return anything.
+        """
         try:
+            print(f"Background thread started for scan {scan_id}")
             # Run the actual vulnerability tests
             all_results_for_db = []
             for scanner in self.vulnScanners:
@@ -91,17 +84,15 @@ class ScanManager:
             # Save the consolidated results and complete the scan
             self._save_scan_results(scan_id, all_results_for_db)
             self._complete_scan_entry(scan_id)
-            
-            return scan_id
+            print(f"Background thread finished successfully for scan {scan_id}")
             
         except Exception as e:
-            print(f"An error occurred during run_scan: {e}")
+            print(f"An error occurred in background scan thread for {scan_id}: {e}")
             try:
                 # Mark as failed if something goes wrong mid-scan
-                db_manager.update("scans", {"status": "failed"}, {"id": scan_id})
+                db_manager.update("scans", {"status": "failed", "completed_at": datetime.now().isoformat()}, {"id": scan_id})
             except Exception as fail_e:
-                print(f"Could not even mark scan as failed: {fail_e}")
-            return None
+                print(f"Could not even mark scan {scan_id} as failed: {fail_e}")
 
     def get_scan_details(self, scan_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific scan and its associated results."""
@@ -134,4 +125,3 @@ class ScanManager:
         except Exception as e:
             print(f"Error retrieving scans: {e}")
             return []
-

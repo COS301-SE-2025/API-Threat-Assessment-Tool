@@ -410,3 +410,24 @@ describe('Coverage Boost Tests - Error Paths & Edge Cases', () => {
     });
   });
 });
+
+// tests/unit/coverage-boost.test.js
+// ... (keep existing)
+
+describe('Additional Error Paths', () => {
+  // Existing...
+
+  // New: Mock env for branch coverage
+  test('should cover test env branch', async () => {
+    process.env.NODE_ENV = 'test';
+    const response = await request(app).get('/').expect(200);
+    expect(response.body.success).toBe(true);
+  });
+
+  // New: Test global handler with custom error
+  test('should handle custom thrown error', async () => {
+    app.get('/custom-error', (req, res) => { throw new Error('Custom'); });
+    const response = await request(app).get('/custom-error').expect(500);
+    expect(response.body.message).toContain('Server error');
+  });
+});

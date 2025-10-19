@@ -21,7 +21,6 @@ const dashboardService = {
   }
 };
 
-
 const Home = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
@@ -35,7 +34,6 @@ const Home = () => {
       dashboardService.getOverview().then(setStats);
     }
   }, [currentUser]);
-
 
   useEffect(() => {
     const observerOptions = {
@@ -96,7 +94,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="home-container">
+    <div className={`home-container ${darkMode ? 'dark-mode' : ''}`}>
       <header className="home-header">
         <div className="logo" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Logo />
@@ -123,33 +121,25 @@ const Home = () => {
       <main className="home-main">
         <section className="hero-section">
           <div className="hero-content">
-            <h1 className="hero-title">Secure Your APIs with <span className="gradient-text">AT-AT</span></h1>
+            <h1 className="hero-title">
+              Secure Your APIs with<span className="gradient-text"> AT-AT</span>
+            </h1>
             <p className="hero-description">
               Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {currentUser.firstName}! 
-              Comprehensive API security scanning powered by OWASP standards. Identify vulnerabilities and protect your digital assets.
+              Comprehensive API security scanning powered by OWASP standards. 
+              Identify vulnerabilities, ensure compliance, and protect your digital assets.
             </p>
-             {stats && (
-              <div className="hero-stats">
-                  <div className="hero-stat-item">
-                      <span className="stat-number">{stats.total_apis}</span>
-                      <span className="stat-label">APIs Managed</span>
-                  </div>
-                  <div className="hero-stat-item">
-                      <span className="stat-number">{stats.total_scans}</span>
-                      <span className="stat-label">Total Scans</span>
-                  </div>
-                  <div className="hero-stat-item vulnerabilities">
-                      <span className="stat-number">{stats.total_vulnerabilities}</span>
-                      <span className="stat-label">Vulnerabilities Found</span>
-                  </div>
-              </div>
-            )}
             <div className="cta-buttons">
-              <Link to="/dashboard" className="cta-btn primary">🚀 Go to Dashboard</Link>
-              <Link to="/manage-apis" className="cta-btn secondary">⚙️ Manage APIs</Link>
+              <Link to="/manage-apis" className="cta-btn primary">
+                🚀 Manage APIs Here
+              </Link>
             </div>
           </div>
-          <div className="hero-visual"><div className="security-shield"><div className="shield-inner">🛡️</div></div></div>
+          <div className="hero-visual">
+            <div className="security-shield">
+              <div className="shield-inner">🛡️</div>
+            </div>
+          </div>
         </section>
 
         <section id="what-is-atat-section" className={`what-is-atat-section animate-on-scroll ${isVisible['what-is-atat-section'] ? 'visible' : ''}`}>
@@ -178,17 +168,21 @@ const Home = () => {
         <section id="quick-actions" className={`quick-actions-section animate-on-scroll ${isVisible['quick-actions'] ? 'visible' : ''}`}>
           <h2>Quick Actions</h2>
           <div className="actions-grid">
-            <Link to="/dashboard" className="action-card"><div className="action-icon">🔍</div><h3>Run a Scan</h3><p>Start a new security assessment</p></Link>
-            <Link to="/public-templates" className="action-card"><div className="action-icon">📋</div><h3>Explore Templates</h3><p>Browse community scan profiles</p></Link>
-            <Link to="/reports" className="action-card"><div className="action-icon">📊</div><h3>View Reports</h3><p>Access your security reports</p></Link>
             <Link to="/manage-apis" className="action-card"><div className="action-icon">⚙️</div><h3>Manage APIs</h3><p>Configure your API endpoints</p></Link>
+            <Link to="/dashboard" className="action-card"><div className="action-icon">🔍</div><h3>View Dashboard</h3><p>Analyze metrics based on your activity</p></Link>
+            <Link to="/manage-apis" className="action-card"><div className="action-icon">📊</div><h3>View Reports</h3><p>Access your security reports</p></Link>
           </div>
         </section>
       </main>
 
       <footer className="home-footer">
         <p>© 2025 AT-AT (API Threat Assessment Tool) • COS301 Capstone Project. All rights reserved.</p>
-        <div className="footer-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Help Center</a></div>
+        <div className="footer-links">
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Service</Link>
+          <Link to="/documentation">Documentation</Link>
+          <Link to="/contact">Contact Us</Link>
+        </div>
       </footer>
     </div>
   );

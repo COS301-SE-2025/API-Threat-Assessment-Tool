@@ -46,7 +46,7 @@ Best practices and guidelines for writing clean, maintainable, and secure code f
 Curious how our API Threat Assessment Tool works?  
 Watch our official demo video for a guided walkthrough of all the key features, and powerful security scanning capabilities.
 
-[![Watch the Full Demo on YouTube](frontend/src/img/YESSSS.png)](https://youtu.be/EiVzXKa5i9o)
+[![Watch the Full Demo on YouTube](frontend/src/img/YESSSS.png)](https://youtu.be/U67WkEOBb90)
 ---
 
 ## 🛠️ Technology Stack
@@ -255,6 +255,7 @@ Our GitHub repository proudly displays real-time badges showcasing project healt
 [![GitHub issues](https://img.shields.io/github/issues/COS301-SE-2025/API-Threat-Assessment-Tool)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/issues)
 
 </div>
+
 
 
 

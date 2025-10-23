@@ -464,6 +464,18 @@ const fetchApis = useCallback(async () => {
         }
     };
 
+    const handleDownloadSample = () => {
+        // Assuming openapi.json is placed in the public/ folder for direct access
+        const downloadUrl = '/openapi.json';
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', 'openapi.json'); // Forces the file name
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showMessage("Sample API downloaded. Now try importing it!", 'info');
+    };
+    
     const handleStartScanFlow = (api) => setModal({ type: 'scanProfile', data: api });
     const handleViewPastScans = (api) => setModal({ type: 'pastScans', data: api });
 
@@ -629,6 +641,7 @@ const fetchApis = useCallback(async () => {
                         <p className="hero-description">Centrally manage your API endpoints, configure security scans, and monitor your API ecosystem.</p>
                         <div className="hero-actions">
                              <button onClick={() => setModal({ type: 'import' })} className="add-api-btn">⬆️ Import API Spec</button>
+                             <button onClick={handleDownloadSample} className="action-btn-secondary download-sample-btn">⬇️ Download Sample API</button>
                         </div>
                     </div>
                 </section>

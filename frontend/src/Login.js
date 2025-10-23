@@ -1,3 +1,5 @@
+// Login.js
+
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ThemeContext } from './App';
@@ -23,6 +25,7 @@ const Login = () => {
   const formRef = useRef(null);
   const errorRef = useRef(null);
   const submitButtonRef = useRef(null);
+  const demoButtonRef = useRef(null); // Ref for the new Demo button
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -155,21 +158,16 @@ const Login = () => {
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!identifier.trim() || !password) {
-      showError('Please enter both identifier and password');
-      return;
-    }
-
+  const handleLoginLogic = async (username, password, buttonRef) => {
     setIsSubmitting(true);
     setError('');
-    if (submitButtonRef.current) {
-      submitButtonRef.current.style.animation = 'buttonPress 0.2s ease';
+    
+    if (buttonRef && buttonRef.current) {
+      buttonRef.current.style.animation = 'buttonPress 0.2s ease';
     }
 
     try {
-      const result = await login(identifier.trim(), password);
+      const result = await login(username, password);
       if (result.success) {
         showSuccessMessage('Login successful! Redirecting...');
         setAnimationPhase('success');
@@ -185,8 +183,33 @@ const Login = () => {
       console.error('Login error:', err);
     } finally {
       setIsSubmitting(false);
-      if (submitButtonRef.current) submitButtonRef.current.style.animation = '';
+      if (buttonRef && buttonRef.current) buttonRef.current.style.animation = '';
     }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!identifier.trim() || !password) {
+      showError('Please enter both identifier and password');
+      return;
+    }
+
+    await handleLoginLogic(identifier.trim(), password, submitButtonRef);
+  };
+  
+  // NEW: Demo Login Handler
+  const handleDemoLogin = async () => {
+    if (isAnyLoading) return;
+
+    // Use specific demo credentials
+    const demoUsername = "ProjectDayDemo";
+    const demoPassword = "P@ssword!";
+    
+    // Auto-fill form fields (optional, but good UX)
+    setIdentifier(demoUsername);
+    setPassword(demoPassword);
+
+    await handleLoginLogic(demoUsername, demoPassword, demoButtonRef);
   };
 
   const handleThemeToggle = () => {
@@ -282,6 +305,18 @@ const Login = () => {
                 {getButtonContent(isSubmitting ? 'Signing In...' : 'Sign In')}
               </button>
             </form>
+            
+            {/* NEW: Demo Login Button */}
+            <button
+              type="button"
+              className="demo-login-btn"
+              onClick={handleDemoLogin}
+              disabled={isAnyLoading}
+              ref={demoButtonRef}
+              aria-label="Sign in with demo account"
+            >
+              {getButtonContent(isSubmitting ? 'Logging In...' : 'Demo Login')}
+            </button>
 
             <div className="login-links">
               <Link to="/signup" className="create-account-link" aria-label="Create new account">Create Account</Link>

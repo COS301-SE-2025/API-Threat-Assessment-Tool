@@ -122,19 +122,6 @@ We follow **Agile Scrum methodology** with:
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Please read our [Contributing Guidelines](./CONTRIBUTING.md) and [Code of Conduct](./CODE_OF_CONDUCT.md).
-
-### Development Standards
-- Well-organized, modular code with clear separation of concerns
-- Descriptive naming conventions and meaningful comments
-- Comprehensive testing with unit and integration tests
-- Security-first development practices
-- Performance optimization and error handling
-
----
-
 ## 📞 Contact & Support
 
 - **Team Email**: [skillissue.capstone@gmail.com](mailto:skillissue.capstone@gmail.com)
@@ -199,6 +186,7 @@ Our GitHub repository proudly displays real-time badges showcasing project healt
 [![GitHub issues](https://img.shields.io/github/issues/COS301-SE-2025/API-Threat-Assessment-Tool)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/issues)
 
 </div>
+
 
 
 

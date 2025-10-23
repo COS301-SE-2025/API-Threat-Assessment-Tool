@@ -77,19 +77,19 @@ Detailed guide on how to use the API Threat Assessment Tool, including installat
 <td align="center" width="20%">
 <img src="https://github.com/Rhulani756.png" width="100px;" alt="Rhulani Matiane"/><br />
 <b>Rhulani Matiane</b><br />
-<sub>UI/UX Developer</sub><br />
+<sub>UI/UX Developer & Intergration Engineer</sub><br />
 <a href="https://github.com/Rhulani756">GitHub</a> • <a href="https://www.linkedin.com/in/rhulani-matiane">LinkedIn</a>
 </td>
 <td align="center" width="20%">
 <img src="https://github.com/DragonMage899.png" width="100px;" alt="Justin Bhana"/><br />
 <b>Justin Bhana</b><br />
-<sub>Security Specialist</sub><br />
+<sub>Security Specialist & DevOps</sub><br />
 <a href="https://github.com/DragonMage899">GitHub</a> • <a href="https://www.linkedin.com/in/justin-bhana">LinkedIn</a>
 </td>
 <td align="center" width="20%">
 <img src="https://github.com/u22593048.png" width="100px;" alt="Jacques van der Merwe"/><br />
 <b>Jacques van der Merwe</b><br />
-<sub>Full-Stack & DevOps</sub><br />
+<sub>Full-Stack & Business Analyst</sub><br />
 <a href="https://github.com/u22593048">GitHub</a> • <a href="http://linkedin.com/in/jacques-van-der-merwe007">LinkedIn</a>
 </td>
 </tr>
@@ -212,3 +212,4 @@ Found a bug or have a feature request? **[Open an Issue](https://github.com/COS3
 [![Build Status](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/actions)
 [![Coverage Status](https://coveralls.io/repos/github/COS301-SE-2025/API-Threat-Assessment-Tool/badge.svg)](https://coveralls.io/github/COS301-SE-2025/API-Threat-Assessment-Tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+

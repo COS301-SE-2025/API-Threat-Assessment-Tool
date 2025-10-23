@@ -26,6 +26,9 @@ API Threat Assessment Tool (AT-AT) is an innovative web-based platform that help
 ### 📖 [Functional Requirements (SRS) Document](https://documentation.at-atdocs.pages.dev/)
 Comprehensive Software Requirements Specification detailing functional and non-functional requirements, user stories, technology stack, and system architecture.
 
+### 📝 [Coding Standards](https://documentation.at-atdocs.pages.dev/reference/coding-standards)
+Best practices and guidelines for writing clean, maintainable, and secure code for the API Threat Assessment Tool (AT-AT).
+
 ### 📊 [GitHub Project Board](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/projects)
 Track our development progress, sprint planning, and task management through our organized project board.
 
@@ -34,9 +37,6 @@ Detailed guide on how to use the API Threat Assessment Tool (AT-AT), including i
 
 ### 📥 [Installation Manual](https://documentation.at-atdocs.pages.dev/reference/install)
 Step-by-step guide for setting up the API Threat Assessment Tool (AT-AT), covering prerequisites, system setup, and deployment instructions.
-
-### 📝 [Coding Standards](https://documentation.at-atdocs.pages.dev/reference/coding-standards)
-Best practices and guidelines for writing clean, maintainable, and secure code for the API Threat Assessment Tool (AT-AT).
 
 ---
 ---
@@ -186,6 +186,7 @@ Our GitHub repository proudly displays real-time badges showcasing project healt
 [![GitHub issues](https://img.shields.io/github/issues/COS301-SE-2025/API-Threat-Assessment-Tool)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/issues)
 
 </div>
+
 
 
 

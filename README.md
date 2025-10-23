@@ -77,7 +77,7 @@ Detailed guide on how to use the API Threat Assessment Tool, including installat
 <td align="center" width="20%">
 <img src="https://github.com/Rhulani756.png" width="100px;" alt="Rhulani Matiane"/><br />
 <b>Rhulani Matiane</b><br />
-<sub>UI/UX Developer & Intergration Engineer</sub><br />
+<sub>UI/UX Developer & Integration Engineer</sub><br />
 <a href="https://github.com/Rhulani756">GitHub</a> • <a href="https://www.linkedin.com/in/rhulani-matiane">LinkedIn</a>
 </td>
 <td align="center" width="20%">
@@ -212,4 +212,5 @@ Found a bug or have a feature request? **[Open an Issue](https://github.com/COS3
 [![Build Status](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/actions)
 [![Coverage Status](https://coveralls.io/repos/github/COS301-SE-2025/API-Threat-Assessment-Tool/badge.svg)](https://coveralls.io/github/COS301-SE-2025/API-Threat-Assessment-Tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 

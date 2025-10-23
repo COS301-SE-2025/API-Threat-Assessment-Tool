@@ -110,62 +110,6 @@ Watch our official demo video for a guided walkthrough of all the key features, 
 
 ---
 
-## 🗺️ Development Roadmap
-
-### 📅 Demo 1 (Current Sprint)
-- ✅ Core authentication system (Login/Register)
-- ✅ API specification import functionality
-- ✅ Basic UI components and backend integration
-- ✅ Initial documentation and architecture diagrams
-- 🔄 Research report and technical documentation
-
-### 🔮 Upcoming Features
-- **Enhanced Vulnerability Coverage** beyond OWASP API Top 10
-- **Advanced Reporting** with dashboard analytics
-- **CLI Integration** for automated testing pipelines
-- **Red Team Simulation Mode** for advanced attack emulation
-- **Historical Trend Analysis** and compliance reporting
-
----
-
-## 🚦 Getting Started
-
-### Prerequisites
-- Docker and Docker Compose
-- Node.js (v18+)
-- Python (v3.9+)
-- PostgreSQL
-
-### Quick Setup
-```bash
-# Clone the repository
-git clone https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool.git
-cd API-Threat-Assessment-Tool
-
-# Start with Docker Compose
-docker-compose up -d
-
-# Or run locally:
-# Backend setup
-cd backend
-pip install -r requirements.txt
-python -m uvicorn main:app --reload
-
-# Frontend setup (new terminal)
-cd ../frontend
-npm install
-npm start
-
-# Tests setup (new terminal)
-cd ../frontend
-npm install
-npm test
-```
-
-For detailed installation and setup instructions, see our [Documentation](./Documentation/).
-
----
-
 ## 📈 Project Management
 
 We follow **Agile Scrum methodology** with:
@@ -255,6 +199,7 @@ Our GitHub repository proudly displays real-time badges showcasing project healt
 [![GitHub issues](https://img.shields.io/github/issues/COS301-SE-2025/API-Threat-Assessment-Tool)](https://github.com/COS301-SE-2025/API-Threat-Assessment-Tool/issues)
 
 </div>
+
 
 
 

@@ -4366,3 +4366,27 @@
     background-color: var(--primary-light);
     color: var(--bg-secondary);
 }
+
+/* ManageAPIs.css (Add to the end of the file) */
+
+.download-sample-btn {
+    /* Style to make it visually distinct but secondary to the Import button */
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--secondary-color);
+    box-shadow: none;
+    padding: 15px 30px; /* Match padding of primary button */
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.dark-mode .download-sample-btn {
+    background: var(--bg-secondary);
+}
+
+.download-sample-btn:hover {
+    background: var(--secondary-color);
+    border-color: var(--text-primary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+}
